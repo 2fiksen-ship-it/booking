@@ -967,7 +967,28 @@ def main():
         print(f"🎯 معدل النجاح: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         print(f"🎯 Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         
-        # Reports Results (PRIMARY FOCUS)
+        # Super Admin Results (PRIMARY FOCUS)
+        print(f"\n👑 نتائج وظائف المدير العام - SUPER ADMIN FUNCTIONALITY RESULTS (PRIMARY FOCUS):")
+        super_admin_keys = [
+            ('super_admin_login', 'Super Admin Login (superadmin@sanhaja.com)'),
+            ('super_admin_dashboard', 'Super Admin Dashboard (All Agencies Data)'),
+            ('super_admin_invoices', 'Super Admin Invoices (All Agencies)'),
+            ('super_admin_payments', 'Super Admin Payments (All Agencies)'),
+            ('super_admin_users', 'Super Admin User Management'),
+            ('super_admin_agencies', 'Super Admin Agencies Access'),
+            ('super_admin_daily_reports', 'Super Admin Daily Reports Management'),
+            ('super_admin_cross_agency_invoices', 'Cross-Agency Invoices Visibility'),
+            ('super_admin_cross_agency_payments', 'Cross-Agency Payments Visibility'),
+            ('super_admin_cross_agency_reports', 'Cross-Agency Reports Visibility'),
+            ('super_admin_all_agencies', 'All 6 Agencies Visible')
+        ]
+        
+        for key, description in super_admin_keys:
+            if key in super_admin_results:
+                status = "✅" if super_admin_results[key] else "❌"
+                print(f"   {status} {description}")
+        
+        # Reports Results (SECONDARY FOCUS)
         print(f"\n📊 نتائج تقارير النظام الجديدة - NEW REPORTS ENDPOINTS RESULTS:")
         reports_keys = [
             ('sales_report_daily', 'Sales Report - Daily'),
