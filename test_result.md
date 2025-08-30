@@ -266,7 +266,7 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: false
 
 test_plan:
@@ -274,7 +274,6 @@ test_plan:
     - "Bookings Management API"
     - "Invoices Management API" 
     - "Payments Management API"
-    - "Reports Generation API"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
