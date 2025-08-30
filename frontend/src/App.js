@@ -27,6 +27,9 @@ console.log('=== APP.JS LOADED ===');
 console.log('BACKEND_URL:', BACKEND_URL);
 console.log('API:', API);
 
+// Configure axios to include credentials for session cookies
+axios.defaults.withCredentials = true;
+
 // Auth Context
 const AuthContext = createContext();
 
