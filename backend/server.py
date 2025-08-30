@@ -93,6 +93,52 @@ class DailyReport(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     approved_at: Optional[datetime] = None
 
+# Notification System Models
+class NotificationType(str, Enum):
+    INVOICE_DUE = "invoice_due"  # اقتراب استحقاق فاتورة
+    LOW_CASHBOX = "low_cashbox"  # انخفاض رصيد الصندوق
+    BACKUP_FAILED = "backup_failed"  # فشل النسخ الاحتياطي
+    BACKUP_SUCCESS = "backup_success"  # نجح النسخ الاحتياطي
+
+class NotificationPriority(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    URGENT = "urgent"
+
+class Notification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    message: str
+    type: NotificationType
+    priority: NotificationPriority = NotificationPriority.MEDIUM
+    user_id: Optional[str] = None  # إذا كان للمستخدم المحدد، وإلا للجميع
+    agency_id: Optional[str] = None  # إذا كان لوكالة محددة
+    is_read: bool = False
+    action_url: Optional[str] = None  # رابط للإجراء المطلوب
+    metadata: Optional[dict] = None  # بيانات إضافية
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    read_at: Optional[datetime] = None
+
+# Backup/Export Models
+class BackupStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+class BackupRecord(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    filename: str
+    file_size: Optional[int] = None
+    status: BackupStatus = BackupStatus.PENDING
+    backup_type: str = "full"  # full, partial
+    agency_id: Optional[str] = None  # إذا كان للوكالة المحددة
+    created_by: str
+    error_message: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: Optional[datetime] = None
+
 # Database Models
 class Agency(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
