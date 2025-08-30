@@ -1228,17 +1228,21 @@ async def create_user(user_data: UserCreate, current_user: User = Depends(get_cu
         raise HTTPException(status_code=400, detail="Agency not found")
     
     # Create new user
+    password_hash = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
     user = User(
         id=str(uuid.uuid4()),
         name=user_data.name,
         email=user_data.email,
-        password_hash=bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
         role=user_data.role,
         agency_id=user_data.agency_id,
         created_at=datetime.now(timezone.utc)
     )
     
-    await db.users.insert_one(user.dict())
+    # Insert user with password_hash
+    user_dict = user.dict()
+    user_dict["password_hash"] = password_hash
+    await db.users.insert_one(user_dict)
     return user
 
 @api_router.put("/users/{user_id}", response_model=User)
