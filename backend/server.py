@@ -329,11 +329,10 @@ async def get_agencies(current_user: User = Depends(get_current_user)):
         agencies = await db.agencies.find({"id": current_user.agency_id}).to_list(1000)
     return [Agency(**agency) for agency in agencies]
 
-# User Routes
+# User Management Routes (Super Admin Only)
 @api_router.post("/users", response_model=User)
 async def create_user(user_data: UserCreate, current_user: User = Depends(get_current_user)):
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Only admins can create users")
+    require_super_admin(current_user)  # Only super admin can create users
     
     # Check if email already exists
     existing_user = await db.users.find_one({"email": user_data.email})
@@ -351,11 +350,98 @@ async def create_user(user_data: UserCreate, current_user: User = Depends(get_cu
 
 @api_router.get("/users", response_model=List[User])
 async def get_users(current_user: User = Depends(get_current_user)):
-    if current_user.role == UserRole.ADMIN:
+    if current_user.role == UserRole.SUPER_ADMIN:
+        # Super admin sees all users
         users = await db.users.find().to_list(1000)
+    elif current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        # General accountant sees all agency staff
+        users = await db.users.find({"role": UserRole.AGENCY_STAFF}).to_list(1000)
     else:
-        users = await db.users.find({"agency_id": current_user.agency_id}).to_list(1000)
+        # Agency staff see only themselves
+        users = await db.users.find({"id": current_user.id}).to_list(1000)
+    
     return [User(**user) for user in users]
+
+# Daily Reports Routes
+@api_router.post("/daily-reports")
+async def create_daily_report(
+    agency_id: str,
+    report_date: datetime,
+    total_income: float,
+    total_expenses: float,
+    transactions_count: int,
+    notes: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    can_manage_agency_data(current_user, agency_id)
+    
+    # Check if report already exists for this date
+    existing_report = await db.daily_reports.find_one({
+        "agency_id": agency_id,
+        "report_date": report_date.date().isoformat()
+    })
+    
+    if existing_report:
+        raise HTTPException(status_code=400, detail="Daily report already exists for this date")
+    
+    report = DailyReport(
+        agency_id=agency_id,
+        report_date=report_date,
+        total_income=total_income,
+        total_expenses=total_expenses,
+        transactions_count=transactions_count,
+        created_by=current_user.id,
+        notes=notes
+    )
+    
+    await db.daily_reports.insert_one(report.dict())
+    return {"message": "Daily report created successfully", "status": "pending_approval"}
+
+@api_router.get("/daily-reports")
+async def get_daily_reports(current_user: User = Depends(get_current_user)):
+    if current_user.role == UserRole.SUPER_ADMIN:
+        # Super admin sees all reports
+        reports = await db.daily_reports.find().to_list(1000)
+    elif current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        # General accountant sees all reports for approval
+        reports = await db.daily_reports.find().to_list(1000)
+    else:
+        # Agency staff see only their agency's reports
+        reports = await db.daily_reports.find({"agency_id": current_user.agency_id}).to_list(1000)
+    
+    return [DailyReport(**report) for report in reports]
+
+@api_router.put("/daily-reports/{report_id}/approve")
+async def approve_daily_report(
+    report_id: str,
+    action: str,  # "approve" or "reject"
+    notes: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    require_general_accountant_or_above(current_user)
+    
+    report = await db.daily_reports.find_one({"id": report_id})
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    if action not in ["approve", "reject"]:
+        raise HTTPException(status_code=400, detail="Action must be 'approve' or 'reject'")
+    
+    status = ReportStatus.APPROVED if action == "approve" else ReportStatus.REJECTED
+    
+    await db.daily_reports.update_one(
+        {"id": report_id},
+        {
+            "$set": {
+                "status": status,
+                "approved_by": current_user.id,
+                "approved_at": datetime.now(timezone.utc),
+                "notes": notes or report.get("notes", "")
+            }
+        }
+    )
+    
+    return {"message": f"Report {action}d successfully"}
 
 # Client Routes
 @api_router.post("/clients", response_model=Client)
