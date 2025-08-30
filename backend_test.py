@@ -694,6 +694,14 @@ def main():
     
     # Only run full tests if basic authentication works
     if basic_results.get('admin_login'):
+        # Test NEW: Reports Endpoints (Primary Focus)
+        print("\n" + "="*80)
+        print("اختبار تقارير النظام الجديدة - المحور الأساسي")
+        print("TESTING NEW REPORTS ENDPOINTS - PRIMARY FOCUS")
+        print("="*80)
+        
+        reports_results = tester.test_reports_endpoints()
+        
         # Test 1: Authentication for all user types
         print("\n" + "="*80)
         print("المرحلة الأولى: اختبار المصادقة للتسلسل الهرمي")
