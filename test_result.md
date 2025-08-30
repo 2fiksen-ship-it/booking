@@ -325,9 +325,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Bookings Management API"
-    - "Invoices Management API" 
-    - "Payments Management API"
+    - "Super Admin Dashboard Cross-Agency Access"
+    - "Super Admin User Management" 
+    - "Super Admin Agencies Management"
+    - "Super Admin Daily Reports Management"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
