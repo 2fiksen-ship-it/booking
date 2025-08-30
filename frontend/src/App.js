@@ -16,7 +16,7 @@ import { Textarea } from './components/ui/textarea';
 import { Calendar } from './components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
-import { CalendarIcon, Home, Users, Building2, Package, FileText, CreditCard, Wallet, BarChart3, Settings, LogOut, Globe, Plus, Search, Edit, Trash2, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CalendarIcon, Home, Users, Building2, Package, FileText, CreditCard, Wallet, BarChart3, Settings, LogOut, Globe, Plus, Search, Edit, Trash2, CheckCircle, XCircle, Clock, Bell, AlertTriangle, Info, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar, fr } from 'date-fns/locale';
 
