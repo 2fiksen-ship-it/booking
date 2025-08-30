@@ -38,9 +38,9 @@ api_router = APIRouter(prefix="/api")
 
 # Enums
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    ACCOUNTANT = "accountant"
-    AGENT = "agent"
+    SUPER_ADMIN = "super_admin"  # مدير عام - كل الصلاحيات
+    GENERAL_ACCOUNTANT = "general_accountant"  # محاسب عام - موافقة على التقارير
+    AGENCY_STAFF = "agency_staff"  # موظفي الوكالات - إدخال البيانات
 
 class BookingType(str, Enum):
     UMRAH = "عمرة"
