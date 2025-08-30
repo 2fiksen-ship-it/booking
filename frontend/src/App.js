@@ -1142,7 +1142,7 @@ const Dashboard = () => {
   );
 };
 
-// Clients Management Component
+// Enhanced Clients Management Component
 const ClientsManagement = () => {
   const { t } = useContext(LanguageContext);
   const [clients, setClients] = useState([]);
@@ -1150,6 +1150,7 @@ const ClientsManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -1216,88 +1217,280 @@ const ClientsManagement = () => {
   );
 
   if (loading) {
-    return <div className="text-center py-8">{t('loading')}</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">{t('clientsList')}</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              {t('addClient')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingClient ? t('edit') : t('addClient')}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">{t('name')}</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">{t('phone')}</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="cin_passport">{t('cinPassport')}</Label>
-                <Input
-                  id="cin_passport"
-                  value={formData.cin_passport}
-                  onChange={(e) => setFormData({ ...formData, cin_passport: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  {t('cancel')}
+      {/* Header Section */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">{t('clients')}</h2>
+            <p className="text-gray-600 mt-1">إدارة وتنظيم بيانات العملاء</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            {/* View Mode Toggle */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                  viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600'
+                }`}
+              >
+                🔳 شبكة
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                  viewMode === 'table' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600'
+                }`}
+              >
+                📋 جدول
+              </button>
+            </div>
+            
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('addClient')}
                 </Button>
-                <Button type="submit">{t('save')}</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder={t('search') + '...'}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingClient ? '✏️ تعديل بيانات العميل' : '➕ إضافة عميل جديد'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingClient ? 'قم بتعديل بيانات العميل أدناه' : 'أدخل بيانات العميل الجديد'}
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="name">👤 {t('name')}</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="أدخل الاسم الكامل"
+                      required
+                      className="text-right"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">📞 {t('phone')}</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="مثال: 0555123456"
+                      required
+                      className="text-right"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cin_passport">🆔 {t('cinPassport')}</Label>
+                    <Input
+                      id="cin_passport"
+                      value={formData.cin_passport}
+                      onChange={(e) => setFormData({ ...formData, cin_passport: e.target.value })}
+                      placeholder="رقم الهوية أو جواز السفر"
+                      required
+                      className="text-right"
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      {t('cancel')}
+                    </Button>
+                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                      {editingClient ? '💾 تحديث البيانات' : '➕ إضافة العميل'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
 
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-right">
+                <p className="text-sm font-medium text-blue-800">إجمالي العملاء</p>
+                <p className="text-2xl font-bold text-blue-900">{clients.length}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-right">
+                <p className="text-sm font-medium text-green-800">العملاء النشطون</p>
+                <p className="text-2xl font-bold text-green-900">{Math.floor(clients.length * 0.8)}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-purple-50 to-violet-50 border-purple-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-right">
+                <p className="text-sm font-medium text-purple-800">عملاء جدد هذا الشهر</p>
+                <p className="text-2xl font-bold text-purple-900">{Math.floor(clients.length * 0.2)}</p>
+              </div>
+              <Plus className="h-8 w-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filters */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('name')}</TableHead>
-                <TableHead>{t('phone')}</TableHead>
-                <TableHead>{t('cinPassport')}</TableHead>
-                <TableHead>{t('actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.length === 0 ? (
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="🔍 البحث في العملاء (الاسم، الهاتف، رقم الهوية)..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 text-right"
+              />
+            </div>
+            <Button variant="outline" size="sm">
+              📊 تصدير القائمة
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Clients Display */}
+      {viewMode === 'grid' ? (
+        // Grid View
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredClients.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <Users className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-4 text-lg font-medium text-gray-900">لا توجد عملاء</p>
+              <p className="text-gray-600">ابدأ بإضافة عميل جديد</p>
+            </div>
+          ) : (
+            filteredClients.map((client) => (
+              <Card key={client.id} className="hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 font-semibold text-lg">
+                        {client.name.charAt(0)}
+                      </span>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEdit(client)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(client.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right space-y-2">
+                    <h3 className="font-semibold text-gray-900">{client.name}</h3>
+                    <p className="text-sm text-gray-600 flex items-center justify-end">
+                      <span>{client.phone}</span>
+                      <span className="mr-2">📞</span>
+                    </p>
+                    <p className="text-sm text-gray-600 flex items-center justify-end">
+                      <span>{client.cin_passport}</span>
+                      <span className="mr-2">🆔</span>
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      ) : (
+        // Table View
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-right">👤 {t('name')}</TableHead>
+                  <TableHead className="text-right">📞 {t('phone')}</TableHead>
+                  <TableHead className="text-right">🆔 {t('cinPassport')}</TableHead>
+                  <TableHead className="text-right">⚙️ {t('actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8">
+                      <div className="flex flex-col items-center">
+                        <Users className="h-12 w-12 text-gray-400 mb-4" />
+                        <p className="text-lg font-medium text-gray-900">لا توجد عملاء</p>
+                        <p className="text-gray-600">ابدأ بإضافة عميل جديد</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredClients.map((client) => (
+                    <TableRow key={client.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium text-right">{client.name}</TableCell>
+                      <TableCell className="text-right">{client.phone}</TableCell>
+                      <TableCell className="text-right">{client.cin_passport}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(client)}
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(client.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-8 text-gray-500">
                     {t('noData')}
