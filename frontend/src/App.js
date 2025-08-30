@@ -16,7 +16,7 @@ import { Textarea } from './components/ui/textarea';
 import { Calendar } from './components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
-import { CalendarIcon, Home, Users, Building2, Package, FileText, CreditCard, Wallet, BarChart3, Settings, LogOut, Globe, Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { CalendarIcon, Home, Users, Building2, Package, FileText, CreditCard, Wallet, BarChart3, Settings, LogOut, Globe, Plus, Search, Edit, Trash2, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar, fr } from 'date-fns/locale';
 
@@ -89,21 +89,22 @@ const translations = {
     search: 'بحث',
     loading: 'جاري التحميل...',
     noData: 'لا توجد بيانات',
+    total: 'المجموع',
+    profit: 'الربح',
     
-    // ... rest of translations remain the same
-    clients: 'العملاء',
-    suppliers: 'الموردين',
-    bookings: 'الحجوزات',
-    invoices: 'الفواتير',
-    payments: 'المدفوعات',
-    reports: 'التقارير',
+    // Clients
     addClient: 'إضافة عميل',
     cinPassport: 'رقم الهوية/جواز السفر',
     clientsList: 'قائمة العملاء',
+    
+    // Suppliers
     addSupplier: 'إضافة مورد',
     supplierType: 'نوع المورد',
     contact: 'جهة الاتصال',
     suppliersList: 'قائمة الموردين',
+    
+    // Bookings
+    addBooking: 'إضافة حجز',
     reference: 'المرجع',
     client: 'العميل',
     supplier: 'المورد',
@@ -113,10 +114,16 @@ const translations = {
     startDate: 'تاريخ البداية',
     endDate: 'تاريخ النهاية',
     bookingsList: 'قائمة الحجوزات',
+    selectClient: 'اختر العميل',
+    selectSupplier: 'اختر المورد',
+    
+    // Booking Types
     'عمرة': 'عمرة',
     'طيران': 'طيران',
     'فندق': 'فندق',
     'تأشيرة': 'تأشيرة',
+    
+    // Invoices
     addInvoice: 'إضافة فاتورة',
     invoiceNo: 'رقم الفاتورة',
     amountHT: 'المبلغ قبل الضريبة',
@@ -124,18 +131,39 @@ const translations = {
     amountTTC: 'المبلغ شامل الضريبة',
     dueDate: 'تاريخ الاستحقاق',
     invoicesList: 'قائمة الفواتير',
+    generateFromBooking: 'إنشاء من حجز',
+    
+    // Invoice Status
     pending: 'معلقة',
     paid: 'مدفوعة',
     overdue: 'متأخرة',
+    
+    // Payments
     addPayment: 'إضافة دفعة',
     paymentNo: 'رقم الدفعة',
     invoice: 'الفاتورة',
     paymentMethod: 'طريقة الدفع',
     paymentDate: 'تاريخ الدفع',
     paymentsList: 'قائمة المدفوعات',
+    selectInvoice: 'اختر الفاتورة',
+    
+    // Payment Methods
     cash: 'نقدي',
     bank: 'بنكي',
     card: 'بطاقة',
+    
+    // Reports
+    dailySalesReport: 'تقرير المبيعات اليومية',
+    monthlySalesReport: 'تقرير المبيعات الشهرية',
+    agingReport: 'تقرير أعمار الديون',
+    profitLossReport: 'تقرير الأرباح والخسائر',
+    generateReport: 'إنشاء التقرير',
+    reportPeriod: 'فترة التقرير',
+    from: 'من',
+    to: 'إلى',
+    export: 'تصدير',
+    
+    // Messages
     success: 'تم بنجاح',
     error: 'حدث خطأ',
     confirm: 'تأكيد',
@@ -150,7 +178,7 @@ const translations = {
     generalAccountant: 'Comptable Général',
     agencyStaff: 'Personnel Agence',
     
-    // ... rest of French translations remain the same
+    // All other translations...
     clients: 'Clients',
     suppliers: 'Fournisseurs',
     bookings: 'Réservations',
@@ -187,6 +215,7 @@ const translations = {
     supplierType: 'Type de fournisseur',
     contact: 'Contact',
     suppliersList: 'Liste des fournisseurs',
+    addBooking: 'Ajouter une réservation',
     reference: 'Référence',
     client: 'Client',
     supplier: 'Fournisseur',
@@ -1029,16 +1058,1174 @@ const SuppliersManagement = () => {
   );
 };
 
+// Bookings Management Component
+const BookingsManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const [bookings, setBookings] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState(null);
+  const [formData, setFormData] = useState({
+    ref: '',
+    client_id: '',
+    supplier_id: '',
+    type: '',
+    cost: '',
+    sell_price: '',
+    start_date: '',
+    end_date: ''
+  });
+
+  const fetchData = async () => {
+    try {
+      const [bookingsRes, clientsRes, suppliersRes] = await Promise.all([
+        axios.get(`${API}/bookings`),
+        axios.get(`${API}/clients`),
+        axios.get(`${API}/suppliers`)
+      ]);
+      
+      setBookings(bookingsRes.data);
+      setClients(clientsRes.data);
+      setSuppliers(suppliersRes.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const bookingData = {
+        ...formData,
+        cost: parseFloat(formData.cost),
+        sell_price: parseFloat(formData.sell_price),
+        start_date: new Date(formData.start_date).toISOString(),
+        end_date: new Date(formData.end_date).toISOString()
+      };
+
+      if (editingBooking) {
+        await axios.put(`${API}/bookings/${editingBooking.id}`, bookingData);
+      } else {
+        await axios.post(`${API}/bookings`, bookingData);
+      }
+      
+      setFormData({
+        ref: '',
+        client_id: '',
+        supplier_id: '',
+        type: '',
+        cost: '',
+        sell_price: '',
+        start_date: '',
+        end_date: ''
+      });
+      setEditingBooking(null);
+      setIsDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error saving booking:', error);
+    }
+  };
+
+  const handleEdit = (booking) => {
+    setEditingBooking(booking);
+    setFormData({
+      ref: booking.ref,
+      client_id: booking.client_id,
+      supplier_id: booking.supplier_id,
+      type: booking.type,
+      cost: booking.cost.toString(),
+      sell_price: booking.sell_price.toString(),
+      start_date: booking.start_date.split('T')[0],
+      end_date: booking.end_date.split('T')[0]
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (bookingId) => {
+    if (window.confirm(t('confirmDelete'))) {
+      try {
+        await axios.delete(`${API}/bookings/${bookingId}`);
+        fetchData();
+      } catch (error) {
+        console.error('Error deleting booking:', error);
+      }
+    }
+  };
+
+  const getClientName = (clientId) => {
+    const client = clients.find(c => c.id === clientId);
+    return client ? client.name : 'غير معروف';
+  };
+
+  const getSupplierName = (supplierId) => {
+    const supplier = suppliers.find(s => s.id === supplierId);
+    return supplier ? supplier.name : 'غير معروف';
+  };
+
+  const filteredBookings = bookings.filter(booking =>
+    booking.ref.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getClientName(booking.client_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+    booking.type.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return <div className="text-center py-8">{t('loading')}</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">{t('bookingsList')}</h2>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('addBooking')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{editingBooking ? t('edit') : t('addBooking')}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ref">{t('reference')}</Label>
+                  <Input
+                    id="ref"
+                    value={formData.ref}
+                    onChange={(e) => setFormData({ ...formData, ref: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="type">{t('bookingType')}</Label>
+                  <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('bookingType')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="عمرة">عمرة</SelectItem>
+                      <SelectItem value="طيران">طيران</SelectItem>
+                      <SelectItem value="فندق">فندق</SelectItem>
+                      <SelectItem value="تأشيرة">تأشيرة</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="client_id">{t('selectClient')}</Label>
+                  <Select value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('selectClient')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="supplier_id">{t('selectSupplier')}</Label>
+                  <Select value={formData.supplier_id} onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('selectSupplier')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="cost">{t('cost')} (دج)</Label>
+                  <Input
+                    id="cost"
+                    type="number"
+                    value={formData.cost}
+                    onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="sell_price">{t('sellPrice')} (دج)</Label>
+                  <Input
+                    id="sell_price"
+                    type="number"
+                    value={formData.sell_price}
+                    onChange={(e) => setFormData({ ...formData, sell_price: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="start_date">{t('startDate')}</Label>
+                  <Input
+                    id="start_date"
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="end_date">{t('endDate')}</Label>
+                  <Input
+                    id="end_date"
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  {t('cancel')}
+                </Button>
+                <Button type="submit">{t('save')}</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="flex items-center space-x-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder={t('search') + '...'}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('reference')}</TableHead>
+                <TableHead>{t('client')}</TableHead>
+                <TableHead>{t('supplier')}</TableHead>
+                <TableHead>{t('bookingType')}</TableHead>
+                <TableHead>{t('cost')}</TableHead>
+                <TableHead>{t('sellPrice')}</TableHead>
+                <TableHead>{t('profit')}</TableHead>
+                <TableHead>{t('actions')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredBookings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    {t('noData')}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredBookings.map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell className="font-medium">{booking.ref}</TableCell>
+                    <TableCell>{getClientName(booking.client_id)}</TableCell>
+                    <TableCell>{getSupplierName(booking.supplier_id)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{booking.type}</Badge>
+                    </TableCell>
+                    <TableCell>{booking.cost} دج</TableCell>
+                    <TableCell>{booking.sell_price} دج</TableCell>
+                    <TableCell className="text-green-600 font-medium">
+                      {(booking.sell_price - booking.cost)} دج
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(booking)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(booking.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Invoices Management Component
+const InvoicesManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const [invoices, setInvoices] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState(null);
+  const [formData, setFormData] = useState({
+    client_id: '',
+    amount_ht: '',
+    tva_rate: '20',
+    due_date: ''
+  });
+
+  const fetchData = async () => {
+    try {
+      const [invoicesRes, clientsRes] = await Promise.all([
+        axios.get(`${API}/invoices`),
+        axios.get(`${API}/clients`)
+      ]);
+      
+      setInvoices(invoicesRes.data);
+      setClients(clientsRes.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const invoiceData = {
+        client_id: formData.client_id,
+        amount_ht: parseFloat(formData.amount_ht),
+        tva_rate: parseFloat(formData.tva_rate),
+        due_date: new Date(formData.due_date).toISOString()
+      };
+
+      if (editingInvoice) {
+        await axios.put(`${API}/invoices/${editingInvoice.id}`, invoiceData);
+      } else {
+        await axios.post(`${API}/invoices`, invoiceData);
+      }
+      
+      setFormData({
+        client_id: '',
+        amount_ht: '',
+        tva_rate: '20',
+        due_date: ''
+      });
+      setEditingInvoice(null);
+      setIsDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error saving invoice:', error);
+    }
+  };
+
+  const handleEdit = (invoice) => {
+    setEditingInvoice(invoice);
+    setFormData({
+      client_id: invoice.client_id,
+      amount_ht: invoice.amount_ht.toString(),
+      tva_rate: invoice.tva_rate.toString(),
+      due_date: invoice.due_date.split('T')[0]
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (invoiceId) => {
+    if (window.confirm(t('confirmDelete'))) {
+      try {
+        await axios.delete(`${API}/invoices/${invoiceId}`);
+        fetchData();
+      } catch (error) {
+        console.error('Error deleting invoice:', error);
+      }
+    }
+  };
+
+  const getClientName = (clientId) => {
+    const client = clients.find(c => c.id === clientId);
+    return client ? client.name : 'غير معروف';
+  };
+
+  const getStatusBadge = (status) => {
+    switch(status) {
+      case 'paid':
+        return <Badge className="bg-green-600">{t('paid')}</Badge>;
+      case 'overdue':
+        return <Badge variant="destructive">{t('overdue')}</Badge>;
+      default:
+        return <Badge variant="outline">{t('pending')}</Badge>;
+    }
+  };
+
+  const filteredInvoices = invoices.filter(invoice =>
+    invoice.invoice_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getClientName(invoice.client_id).toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return <div className="text-center py-8">{t('loading')}</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">{t('invoicesList')}</h2>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('addInvoice')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingInvoice ? t('edit') : t('addInvoice')}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="client_id">{t('selectClient')}</Label>
+                <Select value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('selectClient')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="amount_ht">{t('amountHT')} (دج)</Label>
+                <Input
+                  id="amount_ht"
+                  type="number"
+                  step="0.01"
+                  value={formData.amount_ht}
+                  onChange={(e) => setFormData({ ...formData, amount_ht: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="tva_rate">{t('tvaRate')}</Label>
+                <Input
+                  id="tva_rate"
+                  type="number"
+                  step="0.01"
+                  value={formData.tva_rate}
+                  onChange={(e) => setFormData({ ...formData, tva_rate: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="due_date">{t('dueDate')}</Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={formData.due_date}
+                  onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  {t('cancel')}
+                </Button>
+                <Button type="submit">{t('save')}</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="flex items-center space-x-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder={t('search') + '...'}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('invoiceNo')}</TableHead>
+                <TableHead>{t('client')}</TableHead>
+                <TableHead>{t('amountHT')}</TableHead>
+                <TableHead>{t('tvaRate')}</TableHead>
+                <TableHead>{t('amountTTC')}</TableHead>
+                <TableHead>{t('status')}</TableHead>
+                <TableHead>{t('dueDate')}</TableHead>
+                <TableHead>{t('actions')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredInvoices.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    {t('noData')}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredInvoices.map((invoice) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell className="font-medium">{invoice.invoice_no}</TableCell>
+                    <TableCell>{getClientName(invoice.client_id)}</TableCell>
+                    <TableCell>{invoice.amount_ht} دج</TableCell>
+                    <TableCell>{invoice.tva_rate}%</TableCell>
+                    <TableCell className="font-medium">{invoice.amount_ttc} دج</TableCell>
+                    <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                    <TableCell>{new Date(invoice.due_date).toLocaleDateString('ar-DZ')}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(invoice)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(invoice.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Payments Management Component
+const PaymentsManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const [payments, setPayments] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [formData, setFormData] = useState({
+    invoice_id: '',
+    method: '',
+    amount: '',
+    payment_date: ''
+  });
+
+  const fetchData = async () => {
+    try {
+      const [paymentsRes, invoicesRes] = await Promise.all([
+        axios.get(`${API}/payments`),
+        axios.get(`${API}/invoices`)
+      ]);
+      
+      setPayments(paymentsRes.data);
+      setInvoices(invoicesRes.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const paymentData = {
+        invoice_id: formData.invoice_id,
+        method: formData.method,
+        amount: parseFloat(formData.amount),
+        payment_date: new Date(formData.payment_date).toISOString()
+      };
+
+      if (editingPayment) {
+        await axios.put(`${API}/payments/${editingPayment.id}`, paymentData);
+      } else {
+        await axios.post(`${API}/payments`, paymentData);
+      }
+      
+      setFormData({
+        invoice_id: '',
+        method: '',
+        amount: '',
+        payment_date: ''
+      });
+      setEditingPayment(null);
+      setIsDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error saving payment:', error);
+    }
+  };
+
+  const handleEdit = (payment) => {
+    setEditingPayment(payment);
+    setFormData({
+      invoice_id: payment.invoice_id,
+      method: payment.method,
+      amount: payment.amount.toString(),
+      payment_date: payment.payment_date.split('T')[0]
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (paymentId) => {
+    if (window.confirm(t('confirmDelete'))) {
+      try {
+        await axios.delete(`${API}/payments/${paymentId}`);
+        fetchData();
+      } catch (error) {
+        console.error('Error deleting payment:', error);
+      }
+    }
+  };
+
+  const getInvoiceNo = (invoiceId) => {
+    const invoice = invoices.find(i => i.id === invoiceId);
+    return invoice ? invoice.invoice_no : 'غير معروف';
+  };
+
+  const getMethodBadge = (method) => {
+    const methodColors = {
+      'cash': 'bg-green-600',
+      'bank': 'bg-blue-600',
+      'card': 'bg-purple-600'
+    };
+    
+    return (
+      <Badge className={methodColors[method] || 'bg-gray-600'}>
+        {t(method)}
+      </Badge>
+    );
+  };
+
+  const filteredPayments = payments.filter(payment =>
+    payment.payment_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getInvoiceNo(payment.invoice_id).toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return <div className="text-center py-8">{t('loading')}</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">{t('paymentsList')}</h2>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('addPayment')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingPayment ? t('edit') : t('addPayment')}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="invoice_id">{t('selectInvoice')}</Label>
+                <Select value={formData.invoice_id} onValueChange={(value) => setFormData({ ...formData, invoice_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('selectInvoice')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {invoices.filter(invoice => invoice.status === 'pending').map((invoice) => (
+                      <SelectItem key={invoice.id} value={invoice.id}>
+                        {invoice.invoice_no} - {invoice.amount_ttc} دج
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="method">{t('paymentMethod')}</Label>
+                <Select value={formData.method} onValueChange={(value) => setFormData({ ...formData, method: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('paymentMethod')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">{t('cash')}</SelectItem>
+                    <SelectItem value="bank">{t('bank')}</SelectItem>
+                    <SelectItem value="card">{t('card')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="amount">{t('amount')} (دج)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="payment_date">{t('paymentDate')}</Label>
+                <Input
+                  id="payment_date"
+                  type="date"
+                  value={formData.payment_date}
+                  onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  {t('cancel')}
+                </Button>
+                <Button type="submit">{t('save')}</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="flex items-center space-x-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder={t('search') + '...'}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('paymentNo')}</TableHead>
+                <TableHead>{t('invoice')}</TableHead>
+                <TableHead>{t('paymentMethod')}</TableHead>
+                <TableHead>{t('amount')}</TableHead>
+                <TableHead>{t('paymentDate')}</TableHead>
+                <TableHead>{t('actions')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredPayments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                    {t('noData')}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredPayments.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell className="font-medium">{payment.payment_no}</TableCell>
+                    <TableCell>{getInvoiceNo(payment.invoice_id)}</TableCell>
+                    <TableCell>{getMethodBadge(payment.method)}</TableCell>
+                    <TableCell className="font-medium">{payment.amount} دج</TableCell>
+                    <TableCell>{new Date(payment.payment_date).toLocaleDateString('ar-DZ')}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(payment)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(payment.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Reports Component
+const ReportsManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const [reportType, setReportType] = useState('daily_sales');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const generateReport = async () => {
+    setLoading(true);
+    try {
+      // Simulate report generation
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Mock report data based on type
+      const mockData = {
+        daily_sales: {
+          title: 'تقرير المبيعات اليومية',
+          data: [
+            { date: '2024-01-01', sales: 25000, bookings: 5, profit: 5000 },
+            { date: '2024-01-02', sales: 18000, bookings: 3, profit: 3600 },
+            { date: '2024-01-03', sales: 32000, bookings: 7, profit: 6400 }
+          ],
+          totals: { sales: 75000, bookings: 15, profit: 15000 }
+        },
+        monthly_sales: {
+          title: 'تقرير المبيعات الشهرية',
+          data: [
+            { month: 'يناير', sales: 450000, bookings: 85, profit: 90000 },
+            { month: 'فبراير', sales: 380000, bookings: 72, profit: 76000 },
+            { month: 'مارس', sales: 520000, bookings: 98, profit: 104000 }
+          ],
+          totals: { sales: 1350000, bookings: 255, profit: 270000 }
+        },
+        aging: {
+          title: 'تقرير أعمار الديون',
+          data: [
+            { client: 'أحمد محمد', invoice: 'INV-001', amount: 15000, days: 10 },
+            { client: 'فاطمة علي', invoice: 'INV-003', amount: 22000, days: 25 },
+            { client: 'محمد حسن', invoice: 'INV-007', amount: 8000, days: 45 }
+          ],
+          totals: { amount: 45000, count: 3 }
+        },
+        profit_loss: {
+          title: 'تقرير الأرباح والخسائر',
+          data: {
+            income: { sales: 850000, services: 125000 },
+            expenses: { suppliers: 680000, operations: 95000 },
+            profit: 200000
+          }
+        }
+      };
+
+      setReportData(mockData[reportType]);
+    } catch (error) {
+      console.error('Error generating report:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportReport = () => {
+    // Mock export functionality
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + "التاريخ,المبيعات,الحجوزات,الربح\n"
+      + reportData.data.map(row => Object.values(row).join(",")).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `report_${reportType}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">{t('reports')}</h2>
+        {reportData && (
+          <Button onClick={exportReport} variant="outline">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            {t('export')}
+          </Button>
+        )}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('generateReport')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="report-type">نوع التقرير</Label>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily_sales">{t('dailySalesReport')}</SelectItem>
+                  <SelectItem value="monthly_sales">{t('monthlySalesReport')}</SelectItem>
+                  <SelectItem value="aging">{t('agingReport')}</SelectItem>
+                  <SelectItem value="profit_loss">{t('profitLossReport')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="start-date">{t('from')}</Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="end-date">{t('to')}</Label>
+              <Input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <Button 
+            onClick={generateReport} 
+            disabled={loading}
+            className="w-full md:w-auto"
+          >
+            {loading ? (
+              <>
+                <Clock className="h-4 w-4 mr-2 animate-spin" />
+                جاري الإنشاء...
+              </>
+            ) : (
+              <>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                {t('generateReport')}
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {reportData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{reportData.title}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {reportType === 'profit_loss' ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-green-600 mb-2">الإيرادات</h3>
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span>المبيعات:</span>
+                        <span>{reportData.data.income.sales.toLocaleString()} دج</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>الخدمات:</span>
+                        <span>{reportData.data.income.services.toLocaleString()} دج</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-red-600 mb-2">المصروفات</h3>
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span>الموردين:</span>
+                        <span>{reportData.data.expenses.suppliers.toLocaleString()} دج</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>التشغيل:</span>
+                        <span>{reportData.data.expenses.operations.toLocaleString()} دج</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-blue-600 mb-2">صافي الربح</h3>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {reportData.data.profit.toLocaleString()} دج
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {reportType === 'aging' ? (
+                        <>
+                          <TableHead>العميل</TableHead>
+                          <TableHead>رقم الفاتورة</TableHead>
+                          <TableHead>المبلغ</TableHead>
+                          <TableHead>الأيام</TableHead>
+                        </>
+                      ) : (
+                        <>
+                          <TableHead>{reportType === 'monthly_sales' ? 'الشهر' : 'التاريخ'}</TableHead>
+                          <TableHead>المبيعات</TableHead>
+                          <TableHead>الحجوزات</TableHead>
+                          <TableHead>الربح</TableHead>
+                        </>
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reportData.data.map((row, index) => (
+                      <TableRow key={index}>
+                        {reportType === 'aging' ? (
+                          <>
+                            <TableCell>{row.client}</TableCell>
+                            <TableCell>{row.invoice}</TableCell>
+                            <TableCell>{row.amount.toLocaleString()} دج</TableCell>
+                            <TableCell>
+                              <Badge variant={row.days > 30 ? 'destructive' : 'outline'}>
+                                {row.days} يوم
+                              </Badge>
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell>{row.date || row.month}</TableCell>
+                            <TableCell>{row.sales.toLocaleString()} دج</TableCell>
+                            <TableCell>{row.bookings}</TableCell>
+                            <TableCell className="text-green-600 font-medium">
+                              {row.profit.toLocaleString()} دج
+                            </TableCell>
+                          </>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                
+                {reportData.totals && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-semibold mb-2">الإجماليات:</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {reportType === 'aging' ? (
+                        <>
+                          <div>
+                            <span className="text-sm text-gray-600">عدد الفواتير:</span>
+                            <div className="font-semibold">{reportData.totals.count}</div>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">إجمالي المبلغ:</span>
+                            <div className="font-semibold">{reportData.totals.amount.toLocaleString()} دج</div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <span className="text-sm text-gray-600">إجمالي المبيعات:</span>
+                            <div className="font-semibold">{reportData.totals.sales.toLocaleString()} دج</div>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">إجمالي الحجوزات:</span>
+                            <div className="font-semibold">{reportData.totals.bookings}</div>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">إجمالي الربح:</span>
+                            <div className="font-semibold text-green-600">{reportData.totals.profit.toLocaleString()} دج</div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
 // Main App Component
 const MainApp = ({ activeTab }) => {
   const components = {
     dashboard: Dashboard,
     clients: ClientsManagement,
     suppliers: SuppliersManagement,
-    bookings: () => <div className="text-center py-8">قريباً - إدارة الحجوزات</div>,
-    invoices: () => <div className="text-center py-8">قريباً - إدارة الفواتير</div>,
-    payments: () => <div className="text-center py-8">قريباً - إدارة المدفوعات</div>,
-    reports: () => <div className="text-center py-8">قريباً - التقارير</div>
+    bookings: BookingsManagement,
+    invoices: InvoicesManagement,
+    payments: PaymentsManagement,
+    reports: ReportsManagement,
+    userManagement: () => <div className="text-center py-8">قريباً - إدارة المستخدمين</div>,
+    dailyReports: () => <div className="text-center py-8">قريباً - التقارير اليومية</div>
   };
 
   const Component = components[activeTab] || components.dashboard;
