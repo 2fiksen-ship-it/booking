@@ -3508,8 +3508,8 @@ const MainApp = ({ activeTab }) => {
     invoices: InvoicesManagement,
     payments: PaymentsManagement,
     reports: ReportsManagement,
-    userManagement: () => <div className="text-center py-8">قريباً - إدارة المستخدمين</div>,
-    dailyReports: () => <div className="text-center py-8">قريباً - التقارير اليومية</div>
+    userManagement: UserManagement,
+    dailyReports: DailyReportsManagement
   };
 
   const Component = components[activeTab] || components.dashboard;
