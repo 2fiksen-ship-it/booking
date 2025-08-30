@@ -1104,9 +1104,12 @@ async def get_dashboard(current_user: User = Depends(get_current_user)):
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today + timedelta(days=1)
     
+    # Query filter based on role
+    query_filter = {} if current_user.role == UserRole.SUPER_ADMIN else {"agency_id": current_user.agency_id}
+    
     # Today's income/expenses
     today_invoices = await db.invoices.find({
-        "agency_id": current_user.agency_id,
+        **query_filter,
         "created_at": {"$gte": today, "$lt": tomorrow}
     }).to_list(1000)
     
@@ -1114,19 +1117,19 @@ async def get_dashboard(current_user: User = Depends(get_current_user)):
     
     # Unpaid invoices
     unpaid_invoices = await db.invoices.count_documents({
-        "agency_id": current_user.agency_id,
+        **query_filter,
         "status": InvoiceStatus.PENDING
     })
     
     # This week's bookings
     week_start = today - timedelta(days=today.weekday())
     week_bookings = await db.bookings.count_documents({
-        "agency_id": current_user.agency_id,
+        **query_filter,
         "created_at": {"$gte": week_start}
     })
     
     # Cashbox balance
-    cashboxes = await db.cashboxes.find({"agency_id": current_user.agency_id}).to_list(1000)
+    cashboxes = await db.cashboxes.find(query_filter).to_list(1000)
     total_cashbox_balance = sum(cb["balance"] for cb in cashboxes)
     
     return {
