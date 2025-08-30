@@ -454,81 +454,183 @@ class SanhajaAPITester:
         return success and success2
 
 def main():
-    print("🚀 Starting Sanhaja Travel Agencies API Testing...")
-    print("=" * 60)
+    print("🚀 Starting Sanhaja Travel Agencies Hierarchical System Testing...")
+    print("نظام محاسبة وكالات صنهاجة للسفر - اختبار التسلسل الهرمي")
+    print("=" * 80)
     
     tester = SanhajaAPITester()
     
-    # Test 1: Basic Authentication
-    print("\n" + "="*60)
-    print("PHASE 1: AUTHENTICATION TESTING")
-    print("="*60)
+    # Test 1: Authentication for all user types
+    print("\n" + "="*80)
+    print("المرحلة الأولى: اختبار المصادقة للتسلسل الهرمي")
+    print("PHASE 1: HIERARCHICAL AUTHENTICATION TESTING")
+    print("="*80)
     
-    if not tester.test_login("admin@tlemcen.sanhaja.com", "admin123"):
-        print("❌ Login failed, stopping tests")
-        return 1
+    auth_results = {}
     
-    # Test current user endpoint
-    tester.test_auth_me()
+    # Test Super Admin login
+    print(f"\n🔐 Testing Super Admin (المدير العام)...")
+    auth_results['super_admin'] = tester.test_login(
+        tester.test_users['super_admin']['email'], 
+        tester.test_users['super_admin']['password']
+    )
     
-    # Test 2: Dashboard
-    print("\n" + "="*60)
-    print("PHASE 2: DASHBOARD TESTING")
-    print("="*60)
+    # Test General Accountant login  
+    print(f"\n🔐 Testing General Accountant (المحاسب العام)...")
+    auth_results['general_accountant'] = tester.test_login(
+        tester.test_users['general_accountant']['email'], 
+        tester.test_users['general_accountant']['password']
+    )
     
-    tester.test_dashboard()
+    # Test Agency Staff logins
+    print(f"\n🔐 Testing Agency Staff (موظفي الوكالات)...")
+    for key in ['tlemcen_staff1', 'oran_staff1', 'maghnia_staff1']:
+        user = tester.test_users[key]
+        print(f"\n   Testing {user['agency']} staff...")
+        auth_results[key] = tester.test_login(user['email'], user['password'])
     
-    # Test 3: CRUD Operations
-    print("\n" + "="*60)
-    print("PHASE 3: CRUD OPERATIONS TESTING")
-    print("="*60)
+    # Test 2: Hierarchical Permissions
+    print("\n" + "="*80)
+    print("المرحلة الثانية: اختبار الأذونات الهرمية")
+    print("PHASE 2: HIERARCHICAL PERMISSIONS TESTING")
+    print("="*80)
     
+    permission_results = tester.test_hierarchical_permissions()
+    
+    # Test 3: Daily Reports Workflow
+    print("\n" + "="*80)
+    print("المرحلة الثالثة: اختبار سير عمل التقارير اليومية")
+    print("PHASE 3: DAILY REPORTS WORKFLOW TESTING")
+    print("="*80)
+    
+    reports_results = tester.test_daily_reports_workflow()
+    
+    # Test 4: User Management (Super Admin Only)
+    print("\n" + "="*80)
+    print("المرحلة الرابعة: اختبار إدارة المستخدمين")
+    print("PHASE 4: USER MANAGEMENT TESTING")
+    print("="*80)
+    
+    user_mgmt_results = tester.test_user_management()
+    
+    # Test 5: Basic CRUD Operations
+    print("\n" + "="*80)
+    print("المرحلة الخامسة: اختبار العمليات الأساسية")
+    print("PHASE 5: BASIC CRUD OPERATIONS TESTING")
+    print("="*80)
+    
+    # Login as Super Admin for CRUD testing
+    tester.test_login(tester.test_users['super_admin']['email'], 
+                     tester.test_users['super_admin']['password'])
     crud_results = tester.test_crud_endpoints()
     
-    # Test 4: Agency Isolation
-    print("\n" + "="*60)
-    print("PHASE 4: MULTI-AGENCY ISOLATION TESTING")
-    print("="*60)
+    # Test 6: Error Handling
+    print("\n" + "="*80)
+    print("المرحلة السادسة: اختبار معالجة الأخطاء")
+    print("PHASE 6: ERROR HANDLING TESTING")
+    print("="*80)
     
-    isolation_success = tester.test_agency_isolation()
+    error_handling_results = tester.test_error_handling()
     
-    # Test 5: Error Handling
-    print("\n" + "="*60)
-    print("PHASE 5: ERROR HANDLING TESTING")
-    print("="*60)
+    # Final Results Summary
+    print("\n" + "="*80)
+    print("النتائج النهائية - FINAL RESULTS")
+    print("="*80)
     
-    # Re-login for error testing
-    tester.test_login("admin@rabat.sanhaja.com", "admin123")
-    error_handling_success = tester.test_error_handling()
+    print(f"📊 إجمالي الاختبارات: {tester.tests_run}")
+    print(f"📊 Total Tests: {tester.tests_run}")
+    print(f"✅ الاختبارات الناجحة: {tester.tests_passed}")
+    print(f"✅ Passed Tests: {tester.tests_passed}")
+    print(f"🎯 معدل النجاح: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
+    print(f"🎯 Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
-    # Final Results
-    print("\n" + "="*60)
-    print("FINAL RESULTS")
-    print("="*60)
-    print(f"📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
-    print(f"🎯 Success rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
+    # Authentication Results
+    print(f"\n🔐 نتائج المصادقة - Authentication Results:")
+    for role, success in auth_results.items():
+        status = "✅" if success else "❌"
+        role_name = tester.test_users.get(role, {}).get('name', role)
+        print(f"   {status} {role_name} ({role})")
     
-    print(f"\n📋 CRUD Results:")
+    # Permission Results
+    print(f"\n👑 نتائج الأذونات الهرمية - Hierarchical Permissions:")
+    key_permissions = [
+        ('super_admin_agencies', 'Super Admin - All Agencies Access'),
+        ('super_admin_users', 'Super Admin - All Users Access'),
+        ('accountant_agencies', 'General Accountant - All Agencies View'),
+        ('accountant_no_user_creation', 'General Accountant - No User Creation'),
+        ('tlemcen_isolation', 'Tlemcen Staff - Agency Isolation'),
+        ('agency_isolation', 'Cross-Agency Data Isolation')
+    ]
+    
+    for key, description in key_permissions:
+        if key in permission_results:
+            status = "✅" if permission_results[key] else "❌"
+            print(f"   {status} {description}")
+    
+    # Daily Reports Results
+    print(f"\n📊 نتائج التقارير اليومية - Daily Reports Workflow:")
+    reports_keys = [
+        ('create_report', 'Agency Staff - Create Report'),
+        ('staff_get_reports', 'Agency Staff - View Own Reports'),
+        ('accountant_get_reports', 'General Accountant - View All Reports'),
+        ('approve_report', 'General Accountant - Approve Report'),
+        ('super_admin_reports', 'Super Admin - Oversight')
+    ]
+    
+    for key, description in reports_keys:
+        if key in reports_results:
+            status = "✅" if reports_results[key] else "❌"
+            print(f"   {status} {description}")
+    
+    # User Management Results
+    print(f"\n👥 نتائج إدارة المستخدمين - User Management:")
+    user_mgmt_keys = [
+        ('super_admin_create_user', 'Super Admin - Can Create Users'),
+        ('accountant_cannot_create_user', 'General Accountant - Cannot Create Users'),
+        ('staff_cannot_create_user', 'Agency Staff - Cannot Create Users')
+    ]
+    
+    for key, description in user_mgmt_keys:
+        if key in user_mgmt_results:
+            status = "✅" if user_mgmt_results[key] else "❌"
+            print(f"   {status} {description}")
+    
+    # CRUD Results
+    print(f"\n📋 نتائج العمليات الأساسية - CRUD Operations:")
     for endpoint, success in crud_results.items():
         status = "✅" if success else "❌"
         print(f"   {status} {endpoint}")
     
-    print(f"\n🏢 Agency Isolation: {'✅' if isolation_success else '❌'}")
-    print(f"🚫 Error Handling: {'✅' if error_handling_success else '❌'}")
+    # Error Handling
+    print(f"\n🚫 معالجة الأخطاء - Error Handling: {'✅' if error_handling_results else '❌'}")
     
-    # Test different user roles
-    print(f"\n👥 Testing Different User Roles:")
-    role_tests = [
-        ("admin@rabat.sanhaja.com", "admin123", "Admin"),
-        ("accountant@rabat.sanhaja.com", "acc123", "Accountant"),
-        ("agent@rabat.sanhaja.com", "agent123", "Agent")
-    ]
+    # Summary of Critical Issues
+    print(f"\n⚠️  القضايا الحرجة - Critical Issues:")
+    critical_issues = []
     
-    for email, password, role in role_tests:
-        if tester.test_login(email, password):
-            print(f"   ✅ {role} login successful")
-        else:
-            print(f"   ❌ {role} login failed")
+    if not auth_results.get('super_admin'):
+        critical_issues.append("❌ Super Admin login failed")
+    if not auth_results.get('general_accountant'):
+        critical_issues.append("❌ General Accountant login failed")
+    if not permission_results.get('agency_isolation', True):
+        critical_issues.append("❌ Agency data isolation not working")
+    if not user_mgmt_results.get('super_admin_create_user'):
+        critical_issues.append("❌ Super Admin cannot create users")
+    
+    if critical_issues:
+        for issue in critical_issues:
+            print(f"   {issue}")
+    else:
+        print("   ✅ No critical issues found!")
+    
+    # Recommendations
+    print(f"\n💡 التوصيات - Recommendations:")
+    if tester.tests_passed < tester.tests_run:
+        print("   🔧 Some tests failed - check backend logs and user setup")
+        print("   🔧 Verify all test users exist in database with correct roles")
+        print("   🔧 Check agency assignments for staff users")
+    else:
+        print("   🎉 All tests passed! System is working correctly.")
     
     return 0 if tester.tests_passed == tester.tests_run else 1
 
