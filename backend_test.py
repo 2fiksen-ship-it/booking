@@ -185,49 +185,247 @@ class SanhajaAPITester:
         
         return results
 
-    def test_agency_isolation(self):
-        """Test that users only see their agency's data"""
-        print(f"\n🏢 Testing Agency Isolation...")
+    def test_hierarchical_permissions(self):
+        """Test hierarchical permission system"""
+        print(f"\n👑 Testing Hierarchical Permissions...")
         
-        # Test with different Algerian agency users
-        test_users = [
-            ("admin@tlemcen.sanhaja.com", "admin123", "تلمسان"),
-            ("admin@oran.sanhaja.com", "admin123", "وهران"),
-        ]
+        results = {}
         
-        agency_data = {}
-        
-        for email, password, city in test_users:
-            print(f"\n   Testing isolation for {city}...")
-            if self.test_login(email, password):
-                # Get clients for this agency
-                success, clients = self.run_test(
-                    f"Get Clients for {city}",
-                    "GET",
-                    "clients",
-                    200
-                )
-                if success:
-                    agency_data[city] = {
-                        'agency_id': self.current_user.get('agency_id'),
-                        'clients_count': len(clients) if isinstance(clients, list) else 0
-                    }
-                    print(f"   {city} Agency ID: {agency_data[city]['agency_id']}")
-                    print(f"   {city} Clients: {agency_data[city]['clients_count']}")
-        
-        # Verify different agencies have different data
-        if len(agency_data) >= 2:
-            agencies = list(agency_data.keys())
-            agency1, agency2 = agencies[0], agencies[1]
+        # Test Super Admin permissions
+        print(f"\n   Testing Super Admin permissions...")
+        if self.test_login(self.test_users['super_admin']['email'], 
+                          self.test_users['super_admin']['password']):
             
-            if agency_data[agency1]['agency_id'] != agency_data[agency2]['agency_id']:
-                print(f"✅ Agency isolation working - different agency IDs")
-                return True
-            else:
-                print(f"❌ Agency isolation failed - same agency IDs")
-                return False
+            # Super Admin should see all agencies
+            success, agencies = self.run_test("Super Admin - Get All Agencies", "GET", "agencies", 200)
+            results['super_admin_agencies'] = success
+            if success:
+                print(f"   Super Admin sees {len(agencies)} agencies")
+            
+            # Super Admin should see all users
+            success, users = self.run_test("Super Admin - Get All Users", "GET", "users", 200)
+            results['super_admin_users'] = success
+            if success:
+                print(f"   Super Admin sees {len(users)} users")
+            
+            # Super Admin should see all clients
+            success, clients = self.run_test("Super Admin - Get All Clients", "GET", "clients", 200)
+            results['super_admin_clients'] = success
+            if success:
+                print(f"   Super Admin sees {len(clients)} clients")
         
-        return False
+        # Test General Accountant permissions
+        print(f"\n   Testing General Accountant permissions...")
+        if self.test_login(self.test_users['general_accountant']['email'], 
+                          self.test_users['general_accountant']['password']):
+            
+            # General Accountant should see all agencies
+            success, agencies = self.run_test("General Accountant - Get All Agencies", "GET", "agencies", 200)
+            results['accountant_agencies'] = success
+            if success:
+                print(f"   General Accountant sees {len(agencies)} agencies")
+            
+            # General Accountant should see all clients for review
+            success, clients = self.run_test("General Accountant - Get All Clients", "GET", "clients", 200)
+            results['accountant_clients'] = success
+            if success:
+                print(f"   General Accountant sees {len(clients)} clients")
+            
+            # General Accountant should NOT be able to create users
+            success, response = self.run_test("General Accountant - Create User (Should Fail)", 
+                                            "POST", "users", 403,
+                                            data={
+                                                "name": "Test User",
+                                                "email": "test@test.com", 
+                                                "password": "test123",
+                                                "role": "agency_staff",
+                                                "agency_id": "test-agency"
+                                            })
+            results['accountant_no_user_creation'] = success
+        
+        # Test Agency Staff permissions and isolation
+        print(f"\n   Testing Agency Staff permissions and isolation...")
+        
+        # Test Tlemcen staff
+        if self.test_login(self.test_users['tlemcen_staff1']['email'], 
+                          self.test_users['tlemcen_staff1']['password']):
+            
+            tlemcen_agency_id = self.current_user.get('agency_id')
+            print(f"   Tlemcen Staff Agency ID: {tlemcen_agency_id}")
+            
+            # Should only see their agency
+            success, agencies = self.run_test("Tlemcen Staff - Get Agencies", "GET", "agencies", 200)
+            results['tlemcen_agencies'] = success
+            if success and len(agencies) == 1:
+                print(f"   ✅ Tlemcen staff sees only 1 agency (their own)")
+                results['tlemcen_isolation'] = True
+            else:
+                print(f"   ❌ Tlemcen staff sees {len(agencies)} agencies (should be 1)")
+                results['tlemcen_isolation'] = False
+            
+            # Get clients for Tlemcen
+            success, tlemcen_clients = self.run_test("Tlemcen Staff - Get Clients", "GET", "clients", 200)
+            results['tlemcen_clients'] = success
+            if success:
+                print(f"   Tlemcen staff sees {len(tlemcen_clients)} clients")
+        
+        # Test Oran staff for isolation
+        if self.test_login(self.test_users['oran_staff1']['email'], 
+                          self.test_users['oran_staff1']['password']):
+            
+            oran_agency_id = self.current_user.get('agency_id')
+            print(f"   Oran Staff Agency ID: {oran_agency_id}")
+            
+            # Get clients for Oran
+            success, oran_clients = self.run_test("Oran Staff - Get Clients", "GET", "clients", 200)
+            results['oran_clients'] = success
+            if success:
+                print(f"   Oran staff sees {len(oran_clients)} clients")
+            
+            # Verify different agency IDs
+            if tlemcen_agency_id and oran_agency_id and tlemcen_agency_id != oran_agency_id:
+                print(f"   ✅ Agency isolation confirmed - different agency IDs")
+                results['agency_isolation'] = True
+            else:
+                print(f"   ❌ Agency isolation failed - same or missing agency IDs")
+                results['agency_isolation'] = False
+        
+        return results
+
+    def test_daily_reports_workflow(self):
+        """Test daily reports creation and approval workflow"""
+        print(f"\n📊 Testing Daily Reports Workflow...")
+        
+        results = {}
+        
+        # Step 1: Agency staff creates daily report
+        print(f"\n   Step 1: Agency staff creates daily report...")
+        if self.test_login(self.test_users['tlemcen_staff1']['email'], 
+                          self.test_users['tlemcen_staff1']['password']):
+            
+            agency_id = self.current_user.get('agency_id')
+            report_date = datetime.now().strftime('%Y-%m-%d')
+            
+            # Create daily report
+            success, response = self.run_test("Create Daily Report", 
+                                            "POST", "daily-reports", 200,
+                                            data={
+                                                "agency_id": agency_id,
+                                                "report_date": f"{report_date}T00:00:00Z",
+                                                "total_income": 15000.0,
+                                                "total_expenses": 8000.0,
+                                                "transactions_count": 25,
+                                                "notes": "تقرير يومي تجريبي"
+                                            })
+            results['create_report'] = success
+            
+            # Get daily reports (should see their own)
+            success, reports = self.run_test("Get Daily Reports (Staff)", "GET", "daily-reports", 200)
+            results['staff_get_reports'] = success
+            if success:
+                print(f"   Staff sees {len(reports)} reports")
+        
+        # Step 2: General Accountant approves report
+        print(f"\n   Step 2: General Accountant reviews and approves...")
+        if self.test_login(self.test_users['general_accountant']['email'], 
+                          self.test_users['general_accountant']['password']):
+            
+            # Get all daily reports (should see all agencies)
+            success, reports = self.run_test("Get All Daily Reports (Accountant)", "GET", "daily-reports", 200)
+            results['accountant_get_reports'] = success
+            if success:
+                print(f"   General Accountant sees {len(reports)} reports from all agencies")
+                
+                # Find a pending report to approve
+                pending_reports = [r for r in reports if r.get('status') == 'pending']
+                if pending_reports:
+                    report_id = pending_reports[0]['id']
+                    
+                    # Approve the report
+                    success, response = self.run_test(f"Approve Daily Report {report_id}", 
+                                                    "PUT", f"daily-reports/{report_id}/approve", 200,
+                                                    data={
+                                                        "action": "approve",
+                                                        "notes": "تمت الموافقة من المحاسب العام"
+                                                    })
+                    results['approve_report'] = success
+        
+        # Step 3: Verify Super Admin can see everything
+        print(f"\n   Step 3: Super Admin oversight...")
+        if self.test_login(self.test_users['super_admin']['email'], 
+                          self.test_users['super_admin']['password']):
+            
+            success, reports = self.run_test("Get All Daily Reports (Super Admin)", "GET", "daily-reports", 200)
+            results['super_admin_reports'] = success
+            if success:
+                print(f"   Super Admin sees {len(reports)} reports")
+                approved_reports = [r for r in reports if r.get('status') == 'approved']
+                print(f"   Approved reports: {len(approved_reports)}")
+        
+        return results
+
+    def test_user_management(self):
+        """Test user management (Super Admin only)"""
+        print(f"\n👥 Testing User Management...")
+        
+        results = {}
+        
+        # Test Super Admin can create users
+        print(f"\n   Testing Super Admin user creation...")
+        if self.test_login(self.test_users['super_admin']['email'], 
+                          self.test_users['super_admin']['password']):
+            
+            # Get agencies first to use valid agency_id
+            success, agencies = self.run_test("Get Agencies for User Creation", "GET", "agencies", 200)
+            if success and agencies:
+                agency_id = agencies[0]['id']
+                
+                # Create new user
+                test_email = f"testuser_{datetime.now().strftime('%H%M%S')}@test.com"
+                success, response = self.run_test("Super Admin - Create User", 
+                                                "POST", "users", 200,
+                                                data={
+                                                    "name": "Test User",
+                                                    "email": test_email,
+                                                    "password": "test123",
+                                                    "role": "agency_staff",
+                                                    "agency_id": agency_id
+                                                })
+                results['super_admin_create_user'] = success
+        
+        # Test that General Accountant cannot create users
+        print(f"\n   Testing General Accountant cannot create users...")
+        if self.test_login(self.test_users['general_accountant']['email'], 
+                          self.test_users['general_accountant']['password']):
+            
+            success, response = self.run_test("General Accountant - Create User (Should Fail)", 
+                                            "POST", "users", 403,
+                                            data={
+                                                "name": "Test User",
+                                                "email": "shouldfail@test.com",
+                                                "password": "test123", 
+                                                "role": "agency_staff",
+                                                "agency_id": "any-id"
+                                            })
+            results['accountant_cannot_create_user'] = success
+        
+        # Test that Agency Staff cannot create users
+        print(f"\n   Testing Agency Staff cannot create users...")
+        if self.test_login(self.test_users['tlemcen_staff1']['email'], 
+                          self.test_users['tlemcen_staff1']['password']):
+            
+            success, response = self.run_test("Agency Staff - Create User (Should Fail)", 
+                                            "POST", "users", 403,
+                                            data={
+                                                "name": "Test User",
+                                                "email": "shouldfail2@test.com",
+                                                "password": "test123",
+                                                "role": "agency_staff", 
+                                                "agency_id": "any-id"
+                                            })
+            results['staff_cannot_create_user'] = success
+        
+        return results
 
     def test_error_handling(self):
         """Test error handling"""
