@@ -1042,6 +1042,29 @@ def main():
         print(f"\n⚠️  القضايا الحرجة - Critical Issues:")
         critical_issues = []
         
+        # Super Admin Critical Issues (PRIMARY FOCUS)
+        if not super_admin_results.get('super_admin_login'):
+            critical_issues.append("❌ Super Admin login failed (superadmin@sanhaja.com)")
+        if not super_admin_results.get('super_admin_dashboard'):
+            critical_issues.append("❌ Super Admin dashboard not accessible")
+        if not super_admin_results.get('super_admin_invoices'):
+            critical_issues.append("❌ Super Admin cannot access invoices")
+        if not super_admin_results.get('super_admin_payments'):
+            critical_issues.append("❌ Super Admin cannot access payments")
+        if not super_admin_results.get('super_admin_users'):
+            critical_issues.append("❌ Super Admin user management not working")
+        if not super_admin_results.get('super_admin_agencies'):
+            critical_issues.append("❌ Super Admin agencies access not working")
+        if not super_admin_results.get('super_admin_daily_reports'):
+            critical_issues.append("❌ Super Admin daily reports management not working")
+        if not super_admin_results.get('super_admin_cross_agency_invoices'):
+            critical_issues.append("❌ Super Admin not seeing cross-agency invoices")
+        if not super_admin_results.get('super_admin_cross_agency_payments'):
+            critical_issues.append("❌ Super Admin not seeing cross-agency payments")
+        if not super_admin_results.get('super_admin_all_agencies'):
+            critical_issues.append("❌ Super Admin not seeing all 6 agencies")
+        
+        # Basic Requirements Critical Issues
         if not basic_results.get('admin_login'):
             critical_issues.append("❌ Admin login failed (admin@sanhaja-oran.dz)")
         if not basic_results.get('database_connectivity'):
