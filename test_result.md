@@ -368,10 +368,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Super Admin Dashboard Cross-Agency Access"
-    - "Super Admin User Management" 
-    - "Super Admin Agencies Management"
-    - "Super Admin Daily Reports Management"
+    - "Super Admin Operations Management Cross-Agency Access Bug Investigation"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
