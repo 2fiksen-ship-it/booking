@@ -276,17 +276,22 @@ async def create_seed_data():
     print(f"  - {len(chart_accounts)} chart of accounts")
     
     print("\n🔑 Login credentials:")
+    city_code = {'الرباط': 'rabat', 'الدار البيضاء': 'casa', 'فاس': 'fes', 'مراكش': 'marrakech', 'طنجة': 'tangier', 'أكادير': 'agadir'}
+    
     print("Admin users:")
     for agency in agencies:
-        print(f"  {agency['city']}: admin@{agency['city'].lower()}.sanhaja.com / admin123")
+        email_city = city_code.get(agency['city'], agency['city'].lower())
+        print(f"  {agency['city']}: admin@{email_city}.sanhaja.com / admin123")
     
     print("\nAccountant users:")
     for agency in agencies:
-        print(f"  {agency['city']}: accountant@{agency['city'].lower()}.sanhaja.com / acc123")
+        email_city = city_code.get(agency['city'], agency['city'].lower())
+        print(f"  {agency['city']}: accountant@{email_city}.sanhaja.com / acc123")
     
     print("\nAgent users:")
     for agency in agencies:
-        print(f"  {agency['city']}: agent@{agency['city'].lower()}.sanhaja.com / agent123")
+        email_city = city_code.get(agency['city'], agency['city'].lower())
+        print(f"  {agency['city']}: agent@{email_city}.sanhaja.com / agent123")
 
 if __name__ == "__main__":
     asyncio.run(create_seed_data())
