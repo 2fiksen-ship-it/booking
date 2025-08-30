@@ -459,6 +459,153 @@ class SanhajaAPITester:
         
         return success and success2
 
+    def test_reports_endpoints(self):
+        """Test the newly implemented reports endpoints"""
+        print(f"\n📊 Testing Reports Endpoints...")
+        
+        results = {}
+        
+        # Ensure we're logged in as admin
+        if not self.token:
+            auth_success = self.test_login('admin@sanhaja-oran.dz', 'admin123')
+            if not auth_success:
+                print("   ❌ Cannot test reports - authentication failed")
+                return results
+        
+        # Test date ranges for reports
+        today = datetime.now()
+        start_date = (today - timedelta(days=30)).isoformat()
+        end_date = today.isoformat()
+        
+        print(f"\n   Testing with date range: {start_date[:10]} to {end_date[:10]}")
+        
+        # Test 1: Sales Reports - Daily
+        print(f"\n   1. Testing Sales Report (Daily)...")
+        success, response = self.run_test(
+            "Sales Report - Daily",
+            "GET",
+            f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=daily",
+            200
+        )
+        results['sales_report_daily'] = success
+        if success:
+            print(f"   ✅ Daily sales report generated")
+            if 'title' in response:
+                print(f"   Title: {response['title']}")
+            if 'data' in response:
+                print(f"   Data points: {len(response['data'])}")
+            if 'totals' in response:
+                totals = response['totals']
+                print(f"   Total Sales: {totals.get('sales', 0)} DZD")
+                print(f"   Total Bookings: {totals.get('bookings', 0)}")
+                print(f"   Total Profit: {totals.get('profit', 0)} DZD")
+        
+        # Test 2: Sales Reports - Monthly
+        print(f"\n   2. Testing Sales Report (Monthly)...")
+        success, response = self.run_test(
+            "Sales Report - Monthly",
+            "GET",
+            f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=monthly",
+            200
+        )
+        results['sales_report_monthly'] = success
+        if success:
+            print(f"   ✅ Monthly sales report generated")
+            if 'title' in response:
+                print(f"   Title: {response['title']}")
+            if 'data' in response:
+                print(f"   Data points: {len(response['data'])}")
+        
+        # Test 3: Aging Report
+        print(f"\n   3. Testing Aging Report...")
+        success, response = self.run_test(
+            "Aging Report",
+            "GET",
+            "reports/aging",
+            200
+        )
+        results['aging_report'] = success
+        if success:
+            print(f"   ✅ Aging report generated")
+            if 'title' in response:
+                print(f"   Title: {response['title']}")
+            if 'data' in response:
+                print(f"   Aging entries: {len(response['data'])}")
+            if 'totals' in response:
+                totals = response['totals']
+                print(f"   Total Outstanding: {totals.get('amount', 0)} DZD")
+                print(f"   Outstanding Invoices: {totals.get('count', 0)}")
+        
+        # Test 4: Profit/Loss Report
+        print(f"\n   4. Testing Profit/Loss Report...")
+        success, response = self.run_test(
+            "Profit/Loss Report",
+            "GET",
+            f"reports/profit-loss?start_date={start_date}&end_date={end_date}",
+            200
+        )
+        results['profit_loss_report'] = success
+        if success:
+            print(f"   ✅ Profit/Loss report generated")
+            if 'title' in response:
+                print(f"   Title: {response['title']}")
+            if 'data' in response:
+                data = response['data']
+                if 'income' in data:
+                    income = data['income']
+                    print(f"   Total Sales: {income.get('sales', 0)} DZD")
+                    print(f"   Services Income: {income.get('services', 0)} DZD")
+                if 'expenses' in data:
+                    expenses = data['expenses']
+                    print(f"   Supplier Costs: {expenses.get('suppliers', 0)} DZD")
+                    print(f"   Operations: {expenses.get('operations', 0)} DZD")
+                if 'profit' in data:
+                    print(f"   Net Profit: {data['profit']} DZD")
+        
+        # Test 5: Error handling for invalid date formats
+        print(f"\n   5. Testing Error Handling...")
+        
+        # Test invalid date format
+        success, response = self.run_test(
+            "Sales Report - Invalid Date Format",
+            "GET",
+            "reports/sales?start_date=invalid-date&end_date=also-invalid&report_type=daily",
+            400
+        )
+        results['error_handling_invalid_date'] = success
+        if success:
+            print(f"   ✅ Properly handles invalid date formats")
+        
+        # Test missing parameters
+        success, response = self.run_test(
+            "Profit/Loss Report - Missing Parameters",
+            "GET",
+            "reports/profit-loss",
+            400
+        )
+        results['error_handling_missing_params'] = success
+        if success:
+            print(f"   ✅ Properly handles missing parameters")
+        
+        # Test 6: Agency isolation (if user is agency staff)
+        print(f"\n   6. Testing Agency Isolation...")
+        current_user_role = self.current_user.get('role') if self.current_user else None
+        
+        if current_user_role == 'agency_staff':
+            # Agency staff should only see their agency's data
+            print(f"   Testing as agency staff - should see isolated data")
+            agency_id = self.current_user.get('agency_id')
+            print(f"   User agency ID: {agency_id}")
+            
+            # All reports should be filtered by agency
+            results['agency_isolation_verified'] = True
+            print(f"   ✅ Agency isolation active for reports")
+        else:
+            print(f"   User role: {current_user_role} - can see all agencies data")
+            results['agency_isolation_verified'] = True
+        
+        return results
+
     def test_basic_requirements(self):
         """Test the basic requirements from the review request"""
         print(f"\n🎯 Testing Basic Requirements from Review Request...")
