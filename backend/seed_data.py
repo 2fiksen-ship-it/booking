@@ -74,14 +74,14 @@ async def create_seed_data():
     print("👥 Creating users...")
     users = []
     for agency in agencies:
-        # Create email-friendly city name for Algeria
+        # Create email-friendly city name for Western Algeria
         city_code = {
-            'الجزائر العاصمة': 'algiers', 
+            'تلمسان': 'tlemcen', 
+            'مغنية': 'maghnia', 
+            'ندرومة': 'nedroma', 
             'وهران': 'oran', 
-            'قسنطينة': 'constantine', 
-            'عنابة': 'annaba', 
-            'سطيف': 'setif', 
-            'باتنة': 'batna'
+            'الرمشي': 'remchi', 
+            'سيدي بلعباس': 'sidibel'
         }
         email_city = city_code.get(agency["city"], agency["city"].lower())
         
