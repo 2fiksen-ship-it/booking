@@ -82,16 +82,17 @@ class ReportStatus(str, Enum):
 class DailyReport(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     agency_id: str
-    report_date: datetime
-    total_income: float
-    total_expenses: float
-    transactions_count: int
+    date: datetime  # Changed from report_date to date
+    income: float   # Changed from total_income to income
+    expenses: float # Changed from total_expenses to expenses
+    cashbox_balance: float  # Added cashbox_balance field
     status: ReportStatus = ReportStatus.PENDING
     approved_by: Optional[str] = None  # user_id of general accountant
     created_by: str  # user_id who created the report
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     approved_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None  # Added rejection_reason field
 
 # Notification System Models
 class NotificationType(str, Enum):
