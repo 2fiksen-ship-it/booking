@@ -1442,6 +1442,39 @@ def main():
         print(f"🎯 معدل النجاح: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         print(f"🎯 Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         
+        # Google Authentication Results (PRIMARY FOCUS)
+        print(f"\n🔐 نتائج نظام المصادقة عبر جوجل - GOOGLE AUTHENTICATION RESULTS (PRIMARY FOCUS):")
+        google_auth_keys = [
+            ('google_auth_endpoint_accessible', 'POST /api/auth/google endpoint structure'),
+            ('google_auth_no_session', 'Rejects requests without session ID'),
+            ('google_auth_invalid_session', 'Rejects invalid session IDs'),
+            ('logout_endpoint', 'POST /api/auth/logout endpoint'),
+            ('profile_endpoint_authenticated', 'GET /api/auth/profile endpoint (authenticated)'),
+            ('profile_endpoint_unauthenticated', 'Rejects unauthenticated profile requests'),
+            ('jwt_auth_compatibility', 'JWT authentication backward compatibility'),
+            ('jwt_dashboard_access', 'JWT tokens work for protected endpoints'),
+            ('session_token_handling', 'Session token handling infrastructure'),
+            ('cors_configured', 'CORS configuration for withCredentials'),
+            ('cookie_security', 'Cookie security settings'),
+            ('auth_dependency_working', 'Dual authentication support (JWT + Session)')
+        ]
+        
+        for key, description in google_auth_keys:
+            if key in google_auth_results:
+                status = "✅" if google_auth_results[key] else "❌"
+                print(f"   {status} {description}")
+        
+        # Google Auth Infrastructure Score
+        infrastructure_score = google_auth_results.get('infrastructure_score', 0)
+        print(f"\n   📊 Google Auth Infrastructure Score: {infrastructure_score*100:.1f}%")
+        
+        if infrastructure_score >= 0.75:
+            print(f"   ✅ Google Authentication infrastructure is ready for OAuth integration")
+        elif infrastructure_score >= 0.5:
+            print(f"   ⚠️  Google Authentication infrastructure partially ready")
+        else:
+            print(f"   ❌ Google Authentication infrastructure needs significant work")
+        
         # Bug Investigation Results (PRIMARY FOCUS)
         print(f"\n🔍 نتائج تحقيق الأخطاء - BUG INVESTIGATION RESULTS (PRIMARY FOCUS):")
         bug_keys = [
