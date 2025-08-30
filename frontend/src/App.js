@@ -418,6 +418,7 @@ const Login = () => {
             )}
             <Button
               type="submit"
+              onClick={handleSubmit}
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               disabled={loading}
             >
