@@ -769,6 +769,23 @@ def main():
         print(f"🎯 معدل النجاح: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         print(f"🎯 Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         
+        # Reports Results (PRIMARY FOCUS)
+        print(f"\n📊 نتائج تقارير النظام الجديدة - NEW REPORTS ENDPOINTS RESULTS:")
+        reports_keys = [
+            ('sales_report_daily', 'Sales Report - Daily'),
+            ('sales_report_monthly', 'Sales Report - Monthly'),
+            ('aging_report', 'Aging Report'),
+            ('profit_loss_report', 'Profit/Loss Report'),
+            ('error_handling_invalid_date', 'Error Handling - Invalid Date'),
+            ('error_handling_missing_params', 'Error Handling - Missing Parameters'),
+            ('agency_isolation_verified', 'Agency Isolation')
+        ]
+        
+        for key, description in reports_keys:
+            if key in reports_results:
+                status = "✅" if reports_results[key] else "❌"
+                print(f"   {status} {description}")
+        
         # Basic Requirements Results
         print(f"\n🎯 نتائج المتطلبات الأساسية - Basic Requirements Results:")
         basic_keys = [
@@ -814,6 +831,14 @@ def main():
             critical_issues.append("❌ Clients endpoint not working")
         if not basic_results.get('suppliers_endpoint'):
             critical_issues.append("❌ Suppliers endpoint not working")
+        
+        # Check reports critical issues
+        if not reports_results.get('sales_report_daily'):
+            critical_issues.append("❌ Sales Report (Daily) not working")
+        if not reports_results.get('aging_report'):
+            critical_issues.append("❌ Aging Report not working")
+        if not reports_results.get('profit_loss_report'):
+            critical_issues.append("❌ Profit/Loss Report not working")
         
         if critical_issues:
             for issue in critical_issues:
