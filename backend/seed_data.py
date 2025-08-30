@@ -74,11 +74,15 @@ async def create_seed_data():
     print("👥 Creating users...")
     users = []
     for agency in agencies:
+        # Create email-friendly city name
+        city_code = {'الرباط': 'rabat', 'الدار البيضاء': 'casa', 'فاس': 'fes', 'مراكش': 'marrakech', 'طنجة': 'tangier', 'أكادير': 'agadir'}
+        email_city = city_code.get(agency["city"], agency["city"].lower())
+        
         # Admin user
         users.append({
             'id': str(uuid.uuid4()),
             'name': f'مدير {agency["name"]}',
-            'email': f'admin@{agency["city"].lower()}.sanhaja.com',
+            'email': f'admin@{email_city}.sanhaja.com',
             'password_hash': hash_password('admin123'),
             'role': 'admin',
             'agency_id': agency['id'],
@@ -89,7 +93,7 @@ async def create_seed_data():
         users.append({
             'id': str(uuid.uuid4()),
             'name': f'محاسب {agency["name"]}',
-            'email': f'accountant@{agency["city"].lower()}.sanhaja.com',
+            'email': f'accountant@{email_city}.sanhaja.com',
             'password_hash': hash_password('acc123'),
             'role': 'accountant',
             'agency_id': agency['id'],
@@ -100,7 +104,7 @@ async def create_seed_data():
         users.append({
             'id': str(uuid.uuid4()),
             'name': f'وكيل {agency["name"]}',
-            'email': f'agent@{agency["city"].lower()}.sanhaja.com',
+            'email': f'agent@{email_city}.sanhaja.com',
             'password_hash': hash_password('agent123'),
             'role': 'agent',
             'agency_id': agency['id'],
