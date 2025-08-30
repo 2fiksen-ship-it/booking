@@ -296,11 +296,17 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    
+    console.log('Form submitted with:', email, password);
 
     const result = await login(email, password);
+    console.log('Login result:', result);
+    
     if (result.success) {
+      console.log('Navigating to dashboard...');
       navigate('/'); // Redirect to dashboard after successful login
     } else {
+      console.error('Login failed:', result.error);
       setError(result.error);
     }
     setLoading(false);
