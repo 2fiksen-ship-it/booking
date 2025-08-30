@@ -1333,7 +1333,23 @@ def main():
     
     tester = SanhajaAPITester()
     
-    # BUG INVESTIGATION (Primary Focus from Review Request)
+    # GOOGLE AUTHENTICATION TESTING (Primary Focus from Review Request)
+    print("\n" + "="*80)
+    print("🔐 GOOGLE AUTHENTICATION SYSTEM TESTING - PRIMARY FOCUS")
+    print("اختبار نظام المصادقة عبر جوجل - المحور الأساسي")
+    print("="*80)
+    
+    google_auth_results = tester.test_google_authentication_system()
+    
+    # Test Basic Requirements First
+    print("\n" + "="*80)
+    print("اختبار المتطلبات الأساسية من طلب المراجعة")
+    print("TESTING BASIC REQUIREMENTS FROM REVIEW REQUEST")
+    print("="*80)
+    
+    basic_results = tester.test_basic_requirements()
+    
+    # BUG INVESTIGATION (Secondary Focus from Review Request)
     print("\n" + "="*80)
     print("🔍 BUG INVESTIGATION - OPERATIONS MANAGEMENT CROSS-AGENCY ACCESS")
     print("تحقيق الأخطاء - الوصول عبر الوكالات لإدارة العمليات")
@@ -1348,14 +1364,6 @@ def main():
     print("="*80)
     
     super_admin_results = tester.test_super_admin_functionality()
-    
-    # Test Basic Requirements First
-    print("\n" + "="*80)
-    print("اختبار المتطلبات الأساسية من طلب المراجعة")
-    print("TESTING BASIC REQUIREMENTS FROM REVIEW REQUEST")
-    print("="*80)
-    
-    basic_results = tester.test_basic_requirements()
     
     # Only run full tests if basic authentication works
     if basic_results.get('admin_login'):
