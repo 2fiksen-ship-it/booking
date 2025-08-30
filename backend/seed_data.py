@@ -285,6 +285,13 @@ async def create_seed_data():
     print(f"  - {len(chart_accounts)} chart of accounts")
     
     print("\n🔑 Login credentials:")
+    
+    print("Super Admin:")
+    print("  superadmin@sanhaja.com / super123")
+    
+    print("\nGeneral Accountant:")
+    print("  generalaccountant@sanhaja.com / acc123")
+    
     city_code = {
         'تلمسان': 'tlemcen', 
         'مغنية': 'maghnia', 
@@ -294,20 +301,11 @@ async def create_seed_data():
         'سيدي بلعباس': 'sidibel'
     }
     
-    print("Admin users:")
+    print("\nAgency Staff:")
     for agency in agencies:
         email_city = city_code.get(agency['city'], agency['city'].lower())
-        print(f"  {agency['city']}: admin@{email_city}.sanhaja.com / admin123")
-    
-    print("\nAccountant users:")
-    for agency in agencies:
-        email_city = city_code.get(agency['city'], agency['city'].lower())
-        print(f"  {agency['city']}: accountant@{email_city}.sanhaja.com / acc123")
-    
-    print("\nAgent users:")
-    for agency in agencies:
-        email_city = city_code.get(agency['city'], agency['city'].lower())
-        print(f"  {agency['city']}: agent@{email_city}.sanhaja.com / agent123")
+        print(f"  {agency['city']} Staff 1: staff1@{email_city}.sanhaja.com / staff123")
+        print(f"  {agency['city']} Staff 2: staff2@{email_city}.sanhaja.com / staff123")
 
 if __name__ == "__main__":
     asyncio.run(create_seed_data())
