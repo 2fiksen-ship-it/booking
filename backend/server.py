@@ -327,6 +327,27 @@ async def get_clients(current_user: User = Depends(get_current_user)):
     clients = await db.clients.find({"agency_id": current_user.agency_id}).to_list(1000)
     return [Client(**client) for client in clients]
 
+@api_router.put("/clients/{client_id}", response_model=Client)
+async def update_client(client_id: str, client_data: ClientCreate, current_user: User = Depends(get_current_user)):
+    existing_client = await db.clients.find_one({"id": client_id, "agency_id": current_user.agency_id})
+    if not existing_client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    update_data = client_data.dict()
+    update_data["agency_id"] = current_user.agency_id
+    
+    await db.clients.update_one({"id": client_id}, {"$set": update_data})
+    
+    updated_client = await db.clients.find_one({"id": client_id})
+    return Client(**updated_client)
+
+@api_router.delete("/clients/{client_id}")
+async def delete_client(client_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.clients.delete_one({"id": client_id, "agency_id": current_user.agency_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return {"message": "Client deleted successfully"}
+
 # Supplier Routes
 @api_router.post("/suppliers", response_model=Supplier)
 async def create_supplier(supplier_data: SupplierCreate, current_user: User = Depends(get_current_user)):
@@ -340,6 +361,27 @@ async def create_supplier(supplier_data: SupplierCreate, current_user: User = De
 async def get_suppliers(current_user: User = Depends(get_current_user)):
     suppliers = await db.suppliers.find({"agency_id": current_user.agency_id}).to_list(1000)
     return [Supplier(**supplier) for supplier in suppliers]
+
+@api_router.put("/suppliers/{supplier_id}", response_model=Supplier)
+async def update_supplier(supplier_id: str, supplier_data: SupplierCreate, current_user: User = Depends(get_current_user)):
+    existing_supplier = await db.suppliers.find_one({"id": supplier_id, "agency_id": current_user.agency_id})
+    if not existing_supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    update_data = supplier_data.dict()
+    update_data["agency_id"] = current_user.agency_id
+    
+    await db.suppliers.update_one({"id": supplier_id}, {"$set": update_data})
+    
+    updated_supplier = await db.suppliers.find_one({"id": supplier_id})
+    return Supplier(**updated_supplier)
+
+@api_router.delete("/suppliers/{supplier_id}")
+async def delete_supplier(supplier_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.suppliers.delete_one({"id": supplier_id, "agency_id": current_user.agency_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    return {"message": "Supplier deleted successfully"}
 
 # Booking Routes
 @api_router.post("/bookings", response_model=Booking)
