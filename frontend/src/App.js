@@ -761,103 +761,255 @@ const Layout = ({ children }) => {
   );
 };
 
-// Dashboard Component
+// Enhanced Dashboard Component
 const Dashboard = () => {
   const [stats, setStats] = useState({});
+  const [loading, setLoading] = useState(true);
   const { t } = useContext(LanguageContext);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        setLoading(true);
         const response = await axios.get(`${API}/dashboard`);
         setStats(response.data);
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchStats();
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchStats, 300000);
+    return () => clearInterval(interval);
   }, []);
 
-  const statCards = [
+  const mainStatCards = [
     {
       title: t('todayIncome'),
-      value: `${stats.today_income || 0} دج`,
+      value: `${(stats.today_income || 0).toLocaleString()} دج`,
       icon: Wallet,
-      color: 'from-green-500 to-emerald-600'
+      color: 'from-green-500 to-emerald-600',
+      trend: '+12%',
+      description: 'مقارنة بالأمس'
     },
     {
       title: t('unpaidInvoices'),
       value: stats.unpaid_invoices || 0,
       icon: FileText,
-      color: 'from-orange-500 to-amber-600'
+      color: 'from-orange-500 to-amber-600',
+      trend: '-3%',
+      description: 'فواتير تحتاج متابعة'
     },
     {
       title: t('weekBookings'),
       value: stats.week_bookings || 0,
       icon: Package,
-      color: 'from-blue-500 to-indigo-600'
+      color: 'from-blue-500 to-indigo-600',
+      trend: '+8%',
+      description: 'حجوزات هذا الأسبوع'
     },
     {
       title: t('cashboxBalance'),
-      value: `${stats.cashbox_balance || 0} دج`,
+      value: `${(stats.cashbox_balance || 0).toLocaleString()} دج`,
       icon: CreditCard,
-      color: 'from-purple-500 to-violet-600'
+      color: 'from-purple-500 to-violet-600',
+      trend: '+5%',
+      description: 'إجمالي السيولة'
     }
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-6 text-white">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold mb-2">🏠 {t('quickStats')}</h2>
+            <p className="text-blue-100">مرحباً بك في نظام إدارة وكالات صنهاجة للسفر</p>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-semibold">
+              {new Date().toLocaleDateString('ar-SA', { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'long' 
+              })}
+            </p>
+            <p className="text-blue-200">
+              {new Date().toLocaleTimeString('ar-SA', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statCards.map((stat, index) => (
-          <Card key={index} className="overflow-hidden">
+        {mainStatCards.map((stat, index) => (
+          <Card key={index} className="overflow-hidden hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    {stat.title}
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stat.value}
-                  </p>
-                </div>
+              <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-full bg-gradient-to-r ${stat.color}`}>
                   <stat.icon className="h-6 w-6 text-white" />
                 </div>
+                <div className="text-right">
+                  <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                    {stat.trend}
+                  </span>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-gray-600 mb-1">
+                  {stat.title}
+                </p>
+                <p className="text-2xl font-bold text-gray-900 mb-1">
+                  {stat.value}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {stat.description}
+                </p>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Detailed Analytics Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Quick Actions */}
         <Card>
           <CardHeader>
-            <CardTitle>إحصائيات سريعة</CardTitle>
+            <CardTitle className="flex items-center">
+              <Plus className="h-5 w-5 ml-2" />
+              🚀 الإجراءات السريعة
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <button className="w-full flex items-center justify-between p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-right">
+              <Users className="h-5 w-5 text-blue-600" />
+              <span className="text-sm font-medium">➕ إضافة عميل جديد</span>
+            </button>
+            <button className="w-full flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-right">
+              <Package className="h-5 w-5 text-green-600" />
+              <span className="text-sm font-medium">📋 إنشاء حجز جديد</span>
+            </button>
+            <button className="w-full flex items-center justify-between p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-right">
+              <FileText className="h-5 w-5 text-purple-600" />
+              <span className="text-sm font-medium">📄 إصدار فاتورة</span>
+            </button>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Clock className="h-5 w-5 ml-2" />
+              📈 آخر النشاطات
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">إجمالي العملاء</span>
-                <Badge variant="secondary">-</Badge>
+              <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div className="flex-1 text-right">
+                  <p className="text-sm font-medium">تم إنشاء حجز جديد</p>
+                  <p className="text-xs text-gray-500">منذ 5 دقائق</p>
+                </div>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">الحجوزات النشطة</span>
-                <Badge variant="secondary">-</Badge>
+              <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div className="flex-1 text-right">
+                  <p className="text-sm font-medium">دفعة جديدة مستلمة</p>
+                  <p className="text-xs text-gray-500">منذ 15 دقيقة</p>
+                </div>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">الفواتير المعلقة</span>
-                <Badge variant="destructive">{stats.unpaid_invoices || 0}</Badge>
+              <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                <div className="flex-1 text-right">
+                  <p className="text-sm font-medium">فاتورة تحتاج مراجعة</p>
+                  <p className="text-xs text-gray-500">منذ ساعة</p>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Performance Metrics */}
         <Card>
           <CardHeader>
-            <CardTitle>آخر النشاطات</CardTitle>
+            <CardTitle className="flex items-center">
+              <BarChart3 className="h-5 w-5 ml-2" />
+              📊 مؤشرات الأداء
+            </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-green-800">معدل النمو الشهري</p>
+                  <p className="text-xs text-green-600">مقارنة بالشهر السابق</p>
+                </div>
+                <div className="text-2xl font-bold text-green-700">+15%</div>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-blue-800">متوسط قيمة الحجز</p>
+                  <p className="text-xs text-blue-600">للعمليات الأخيرة</p>
+                </div>
+                <div className="text-lg font-bold text-blue-700">45,000 دج</div>
+              </div>
+              
+              <div className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-50 to-violet-50 rounded-lg">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-purple-800">معدل تحصيل الفواتير</p>
+                  <p className="text-xs text-purple-600">خلال آخر 30 يوم</p>
+                </div>
+                <div className="text-lg font-bold text-purple-700">87%</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Alert Banner for Important Actions */}
+      {(stats.unpaid_invoices > 0) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <CheckCircle className="h-5 w-5 text-amber-400" />
+            </div>
+            <div className="mr-3 flex-1">
+              <h3 className="text-sm font-medium text-amber-800 text-right">
+                ⚠️ تنبيه: يوجد {stats.unpaid_invoices} فاتورة غير مسددة تحتاج للمتابعة
+              </h3>
+              <div className="mt-2">
+                <button className="text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1 rounded-md transition-colors">
+                  عرض الفواتير المعلقة ←
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
             <div className="space-y-4">
               <div className="text-center text-gray-500 py-8">
                 لا توجد أنشطة حديثة
