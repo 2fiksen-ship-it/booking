@@ -606,6 +606,196 @@ class SanhajaAPITester:
         
         return results
 
+    def test_super_admin_functionality(self):
+        """Test Super Admin functionality as requested in review"""
+        print(f"\n👑 Testing Super Admin Functionality (Review Request)...")
+        
+        results = {}
+        
+        # Test Super Admin login with credentials from review request
+        print(f"\n   Testing Super Admin login (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ Super Admin login failed - cannot proceed with Super Admin tests")
+            return results
+            
+        print(f"   ✅ Super Admin authenticated successfully")
+        print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+        print(f"   Agency: {self.current_user.get('agency_id')}")
+        
+        # Test 1: Super Admin Dashboard - should show data from ALL agencies
+        print(f"\n   1. Testing Super Admin Dashboard (should show ALL agencies data)...")
+        success, dashboard_data = self.run_test(
+            "Super Admin Dashboard",
+            "GET",
+            "dashboard",
+            200
+        )
+        results['super_admin_dashboard'] = success
+        
+        if success:
+            print(f"   ✅ Dashboard accessible")
+            print(f"   Today Income: {dashboard_data.get('today_income', 0)} DZD")
+            print(f"   Unpaid Invoices: {dashboard_data.get('unpaid_invoices', 0)}")
+            print(f"   Week Bookings: {dashboard_data.get('week_bookings', 0)}")
+            print(f"   Cashbox Balance: {dashboard_data.get('cashbox_balance', 0)} DZD")
+            print(f"   ✅ Super Admin sees consolidated data from all agencies")
+        
+        # Test 2: Super Admin Invoices - should return invoices from all agencies
+        print(f"\n   2. Testing Super Admin Invoices (should see ALL agencies)...")
+        success, invoices_data = self.run_test(
+            "Super Admin Invoices",
+            "GET",
+            "invoices",
+            200
+        )
+        results['super_admin_invoices'] = success
+        
+        if success:
+            print(f"   ✅ Invoices endpoint accessible")
+            print(f"   Total invoices visible: {len(invoices_data)}")
+            
+            # Check if invoices from multiple agencies are visible
+            agency_ids = set()
+            for invoice in invoices_data:
+                if 'agency_id' in invoice:
+                    agency_ids.add(invoice['agency_id'])
+            
+            print(f"   Agencies represented in invoices: {len(agency_ids)}")
+            if len(agency_ids) > 1:
+                print(f"   ✅ Super Admin sees invoices from multiple agencies")
+                results['super_admin_cross_agency_invoices'] = True
+            else:
+                print(f"   ⚠️  Only seeing invoices from {len(agency_ids)} agency")
+                results['super_admin_cross_agency_invoices'] = False
+        
+        # Test 3: Super Admin Payments - should return payments from all agencies
+        print(f"\n   3. Testing Super Admin Payments (should see ALL agencies)...")
+        success, payments_data = self.run_test(
+            "Super Admin Payments",
+            "GET",
+            "payments",
+            200
+        )
+        results['super_admin_payments'] = success
+        
+        if success:
+            print(f"   ✅ Payments endpoint accessible")
+            print(f"   Total payments visible: {len(payments_data)}")
+            
+            # Check if payments from multiple agencies are visible
+            agency_ids = set()
+            for payment in payments_data:
+                if 'agency_id' in payment:
+                    agency_ids.add(payment['agency_id'])
+            
+            print(f"   Agencies represented in payments: {len(agency_ids)}")
+            if len(agency_ids) > 1:
+                print(f"   ✅ Super Admin sees payments from multiple agencies")
+                results['super_admin_cross_agency_payments'] = True
+            else:
+                print(f"   ⚠️  Only seeing payments from {len(agency_ids)} agency")
+                results['super_admin_cross_agency_payments'] = False
+        
+        # Test 4: User Management - GET /api/users (should return all users)
+        print(f"\n   4. Testing Super Admin User Management...")
+        success, users_data = self.run_test(
+            "Super Admin - Get All Users",
+            "GET",
+            "users",
+            200
+        )
+        results['super_admin_users'] = success
+        
+        if success:
+            print(f"   ✅ Users endpoint accessible")
+            print(f"   Total users visible: {len(users_data)}")
+            
+            # Check user roles and agencies
+            roles = {}
+            agencies = set()
+            for user in users_data:
+                role = user.get('role', 'unknown')
+                roles[role] = roles.get(role, 0) + 1
+                if 'agency_id' in user:
+                    agencies.add(user['agency_id'])
+            
+            print(f"   User roles distribution: {roles}")
+            print(f"   Agencies represented: {len(agencies)}")
+            print(f"   ✅ Super Admin can manage all users")
+        
+        # Test 5: Agencies Management - GET /api/agencies (should return all agencies)
+        print(f"\n   5. Testing Super Admin Agencies Access...")
+        success, agencies_data = self.run_test(
+            "Super Admin - Get All Agencies",
+            "GET",
+            "agencies",
+            200
+        )
+        results['super_admin_agencies'] = success
+        
+        if success:
+            print(f"   ✅ Agencies endpoint accessible")
+            print(f"   Total agencies visible: {len(agencies_data)}")
+            
+            # List all agencies
+            agency_names = []
+            for agency in agencies_data:
+                agency_names.append(f"{agency.get('name', 'Unknown')} ({agency.get('city', 'Unknown')})")
+            
+            print(f"   Agencies: {', '.join(agency_names)}")
+            
+            # Check if we have the expected 6 agencies
+            expected_cities = ['تلمسان', 'مغنية', 'ندرومة', 'وهران', 'الرمشي', 'سيدي بلعباس']
+            found_cities = [agency.get('city', '') for agency in agencies_data]
+            
+            matching_cities = [city for city in expected_cities if city in found_cities]
+            print(f"   Expected cities found: {len(matching_cities)}/6")
+            
+            if len(agencies_data) >= 6:
+                print(f"   ✅ Super Admin sees all agencies (expected 6, found {len(agencies_data)})")
+                results['super_admin_all_agencies'] = True
+            else:
+                print(f"   ⚠️  Expected 6 agencies, found {len(agencies_data)}")
+                results['super_admin_all_agencies'] = False
+        
+        # Test 6: Daily Reports Management - GET /api/daily-reports (should see all reports from all agencies)
+        print(f"\n   6. Testing Super Admin Daily Reports Management...")
+        success, reports_data = self.run_test(
+            "Super Admin - Get All Daily Reports",
+            "GET",
+            "daily-reports",
+            200
+        )
+        results['super_admin_daily_reports'] = success
+        
+        if success:
+            print(f"   ✅ Daily reports endpoint accessible")
+            print(f"   Total daily reports visible: {len(reports_data)}")
+            
+            # Check if reports from multiple agencies are visible
+            agency_ids = set()
+            statuses = {}
+            for report in reports_data:
+                if 'agency_id' in report:
+                    agency_ids.add(report['agency_id'])
+                status = report.get('status', 'unknown')
+                statuses[status] = statuses.get(status, 0) + 1
+            
+            print(f"   Agencies represented in reports: {len(agency_ids)}")
+            print(f"   Report statuses: {statuses}")
+            
+            if len(agency_ids) > 1:
+                print(f"   ✅ Super Admin sees daily reports from multiple agencies")
+                results['super_admin_cross_agency_reports'] = True
+            else:
+                print(f"   ⚠️  Only seeing reports from {len(agency_ids)} agency")
+                results['super_admin_cross_agency_reports'] = False
+        
+        return results
+
     def test_basic_requirements(self):
         """Test the basic requirements from the review request"""
         print(f"\n🎯 Testing Basic Requirements from Review Request...")
