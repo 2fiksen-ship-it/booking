@@ -744,6 +744,9 @@ const Layout = ({ children }) => {
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* Notifications Bell */}
+              <NotificationBell />
+              
               {/* Quick Actions could go here */}
               <div className="text-sm text-gray-500">
                 📅 {new Date().toLocaleTimeString('ar-SA', {hour: '2-digit', minute: '2-digit'})}
