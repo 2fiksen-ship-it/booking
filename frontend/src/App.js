@@ -342,7 +342,7 @@ const AuthProvider = ({ children }) => {
   );
 };
 
-// Login Component
+// Simple Login Component (Debugging)
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -352,34 +352,34 @@ const Login = () => {
   const { t } = useContext(LanguageContext);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Simple test function
+  const testFunction = () => {
+    console.log('=== TEST FUNCTION CALLED ===');
+    alert('Test function works!');
+  };
+
+  const handleLogin = async () => {
+    console.log('=== HANDLE LOGIN CALLED ===');
     setLoading(true);
     setError('');
     
-    console.log('=== FORM SUBMIT START ===');
-    console.log('Form submitted with email:', email);
-    console.log('Backend URL:', BACKEND_URL);
-    console.log('API URL:', API);
-
     try {
+      console.log('Attempting login with:', email);
       const result = await login(email, password);
       console.log('Login result:', result);
       
       if (result.success) {
-        console.log('Login successful, navigating to dashboard...');
-        navigate('/'); // Redirect to dashboard after successful login
+        console.log('Login successful, navigating...');
+        navigate('/');
       } else {
-        console.error('Login failed:', result.error);
-        setError(result.error);
+        setError(result.error || 'Login failed');
       }
     } catch (error) {
-      console.error('Unexpected error during login:', error);
-      setError('An unexpected error occurred');
+      console.error('Login error:', error);
+      setError('An error occurred during login');
     }
     
     setLoading(false);
-    console.log('=== FORM SUBMIT END ===');
   };
 
   return (
@@ -394,7 +394,7 @@ const Login = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">{t('email')}</Label>
               <Input
@@ -420,18 +420,24 @@ const Login = () => {
             {error && (
               <div className="text-red-500 text-sm text-center">{error}</div>
             )}
+            
+            {/* Test button first */}
             <button
-              type="button"
-              onClick={() => {
-                console.log('=== BUTTON CLICKED ===');
-                alert('Button clicked!');
-              }}
-              className="w-full h-9 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md font-medium inline-flex items-center justify-center disabled:opacity-50"
+              onClick={testFunction}
+              className="w-full mb-2 h-9 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium"
+            >
+              Test Button
+            </button>
+            
+            {/* Login button */}
+            <button
+              onClick={handleLogin}
               disabled={loading}
+              className="w-full h-9 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md font-medium disabled:opacity-50"
             >
               {loading ? 'جاري تسجيل الدخول...' : t('login')}
             </button>
-          </form>
+          </div>
         </CardContent>
       </Card>
     </div>
