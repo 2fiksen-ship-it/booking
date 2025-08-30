@@ -1128,6 +1128,169 @@ async def get_dashboard(current_user: User = Depends(get_current_user)):
         "cashbox_balance": total_cashbox_balance
     }
 
+# Reports Routes
+@api_router.get("/reports/sales")
+async def generate_sales_report(
+    start_date: str,
+    end_date: str,
+    report_type: str = "daily",  # daily, monthly
+    current_user: User = Depends(get_current_user)
+):
+    """Generate sales reports (daily/monthly)"""
+    try:
+        from datetime import datetime
+        start = datetime.fromisoformat(start_date)
+        end = datetime.fromisoformat(end_date)
+        
+        # Get invoices for the period
+        invoices = await db.invoices.find({
+            "agency_id": current_user.agency_id,
+            "created_at": {"$gte": start, "$lte": end}
+        }).to_list(1000)
+        
+        if report_type == "monthly":
+            # Group by month
+            monthly_data = {}
+            for invoice in invoices:
+                month_key = invoice["created_at"].strftime("%Y-%m")
+                if month_key not in monthly_data:
+                    monthly_data[month_key] = {
+                        "month": month_key,
+                        "sales": 0,
+                        "bookings": 0,
+                        "profit": 0
+                    }
+                monthly_data[month_key]["sales"] += invoice["amount_ttc"]
+                monthly_data[month_key]["bookings"] += 1
+                monthly_data[month_key]["profit"] += invoice["amount_ttc"] * 0.1  # 10% profit margin
+            
+            data = list(monthly_data.values())
+            totals = {
+                "sales": sum(item["sales"] for item in data),
+                "bookings": sum(item["bookings"] for item in data),
+                "profit": sum(item["profit"] for item in data)
+            }
+        else:
+            # Group by day
+            daily_data = {}
+            for invoice in invoices:
+                date_key = invoice["created_at"].strftime("%Y-%m-%d")
+                if date_key not in daily_data:
+                    daily_data[date_key] = {
+                        "date": date_key,
+                        "sales": 0,
+                        "bookings": 0,
+                        "profit": 0
+                    }
+                daily_data[date_key]["sales"] += invoice["amount_ttc"]
+                daily_data[date_key]["bookings"] += 1
+                daily_data[date_key]["profit"] += invoice["amount_ttc"] * 0.1  # 10% profit margin
+            
+            data = list(daily_data.values())
+            totals = {
+                "sales": sum(item["sales"] for item in data),
+                "bookings": sum(item["bookings"] for item in data),
+                "profit": sum(item["profit"] for item in data)
+            }
+        
+        return {
+            "title": f"تقرير المبيعات {('الشهري' if report_type == 'monthly' else 'اليومي')}",
+            "data": data,
+            "totals": totals
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.get("/reports/aging")
+async def generate_aging_report(current_user: User = Depends(get_current_user)):
+    """Generate accounts receivable aging report"""
+    # Get unpaid invoices
+    unpaid_invoices = await db.invoices.find({
+        "agency_id": current_user.agency_id,
+        "status": InvoiceStatus.PENDING
+    }).to_list(1000)
+    
+    # Get clients data
+    clients = await db.clients.find({"agency_id": current_user.agency_id}).to_list(1000)
+    clients_dict = {client["id"]: client["name"] for client in clients}
+    
+    aging_data = []
+    total_amount = 0
+    
+    for invoice in unpaid_invoices:
+        # Calculate days overdue
+        days_overdue = (datetime.now(timezone.utc) - invoice["created_at"]).days
+        
+        aging_data.append({
+            "client": clients_dict.get(invoice["client_id"], "Unknown"),
+            "invoice": invoice["invoice_no"],
+            "amount": invoice["amount_ttc"],
+            "days": days_overdue
+        })
+        total_amount += invoice["amount_ttc"]
+    
+    # Sort by days overdue (highest first)
+    aging_data.sort(key=lambda x: x["days"], reverse=True)
+    
+    return {
+        "title": "تقرير أعمار الديون",
+        "data": aging_data,
+        "totals": {
+            "count": len(aging_data),
+            "amount": total_amount
+        }
+    }
+
+@api_router.get("/reports/profit-loss")
+async def generate_profit_loss_report(
+    start_date: str,
+    end_date: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate profit and loss report"""
+    try:
+        from datetime import datetime
+        start = datetime.fromisoformat(start_date)
+        end = datetime.fromisoformat(end_date)
+        
+        # Get invoices (income)
+        invoices = await db.invoices.find({
+            "agency_id": current_user.agency_id,
+            "created_at": {"$gte": start, "$lte": end}
+        }).to_list(1000)
+        
+        # Calculate income
+        total_sales = sum(inv["amount_ttc"] for inv in invoices)
+        total_services = total_sales * 0.2  # Assume 20% from services
+        
+        # Calculate expenses (rough estimates)
+        total_supplier_costs = total_sales * 0.6  # 60% of sales as supplier costs
+        total_operations = total_sales * 0.2  # 20% operational costs
+        
+        # Calculate profit
+        total_income = total_sales + total_services
+        total_expenses = total_supplier_costs + total_operations
+        net_profit = total_income - total_expenses
+        
+        return {
+            "title": "تقرير الأرباح والخسائر",
+            "data": {
+                "income": {
+                    "sales": total_sales,
+                    "services": total_services
+                },
+                "expenses": {
+                    "suppliers": total_supplier_costs,
+                    "operations": total_operations
+                },
+                "profit": net_profit
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # Include the router in the main app
 app.include_router(api_router)
 
