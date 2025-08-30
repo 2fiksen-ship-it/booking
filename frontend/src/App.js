@@ -417,7 +417,7 @@ const Layout = ({ children }) => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-bold text-gray-900">
-                وكالات صنهاجة للسفر
+                وكالات صنهاجة للسفر - الجزائر
               </h1>
             </div>
             
