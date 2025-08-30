@@ -151,8 +151,8 @@ async def create_seed_data():
             clients.append({
                 'id': str(uuid.uuid4()),
                 'name': name,
-                'phone': f'+213{5+i%4}{10000000 + i:08d}',
-                'cin_passport': f'CIN{agency["city"][:2].upper()}{i+1:05d}',
+                'phone': f'+213{5+i%4}{10000000 + i + len(agency["name"]):08d}',
+                'cin_passport': f'{agency["city"][:3].upper()}{i+1:05d}',
                 'agency_id': agency['id'],
                 'created_at': datetime.now(timezone.utc) - timedelta(days=i*2)
             })
