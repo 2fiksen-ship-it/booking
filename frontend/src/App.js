@@ -420,14 +420,13 @@ const Login = () => {
             {error && (
               <div className="text-red-500 text-sm text-center">{error}</div>
             )}
-            <Button
+            <button
               type="submit"
-              onClick={handleSubmit}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              className="w-full h-9 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md font-medium inline-flex items-center justify-center disabled:opacity-50"
               disabled={loading}
             >
               {loading ? 'جاري تسجيل الدخول...' : t('login')}
-            </Button>
+            </button>
           </form>
         </CardContent>
       </Card>
