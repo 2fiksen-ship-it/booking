@@ -444,18 +444,36 @@ async def approve_daily_report(
     
     return {"message": f"Report {action}d successfully"}
 
-# Client Routes
+# Client Routes (Updated permissions)
 @api_router.post("/clients", response_model=Client)
 async def create_client(client_data: ClientCreate, current_user: User = Depends(get_current_user)):
     client_dict = client_data.dict()
-    client_dict["agency_id"] = current_user.agency_id
+    
+    # Super admin can specify agency_id, others use their own
+    if current_user.role == UserRole.SUPER_ADMIN and "agency_id" in client_dict:
+        agency_id = client_dict["agency_id"]
+    else:
+        agency_id = current_user.agency_id
+        client_dict["agency_id"] = agency_id
+    
+    can_manage_agency_data(current_user, agency_id)
+    
     client = Client(**client_dict)
     await db.clients.insert_one(client.dict())
     return client
 
 @api_router.get("/clients", response_model=List[Client])
 async def get_clients(current_user: User = Depends(get_current_user)):
-    clients = await db.clients.find({"agency_id": current_user.agency_id}).to_list(1000)
+    if current_user.role == UserRole.SUPER_ADMIN:
+        # Super admin sees all clients
+        clients = await db.clients.find().to_list(1000)
+    elif current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        # General accountant sees all clients
+        clients = await db.clients.find().to_list(1000)
+    else:
+        # Agency staff see only their agency's clients
+        clients = await db.clients.find({"agency_id": current_user.agency_id}).to_list(1000)
+    
     return [Client(**client) for client in clients]
 
 @api_router.put("/clients/{client_id}", response_model=Client)
