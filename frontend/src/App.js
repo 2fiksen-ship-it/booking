@@ -421,7 +421,11 @@ const Login = () => {
               <div className="text-red-500 text-sm text-center">{error}</div>
             )}
             <button
-              type="submit"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                handleSubmit(e);
+              }}
               className="w-full h-9 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md font-medium inline-flex items-center justify-center disabled:opacity-50"
               disabled={loading}
             >
