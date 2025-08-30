@@ -874,6 +874,14 @@ def main():
     
     tester = SanhajaAPITester()
     
+    # Test SUPER ADMIN FUNCTIONALITY (Primary Focus from Review Request)
+    print("\n" + "="*80)
+    print("اختبار وظائف المدير العام - المحور الأساسي من طلب المراجعة")
+    print("TESTING SUPER ADMIN FUNCTIONALITY - PRIMARY FOCUS FROM REVIEW REQUEST")
+    print("="*80)
+    
+    super_admin_results = tester.test_super_admin_functionality()
+    
     # Test Basic Requirements First
     print("\n" + "="*80)
     print("اختبار المتطلبات الأساسية من طلب المراجعة")
@@ -884,10 +892,10 @@ def main():
     
     # Only run full tests if basic authentication works
     if basic_results.get('admin_login'):
-        # Test NEW: Reports Endpoints (Primary Focus)
+        # Test NEW: Reports Endpoints (Secondary Focus)
         print("\n" + "="*80)
-        print("اختبار تقارير النظام الجديدة - المحور الأساسي")
-        print("TESTING NEW REPORTS ENDPOINTS - PRIMARY FOCUS")
+        print("اختبار تقارير النظام الجديدة - المحور الثانوي")
+        print("TESTING NEW REPORTS ENDPOINTS - SECONDARY FOCUS")
         print("="*80)
         
         reports_results = tester.test_reports_endpoints()
