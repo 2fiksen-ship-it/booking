@@ -1102,10 +1102,18 @@ def main():
     
     tester = SanhajaAPITester()
     
-    # Test SUPER ADMIN FUNCTIONALITY (Primary Focus from Review Request)
+    # BUG INVESTIGATION (Primary Focus from Review Request)
     print("\n" + "="*80)
-    print("اختبار وظائف المدير العام - المحور الأساسي من طلب المراجعة")
-    print("TESTING SUPER ADMIN FUNCTIONALITY - PRIMARY FOCUS FROM REVIEW REQUEST")
+    print("🔍 BUG INVESTIGATION - OPERATIONS MANAGEMENT CROSS-AGENCY ACCESS")
+    print("تحقيق الأخطاء - الوصول عبر الوكالات لإدارة العمليات")
+    print("="*80)
+    
+    bug_investigation_results = tester.test_operations_management_bug_investigation()
+    
+    # Test SUPER ADMIN FUNCTIONALITY (Secondary Focus from Review Request)
+    print("\n" + "="*80)
+    print("اختبار وظائف المدير العام - المحور الثانوي من طلب المراجعة")
+    print("TESTING SUPER ADMIN FUNCTIONALITY - SECONDARY FOCUS FROM REVIEW REQUEST")
     print("="*80)
     
     super_admin_results = tester.test_super_admin_functionality()
