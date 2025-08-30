@@ -356,6 +356,7 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Enhanced authentication context with Google OAuth support
   const login = async (email, password) => {
     try {
       console.log('=== LOGIN FUNCTION START ===');
@@ -380,6 +381,43 @@ const AuthProvider = ({ children }) => {
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
       return { success: false, error: error.response?.data?.detail || 'Login failed' };
+    }
+  };
+
+  // Google Authentication function
+  const loginWithGoogle = () => {
+    console.log('=== GOOGLE LOGIN START ==='); 
+    const currentUrl = window.location.origin;
+    const redirectUrl = `${currentUrl}/profile`;
+    const googleAuthUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    console.log('Redirecting to Google Auth:', googleAuthUrl);
+    window.location.href = googleAuthUrl;
+  };
+
+  // Handle Google OAuth callback
+  const handleGoogleCallback = async (sessionId) => {
+    try {
+      console.log('=== GOOGLE CALLBACK START ===');
+      console.log('Session ID received:', sessionId);
+      
+      const response = await axios.post(`${API}/auth/google`, { session_id: sessionId }, {
+        withCredentials: true // Important for cookies
+      });
+      
+      console.log('Google auth response:', response.data);
+      
+      const { user: userData, session_token } = response.data;
+      
+      // Set user data in context
+      setUser(userData);
+      
+      console.log('Google authentication successful:', userData);
+      console.log('=== GOOGLE CALLBACK SUCCESS ===');
+      return { success: true };
+    } catch (error) {
+      console.error('=== GOOGLE CALLBACK ERROR ===');
+      console.error('Google auth error:', error);
+      return { success: false, error: error.response?.data?.detail || 'Google authentication failed' };
     }
   };
 
