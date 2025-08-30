@@ -837,6 +837,86 @@ const Layout = ({ children }) => {
   );
 };
 
+// Profile Component for Google OAuth Callback
+const Profile = () => {
+  const { handleGoogleCallback } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const processGoogleCallback = async () => {
+      try {
+        // Extract session ID from URL fragment
+        const hash = window.location.hash;
+        console.log('Current hash:', hash);
+        
+        if (hash) {
+          const params = new URLSearchParams(hash.substring(1));
+          const sessionId = params.get('session_id');
+          
+          console.log('Extracted session ID:', sessionId);
+          
+          if (sessionId) {
+            console.log('Processing Google callback with session ID:', sessionId);
+            const result = await handleGoogleCallback(sessionId);
+            
+            if (result.success) {
+              console.log('Google authentication successful, redirecting to dashboard');
+              navigate('/');
+            } else {
+              setError(result.error || 'Google authentication failed');
+            }
+          } else {
+            setError('No session ID found in callback');
+          }
+        } else {
+          setError('No authentication data received');
+        }
+      } catch (error) {
+        console.error('Profile callback error:', error);
+        setError('Authentication process failed');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    processGoogleCallback();
+  }, [handleGoogleCallback, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg text-gray-600">جاري معالجة تسجيل الدخول...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <div className="mb-4">
+              <XCircle className="h-12 w-12 text-red-500 mx-auto" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">خطأ في التسجيل</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={() => navigate('/login')} className="w-full">
+              العودة لتسجيل الدخول
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return null;
+};
+
 // Notification Bell Component
 const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
