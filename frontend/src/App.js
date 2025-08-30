@@ -346,19 +346,29 @@ const Login = () => {
     setLoading(true);
     setError('');
     
-    console.log('Form submitted with:', email, password);
+    console.log('=== FORM SUBMIT START ===');
+    console.log('Form submitted with email:', email);
+    console.log('Backend URL:', BACKEND_URL);
+    console.log('API URL:', API);
 
-    const result = await login(email, password);
-    console.log('Login result:', result);
-    
-    if (result.success) {
-      console.log('Navigating to dashboard...');
-      navigate('/'); // Redirect to dashboard after successful login
-    } else {
-      console.error('Login failed:', result.error);
-      setError(result.error);
+    try {
+      const result = await login(email, password);
+      console.log('Login result:', result);
+      
+      if (result.success) {
+        console.log('Login successful, navigating to dashboard...');
+        navigate('/'); // Redirect to dashboard after successful login
+      } else {
+        console.error('Login failed:', result.error);
+        setError(result.error);
+      }
+    } catch (error) {
+      console.error('Unexpected error during login:', error);
+      setError('An unexpected error occurred');
     }
+    
     setLoading(false);
+    console.log('=== FORM SUBMIT END ===');
   };
 
   return (
