@@ -11,6 +11,46 @@ class SanhajaAPITester:
         self.current_user = None
         self.tests_run = 0
         self.tests_passed = 0
+        
+        # Correct user hierarchy for testing
+        self.test_users = {
+            'super_admin': {
+                'email': 'superadmin@sanhaja.com',
+                'password': 'super123',
+                'role': 'super_admin',
+                'name': 'المدير العام'
+            },
+            'general_accountant': {
+                'email': 'generalaccountant@sanhaja.com', 
+                'password': 'acc123',
+                'role': 'general_accountant',
+                'name': 'المحاسب العام'
+            },
+            'tlemcen_staff1': {
+                'email': 'staff1@tlemcen.sanhaja.com',
+                'password': 'staff123',
+                'role': 'agency_staff',
+                'agency': 'تلمسان'
+            },
+            'tlemcen_staff2': {
+                'email': 'staff2@tlemcen.sanhaja.com',
+                'password': 'staff123',
+                'role': 'agency_staff',
+                'agency': 'تلمسان'
+            },
+            'oran_staff1': {
+                'email': 'staff1@oran.sanhaja.com',
+                'password': 'staff123',
+                'role': 'agency_staff',
+                'agency': 'وهران'
+            },
+            'maghnia_staff1': {
+                'email': 'staff1@maghnia.sanhaja.com',
+                'password': 'staff123',
+                'role': 'agency_staff',
+                'agency': 'مغنية'
+            }
+        }
 
     def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
         """Run a single API test"""
