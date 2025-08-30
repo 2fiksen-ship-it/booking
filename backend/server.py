@@ -488,7 +488,443 @@ async def approve_daily_report(
         }
     )
     
-    return {"message": f"Report {action}d successfully"}
+# Notification Routes
+@api_router.post("/notifications")
+async def create_notification(
+    title: str,
+    message: str,
+    notification_type: NotificationType,
+    priority: NotificationPriority = NotificationPriority.MEDIUM,
+    user_id: Optional[str] = None,
+    agency_id: Optional[str] = None,
+    action_url: Optional[str] = None,
+    metadata: Optional[dict] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """إنشاء إشعار جديد"""
+    notification = Notification(
+        title=title,
+        message=message,
+        type=notification_type,
+        priority=priority,
+        user_id=user_id,
+        agency_id=agency_id or current_user.agency_id,
+        action_url=action_url,
+        metadata=metadata
+    )
+    
+    await db.notifications.insert_one(notification.dict())
+    return {"message": "Notification created successfully", "id": notification.id}
+
+@api_router.get("/notifications")
+async def get_notifications(
+    unread_only: bool = False,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """الحصول على الإشعارات للمستخدم الحالي"""
+    query = {
+        "$or": [
+            {"user_id": current_user.id},  # إشعارات شخصية
+            {"user_id": None, "agency_id": current_user.agency_id},  # إشعارات الوكالة
+            {"user_id": None, "agency_id": None}  # إشعارات عامة
+        ]
+    }
+    
+    if unread_only:
+        query["is_read"] = False
+    
+    notifications = await db.notifications.find(query).sort("created_at", -1).limit(limit).to_list(limit)
+    return [Notification(**notification) for notification in notifications]
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """تعليم الإشعار كمقروء"""
+    result = await db.notifications.update_one(
+        {
+            "id": notification_id,
+            "$or": [
+                {"user_id": current_user.id},
+                {"user_id": None, "agency_id": current_user.agency_id},
+                {"user_id": None, "agency_id": None}
+            ]
+        },
+        {
+            "$set": {
+                "is_read": True,
+                "read_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"message": "Notification marked as read"}
+
+@api_router.delete("/notifications/{notification_id}")
+async def delete_notification(
+    notification_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """حذف إشعار"""
+    result = await db.notifications.delete_one(
+        {
+            "id": notification_id,
+            "$or": [
+                {"user_id": current_user.id},
+                {"user_id": None, "agency_id": current_user.agency_id}
+            ]
+        }
+    )
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"message": "Notification deleted successfully"}
+
+# Backup/Export Routes
+@api_router.post("/backup")
+async def create_backup(
+    backup_type: str = "full",
+    agency_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """إنشاء نسخة احتياطية"""
+    require_super_admin(current_user)
+    
+    import json
+    from datetime import datetime
+    
+    try:
+        # إنشاء سجل النسخ الاحتياطي
+        backup_filename = f"sanhaja_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        
+        backup_record = BackupRecord(
+            filename=backup_filename,
+            backup_type=backup_type,
+            agency_id=agency_id,
+            created_by=current_user.id,
+            status=BackupStatus.IN_PROGRESS
+        )
+        
+        await db.backup_records.insert_one(backup_record.dict())
+        
+        # تجميع البيانات للنسخ الاحتياطي
+        collections = ['agencies', 'users', 'clients', 'suppliers', 'bookings', 
+                      'invoices', 'payments', 'cashboxes', 'journal_entries', 
+                      'chart_of_accounts', 'daily_reports']
+        
+        backup_data = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "backup_type": backup_type,
+            "agency_id": agency_id,
+            "collections": {}
+        }
+        
+        for collection_name in collections:
+            collection = db[collection_name]
+            query = {}
+            
+            # إذا كانت نسخة احتياطية لوكالة محددة
+            if agency_id and collection_name in ['clients', 'suppliers', 'bookings', 
+                                               'invoices', 'payments', 'cashboxes', 
+                                               'journal_entries', 'daily_reports']:
+                query["agency_id"] = agency_id
+            
+            documents = await collection.find(query).to_list(None)
+            
+            # تحويل ObjectId إلى string للتسلسل
+            for doc in documents:
+                if '_id' in doc:
+                    doc['_id'] = str(doc['_id'])
+            
+            backup_data["collections"][collection_name] = documents
+        
+        # حفظ النسخة الاحتياطية (في التطبيق الحقيقي، ستحفظ في S3 أو نظام ملفات)
+        # هنا سنحفظها في قاعدة البيانات كمثال
+        backup_size = len(json.dumps(backup_data))
+        
+        await db.backup_records.update_one(
+            {"id": backup_record.id},
+            {
+                "$set": {
+                    "status": BackupStatus.COMPLETED,
+                    "file_size": backup_size,
+                    "completed_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        # حفظ البيانات
+        await db.backups.insert_one({
+            "backup_id": backup_record.id,
+            "data": backup_data
+        })
+        
+        # إنشاء إشعار نجاح
+        await create_notification_internal(
+            title="تم إنشاء النسخة الاحتياطية بنجاح",
+            message=f"تم إنشاء النسخة الاحتياطية {backup_filename} بحجم {backup_size} بايت",
+            notification_type=NotificationType.BACKUP_SUCCESS,
+            user_id=current_user.id
+        )
+        
+        return {
+            "message": "Backup created successfully",
+            "backup_id": backup_record.id,
+            "filename": backup_filename,
+            "size": backup_size
+        }
+        
+    except Exception as e:
+        # تحديث حالة الفشل
+        await db.backup_records.update_one(
+            {"id": backup_record.id},
+            {
+                "$set": {
+                    "status": BackupStatus.FAILED,
+                    "error_message": str(e),
+                    "completed_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+        
+        # إنشاء إشعار فشل
+        await create_notification_internal(
+            title="فشل في إنشاء النسخة الاحتياطية",
+            message=f"حدث خطأ أثناء إنشاء النسخة الاحتياطية: {str(e)}",
+            notification_type=NotificationType.BACKUP_FAILED,
+            priority=NotificationPriority.HIGH,
+            user_id=current_user.id
+        )
+        
+        raise HTTPException(status_code=500, detail=f"Backup failed: {str(e)}")
+
+@api_router.get("/backups")
+async def get_backups(current_user: User = Depends(get_current_user)):
+    """الحصول على قائمة النسخ الاحتياطية"""
+    require_super_admin(current_user)
+    
+    backups = await db.backup_records.find().sort("created_at", -1).to_list(100)
+    return [BackupRecord(**backup) for backup in backups]
+
+@api_router.post("/restore/{backup_id}")
+async def restore_backup(
+    backup_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """استعادة نسخة احتياطية"""
+    require_super_admin(current_user)
+    
+    try:
+        # البحث عن النسخة الاحتياطية
+        backup_record = await db.backup_records.find_one({"id": backup_id})
+        if not backup_record:
+            raise HTTPException(status_code=404, detail="Backup not found")
+        
+        backup_data_doc = await db.backups.find_one({"backup_id": backup_id})
+        if not backup_data_doc:
+            raise HTTPException(status_code=404, detail="Backup data not found")
+        
+        backup_data = backup_data_doc["data"]
+        
+        # استعادة البيانات
+        for collection_name, documents in backup_data["collections"].items():
+            if documents:
+                collection = db[collection_name]
+                
+                # حذف البيانات الموجودة (حذر!)
+                if backup_data.get("agency_id"):
+                    # حذف بيانات الوكالة المحددة فقط
+                    await collection.delete_many({"agency_id": backup_data["agency_id"]})
+                else:
+                    # حذف جميع البيانات
+                    await collection.delete_many({})
+                
+                # إدراج البيانات المستعادة
+                for doc in documents:
+                    if '_id' in doc:
+                        del doc['_id']  # إزالة _id القديم
+                
+                await collection.insert_many(documents)
+        
+        # إنشاء إشعار نجاح
+        await create_notification_internal(
+            title="تم استعادة النسخة الاحتياطية بنجاح",
+            message=f"تم استعادة البيانات من النسخة الاحتياطية {backup_record['filename']}",
+            notification_type=NotificationType.BACKUP_SUCCESS,
+            user_id=current_user.id
+        )
+        
+        return {"message": "Backup restored successfully"}
+        
+    except Exception as e:
+        # إنشاء إشعار فشل
+        await create_notification_internal(
+            title="فشل في استعادة النسخة الاحتياطية",
+            message=f"حدث خطأ أثناء استعادة النسخة الاحتياطية: {str(e)}",
+            notification_type=NotificationType.BACKUP_FAILED,
+            priority=NotificationPriority.HIGH,
+            user_id=current_user.id
+        )
+        
+        raise HTTPException(status_code=500, detail=f"Restore failed: {str(e)}")
+
+# Helper function for creating notifications internally
+async def create_notification_internal(
+    title: str,
+    message: str,
+    notification_type: NotificationType,
+    priority: NotificationPriority = NotificationPriority.MEDIUM,
+    user_id: Optional[str] = None,
+    agency_id: Optional[str] = None,
+    action_url: Optional[str] = None,
+    metadata: Optional[dict] = None
+):
+    """دالة مساعدة لإنشاء الإشعارات داخلياً"""
+    notification = Notification(
+        title=title,
+        message=message,
+        type=notification_type,
+        priority=priority,
+        user_id=user_id,
+        agency_id=agency_id,
+        action_url=action_url,
+        metadata=metadata
+    )
+    
+    await db.notifications.insert_one(notification.dict())
+    return notification
+
+# Background task for checking due invoices and low cashbox
+@api_router.post("/check-notifications")
+async def check_notifications(current_user: User = Depends(get_current_user)):
+    """فحص الإشعارات التلقائية (الفواتير المستحقة ورصيد الصندوق المنخفض)"""
+    
+    # فحص الفواتير المستحقة قريباً (خلال 7 أيام)
+    seven_days_from_now = datetime.now(timezone.utc) + timedelta(days=7)
+    
+    due_invoices = await db.invoices.find({
+        "status": "pending",
+        "due_date": {"$lte": seven_days_from_now.isoformat()},
+        "agency_id": current_user.agency_id
+    }).to_list(None)
+    
+    for invoice in due_invoices:
+        # تحقق من عدم وجود إشعار مسبق لهذه الفاتورة
+        existing_notification = await db.notifications.find_one({
+            "type": NotificationType.INVOICE_DUE,
+            "metadata.invoice_id": invoice["id"],
+            "is_read": False
+        })
+        
+        if not existing_notification:
+            due_date = datetime.fromisoformat(invoice["due_date"].replace('Z', '+00:00'))
+            days_until_due = (due_date - datetime.now(timezone.utc)).days
+            
+            priority = NotificationPriority.HIGH if days_until_due <= 3 else NotificationPriority.MEDIUM
+            
+            await create_notification_internal(
+                title=f"فاتورة مستحقة قريباً - {invoice['invoice_no']}",
+                message=f"الفاتورة {invoice['invoice_no']} ستستحق خلال {days_until_due} أيام بمبلغ {invoice['amount_ttc']} دج",
+                notification_type=NotificationType.INVOICE_DUE,
+                priority=priority,
+                agency_id=current_user.agency_id,
+                action_url=f"/invoices/{invoice['id']}",
+                metadata={"invoice_id": invoice["id"], "days_until_due": days_until_due}
+            )
+    
+    # فحص رصيد الصندوق المنخفض
+    cashboxes = await db.cashboxes.find({"agency_id": current_user.agency_id}).to_list(None)
+    
+    for cashbox in cashboxes:
+        if cashbox["balance"] < 10000:  # أقل من 10,000 دج
+            # تحقق من عدم وجود إشعار مسبق
+            existing_notification = await db.notifications.find_one({
+                "type": NotificationType.LOW_CASHBOX,
+                "metadata.cashbox_id": cashbox["id"],
+                "is_read": False
+            })
+            
+            if not existing_notification:
+                priority = NotificationPriority.URGENT if cashbox["balance"] < 5000 else NotificationPriority.HIGH
+                
+                await create_notification_internal(
+                    title=f"رصيد منخفض في {cashbox['name']}",
+                    message=f"رصيد {cashbox['name']} منخفض: {cashbox['balance']} دج",
+                    notification_type=NotificationType.LOW_CASHBOX,
+                    priority=priority,
+                    agency_id=current_user.agency_id,
+                    action_url=f"/cashboxes/{cashbox['id']}",
+                    metadata={"cashbox_id": cashbox["id"], "balance": cashbox["balance"]}
+                )
+    
+    return {"message": "Notifications checked and created"}
+
+# CSV/Excel Export Routes
+@api_router.get("/export/{table_name}")
+async def export_data(
+    table_name: str,
+    format: str = "csv",  # csv, excel
+    current_user: User = Depends(get_current_user)
+):
+    """تصدير البيانات إلى CSV أو Excel"""
+    import csv
+    import io
+    from fastapi.responses import StreamingResponse
+    
+    # التحقق من الجدول المسموح
+    allowed_tables = ['clients', 'suppliers', 'bookings', 'invoices', 'payments']
+    if table_name not in allowed_tables:
+        raise HTTPException(status_code=400, detail="Table not allowed for export")
+    
+    # جلب البيانات
+    collection = db[table_name]
+    query = {"agency_id": current_user.agency_id}
+    
+    if current_user.role == UserRole.SUPER_ADMIN:
+        query = {}  # المدير العام يرى جميع البيانات
+    
+    data = await collection.find(query).to_list(None)
+    
+    if not data:
+        raise HTTPException(status_code=404, detail="No data found")
+    
+    # إنشاء CSV
+    output = io.StringIO()
+    
+    if data:
+        # استخدام أول سجل لتحديد الأعمدة
+        fieldnames = list(data[0].keys())
+        # إزالة الحقول غير المرغوب فيها
+        fieldnames = [f for f in fieldnames if f not in ['_id', 'password_hash']]
+        
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for row in data:
+            # تنظيف البيانات
+            clean_row = {k: v for k, v in row.items() if k in fieldnames}
+            # تحويل التواريخ إلى نص
+            for key, value in clean_row.items():
+                if isinstance(value, datetime):
+                    clean_row[key] = value.isoformat()
+            writer.writerow(clean_row)
+    
+    output.seek(0)
+    
+    # إنشاء الاستجابة
+    filename = f"{table_name}_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    
+    return StreamingResponse(
+        io.StringIO(output.getvalue()),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 # Client Routes (Updated permissions)
 @api_router.post("/clients", response_model=Client)
