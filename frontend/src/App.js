@@ -517,48 +517,104 @@ const Layout = ({ children }) => {
   const { language, toggleLanguage, t } = useContext(LanguageContext);
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Navigation items based on user role
+  // Navigation items based on user role - Enhanced Professional Organization
   const getNavItems = () => {
     const baseItems = [
-      { id: 'dashboard', label: t('dashboard'), icon: Home }
+      { id: 'dashboard', label: t('dashboard'), icon: Home, category: 'main' }
     ];
 
-    // Super Admin sees everything
+    // Super Admin sees everything with organized categories
     if (user?.role === 'super_admin') {
       return [
         ...baseItems,
-        { id: 'userManagement', label: t('userManagement'), icon: Settings },
-        { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 },
-        { id: 'clients', label: t('clients'), icon: Users },
-        { id: 'suppliers', label: t('suppliers'), icon: Building2 },
-        { id: 'bookings', label: t('bookings'), icon: Package },
-        { id: 'invoices', label: t('invoices'), icon: FileText },
-        { id: 'payments', label: t('payments'), icon: CreditCard },
-        { id: 'reports', label: t('reports'), icon: BarChart3 }
+        // System Administration Category
+        { 
+          category: 'systemAdmin',
+          label: t('systemAdministration'),
+          items: [
+            { id: 'userManagement', label: t('userManagement'), icon: Settings },
+            { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 }
+          ]
+        },
+        // Operations Management Category  
+        {
+          category: 'operations',
+          label: t('operationsManagement'),
+          items: [
+            { id: 'clients', label: t('clients'), icon: Users },
+            { id: 'suppliers', label: t('suppliers'), icon: Building2 },
+            { id: 'bookings', label: t('bookings'), icon: Package }
+          ]
+        },
+        // Financial Management Category
+        {
+          category: 'financial',
+          label: t('financialManagement'),
+          items: [
+            { id: 'invoices', label: t('invoices'), icon: FileText },
+            { id: 'payments', label: t('payments'), icon: CreditCard },  
+            { id: 'reports', label: t('reports'), icon: BarChart3 }
+          ]
+        }
       ];
     }
 
-    // General Accountant sees reports and approvals
+    // General Accountant sees financial and reporting functions
     if (user?.role === 'general_accountant') {
       return [
         ...baseItems,
-        { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 },
-        { id: 'clients', label: t('clients'), icon: Users },
-        { id: 'suppliers', label: t('suppliers'), icon: Building2 },
-        { id: 'invoices', label: t('invoices'), icon: FileText },
-        { id: 'payments', label: t('payments'), icon: CreditCard },
-        { id: 'reports', label: t('reports'), icon: BarChart3 }
+        // Reports and Approval Category
+        {
+          category: 'reportsCenter',
+          label: t('reportsCenter'),
+          items: [
+            { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 },
+            { id: 'reports', label: t('reports'), icon: BarChart3 }
+          ]
+        },
+        // Operations View Category
+        {
+          category: 'operations',
+          label: t('operationsManagement'),
+          items: [
+            { id: 'clients', label: t('clients'), icon: Users },
+            { id: 'suppliers', label: t('suppliers'), icon: Building2 }
+          ]
+        },
+        // Financial Management Category
+        {
+          category: 'financial',
+          label: t('financialManagement'),
+          items: [
+            { id: 'invoices', label: t('invoices'), icon: FileText },
+            { id: 'payments', label: t('payments'), icon: CreditCard }
+          ]
+        }
       ];
     }
 
-    // Agency Staff sees basic operations
+    // Agency Staff sees operational functions
     return [
       ...baseItems,
-      { id: 'clients', label: t('clients'), icon: Users },
-      { id: 'suppliers', label: t('suppliers'), icon: Building2 },
-      { id: 'bookings', label: t('bookings'), icon: Package },
-      { id: 'invoices', label: t('invoices'), icon: FileText },
-      { id: 'payments', label: t('payments'), icon: CreditCard }
+      // Daily Operations Category
+      {
+        category: 'operations',
+        label: t('operationsManagement'),
+        items: [
+          { id: 'clients', label: t('clients'), icon: Users },
+          { id: 'suppliers', label: t('suppliers'), icon: Building2 },
+          { id: 'bookings', label: t('bookings'), icon: Package }
+        ]
+      },
+      // Financial Transactions Category
+      {
+        category: 'financial',
+        label: t('financialManagement'),
+        items: [
+          { id: 'invoices', label: t('invoices'), icon: FileText },
+          { id: 'payments', label: t('payments'), icon: CreditCard }
+        ]
+      }
     ];
   };
 
