@@ -306,6 +306,22 @@ class DailyReportCreate(BaseModel):
     cashbox_balance: float
     notes: Optional[str] = None
 
+# Session Model for Google Authentication
+class SessionToken(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    session_token: str
+    user_id: str
+    email: str
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class GoogleAuthResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    picture: str
+    session_token: str
+
 # Utility Functions
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
