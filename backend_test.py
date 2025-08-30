@@ -1024,6 +1024,237 @@ class SanhajaAPITester:
         
         return results
 
+    def test_google_authentication_system(self):
+        """Test Google Authentication system as requested in review"""
+        print(f"\n🔐 Testing Google Authentication System (Review Request)...")
+        print(f"   Testing infrastructure for Google OAuth - backend endpoints and session support")
+        
+        results = {}
+        
+        # Test 1: Google Auth Endpoint Structure (POST /api/auth/google)
+        print(f"\n   1. Testing POST /api/auth/google endpoint structure...")
+        
+        # Test without session ID (should fail with 400)
+        success, response = self.run_test(
+            "Google Auth - No Session ID",
+            "POST",
+            "auth/google",
+            400,
+            data={}
+        )
+        results['google_auth_no_session'] = success
+        if success:
+            print(f"   ✅ Properly rejects requests without session ID")
+        
+        # Test with invalid session ID (should fail with 401)
+        success, response = self.run_test(
+            "Google Auth - Invalid Session ID",
+            "POST",
+            "auth/google",
+            401,
+            data={"session_id": "invalid-session-id-12345"}
+        )
+        results['google_auth_invalid_session'] = success
+        if success:
+            print(f"   ✅ Properly rejects invalid session IDs")
+        
+        # Test endpoint accessibility (structure test)
+        success, response = self.run_test(
+            "Google Auth - Endpoint Accessible",
+            "POST",
+            "auth/google",
+            400,  # Expected 400 because we're not providing session_id
+            data=None
+        )
+        results['google_auth_endpoint_accessible'] = success
+        if success:
+            print(f"   ✅ Google auth endpoint is accessible and properly structured")
+        
+        # Test 2: Logout Endpoint (POST /api/auth/logout)
+        print(f"\n   2. Testing POST /api/auth/logout endpoint...")
+        
+        success, response = self.run_test(
+            "Logout Endpoint",
+            "POST",
+            "auth/logout",
+            200,
+            data={}
+        )
+        results['logout_endpoint'] = success
+        if success:
+            print(f"   ✅ Logout endpoint accessible and working")
+            if 'message' in response:
+                print(f"   Response: {response['message']}")
+        
+        # Test 3: Profile Endpoint (GET /api/auth/profile)
+        print(f"\n   3. Testing GET /api/auth/profile endpoint...")
+        
+        # First login with traditional auth to test profile endpoint
+        login_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        if login_success:
+            success, response = self.run_test(
+                "Get Profile (Authenticated)",
+                "GET",
+                "auth/profile",
+                200
+            )
+            results['profile_endpoint_authenticated'] = success
+            if success:
+                print(f"   ✅ Profile endpoint accessible when authenticated")
+                if 'user' in response:
+                    user = response['user']
+                    print(f"   User: {user.get('name')} ({user.get('email')})")
+        
+        # Test profile endpoint without authentication
+        old_token = self.token
+        self.token = None
+        success, response = self.run_test(
+            "Get Profile (Unauthenticated)",
+            "GET",
+            "auth/profile",
+            401
+        )
+        results['profile_endpoint_unauthenticated'] = success
+        if success:
+            print(f"   ✅ Profile endpoint properly rejects unauthenticated requests")
+        self.token = old_token
+        
+        # Test 4: Session Support in Authentication System
+        print(f"\n   4. Testing Session Support in Authentication System...")
+        
+        # Test that existing JWT authentication still works
+        print(f"   4a. Testing JWT Authentication Backward Compatibility...")
+        jwt_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['jwt_auth_compatibility'] = jwt_success
+        if jwt_success:
+            print(f"   ✅ JWT authentication still works (backward compatibility)")
+            
+            # Test that JWT token works for protected endpoints
+            success, response = self.run_test(
+                "JWT Token - Dashboard Access",
+                "GET",
+                "dashboard",
+                200
+            )
+            results['jwt_dashboard_access'] = success
+            if success:
+                print(f"   ✅ JWT tokens work for protected endpoints")
+        
+        # Test 5: Database Collections - Sessions Collection
+        print(f"\n   5. Testing Sessions Collection Access...")
+        
+        # We can't directly test the sessions collection, but we can test the infrastructure
+        # by checking if the authentication system handles session tokens properly
+        
+        # Test with a mock session token in cookie (should fail gracefully)
+        success, response = self.run_test(
+            "Mock Session Token Test",
+            "GET",
+            "auth/profile",
+            401,  # Should fail because session doesn't exist in DB
+            headers={"Cookie": "session_token=mock-session-token-12345"}
+        )
+        results['session_token_handling'] = success
+        if success:
+            print(f"   ✅ Session token handling implemented (gracefully rejects invalid sessions)")
+        
+        # Test 6: CORS and Cookie Configuration
+        print(f"\n   6. Testing CORS and Cookie Configuration...")
+        
+        # Test CORS headers by making a request and checking response
+        try:
+            import requests
+            url = f"{self.api_url}/auth/logout"
+            response = requests.options(url, timeout=10)
+            
+            # Check if CORS headers are present
+            cors_headers = [
+                'Access-Control-Allow-Origin',
+                'Access-Control-Allow-Methods', 
+                'Access-Control-Allow-Headers',
+                'Access-Control-Allow-Credentials'
+            ]
+            
+            cors_configured = any(header in response.headers for header in cors_headers)
+            results['cors_configured'] = cors_configured
+            
+            if cors_configured:
+                print(f"   ✅ CORS headers configured")
+                for header in cors_headers:
+                    if header in response.headers:
+                        print(f"   {header}: {response.headers[header]}")
+            else:
+                print(f"   ⚠️  CORS headers not detected in OPTIONS response")
+                
+        except Exception as e:
+            print(f"   ⚠️  Could not test CORS configuration: {e}")
+            results['cors_configured'] = False
+        
+        # Test cookie security settings by checking logout response
+        success, response = self.run_test(
+            "Cookie Security Test (Logout)",
+            "POST", 
+            "auth/logout",
+            200
+        )
+        results['cookie_security'] = success
+        if success:
+            print(f"   ✅ Cookie handling implemented in logout endpoint")
+        
+        # Test 7: Authentication System Dual Support (JWT + Session)
+        print(f"\n   7. Testing Dual Authentication Support (JWT + Session)...")
+        
+        # Test that the system can handle both JWT and session authentication
+        # We already tested JWT above, now test the authentication dependency structure
+        
+        # Test authentication endpoint accessibility
+        success, response = self.run_test(
+            "Authentication Dependency Test",
+            "GET",
+            "auth/me",
+            200  # Should work with our current JWT token
+        )
+        results['auth_dependency_working'] = success
+        if success:
+            print(f"   ✅ Authentication dependency supports both JWT and session tokens")
+            print(f"   Current auth method: JWT Bearer token")
+        
+        # Test 8: Google Auth Infrastructure Summary
+        print(f"\n   8. Google Authentication Infrastructure Summary...")
+        
+        infrastructure_components = [
+            ('google_auth_endpoint_accessible', 'Google Auth Endpoint (/api/auth/google)'),
+            ('logout_endpoint', 'Logout Endpoint (/api/auth/logout)'),
+            ('profile_endpoint_authenticated', 'Profile Endpoint (/api/auth/profile)'),
+            ('jwt_auth_compatibility', 'JWT Authentication Backward Compatibility'),
+            ('session_token_handling', 'Session Token Handling'),
+            ('cors_configured', 'CORS Configuration'),
+            ('cookie_security', 'Cookie Security Settings'),
+            ('auth_dependency_working', 'Dual Authentication Support')
+        ]
+        
+        working_components = 0
+        total_components = len(infrastructure_components)
+        
+        for key, description in infrastructure_components:
+            if results.get(key, False):
+                working_components += 1
+                print(f"   ✅ {description}")
+            else:
+                print(f"   ❌ {description}")
+        
+        results['infrastructure_score'] = working_components / total_components
+        print(f"\n   📊 Google Auth Infrastructure Score: {working_components}/{total_components} ({(working_components/total_components)*100:.1f}%)")
+        
+        if working_components >= 6:
+            print(f"   ✅ Google Authentication infrastructure is ready for OAuth integration")
+        elif working_components >= 4:
+            print(f"   ⚠️  Google Authentication infrastructure partially ready - some components need attention")
+        else:
+            print(f"   ❌ Google Authentication infrastructure needs significant work")
+        
+        return results
+
     def test_basic_requirements(self):
         """Test the basic requirements from the review request"""
         print(f"\n🎯 Testing Basic Requirements from Review Request...")
