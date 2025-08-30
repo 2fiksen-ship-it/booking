@@ -289,6 +289,20 @@ class ChartOfAccountsCreate(BaseModel):
     name: str
     type: AccountType
 
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
+    role: Optional[UserRole] = None
+    agency_id: Optional[str] = None
+
+class DailyReportCreate(BaseModel):
+    date: datetime
+    income: float
+    expenses: float
+    cashbox_balance: float
+    notes: Optional[str] = None
+
 # Utility Functions
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
