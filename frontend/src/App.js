@@ -948,7 +948,7 @@ const SuppliersManagement = () => {
                 <TableHead>{t('contact')}</TableHead>
                 <TableHead>{t('actions')}</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {filteredSuppliers.length === 0 ? (
                 <TableRow>
