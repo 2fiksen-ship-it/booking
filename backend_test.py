@@ -1203,8 +1203,40 @@ def main():
         print(f"🎯 معدل النجاح: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         print(f"🎯 Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         
-        # Super Admin Results (PRIMARY FOCUS)
-        print(f"\n👑 نتائج وظائف المدير العام - SUPER ADMIN FUNCTIONALITY RESULTS (PRIMARY FOCUS):")
+        # Bug Investigation Results (PRIMARY FOCUS)
+        print(f"\n🔍 نتائج تحقيق الأخطاء - BUG INVESTIGATION RESULTS (PRIMARY FOCUS):")
+        bug_keys = [
+            ('super_admin_login', 'Super Admin Login (superadmin@sanhaja.com)'),
+            ('clients_endpoint', 'GET /api/clients endpoint'),
+            ('suppliers_endpoint', 'GET /api/suppliers endpoint'),
+            ('bookings_endpoint', 'GET /api/bookings endpoint'),
+            ('clients_cross_agency', 'Clients Cross-Agency Access'),
+            ('suppliers_cross_agency', 'Suppliers Cross-Agency Access'),
+            ('bookings_cross_agency', 'Bookings Cross-Agency Access'),
+            ('all_agencies_exist', 'All 6 Agencies Exist in System')
+        ]
+        
+        for key, description in bug_keys:
+            if key in bug_investigation_results:
+                status = "✅" if bug_investigation_results[key] else "❌"
+                print(f"   {status} {description}")
+        
+        # Bug Summary
+        bugs_found = bug_investigation_results.get('bugs_found', 0)
+        working_endpoints = bug_investigation_results.get('working_endpoints', 0)
+        
+        print(f"\n   📊 BUG INVESTIGATION SUMMARY:")
+        print(f"   Working Operations Endpoints: {working_endpoints}/3")
+        print(f"   Bugs Found: {bugs_found}/3")
+        
+        if bugs_found > 0:
+            print(f"   🐛 CRITICAL BUGS IDENTIFIED in operations management endpoints")
+            print(f"   🔧 FIX REQUIRED: Update suppliers and bookings endpoints for Super Admin cross-agency access")
+        else:
+            print(f"   ✅ NO BUGS FOUND: All operations endpoints working correctly")
+        
+        # Super Admin Results (SECONDARY FOCUS)
+        print(f"\n👑 نتائج وظائف المدير العام - SUPER ADMIN FUNCTIONALITY RESULTS (SECONDARY FOCUS):")
         super_admin_keys = [
             ('super_admin_login', 'Super Admin Login (superadmin@sanhaja.com)'),
             ('super_admin_dashboard', 'Super Admin Dashboard (All Agencies Data)'),
