@@ -1010,17 +1010,6 @@ const Dashboard = () => {
     </div>
   );
 };
-            <div className="space-y-4">
-              <div className="text-center text-gray-500 py-8">
-                لا توجد أنشطة حديثة
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
 
 // Clients Management Component
 const ClientsManagement = () => {
