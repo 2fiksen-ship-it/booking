@@ -176,8 +176,8 @@ backend:
         comment: "Need to implement payments recording and journal updates"
 
   - task: "Reports Generation API"
-    implemented: false
-    working: "NA"
+    implemented: true
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
@@ -186,6 +186,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Need to implement various report endpoints"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: All reports endpoints are working perfectly! Sales Reports (daily/monthly) ✅, Aging Report ✅, Profit/Loss Report ✅. All endpoints return proper Arabic labels. Agency isolation working correctly - super admin sees all data, agency staff see only their agency data. Error handling works for invalid date formats (400 status) and missing parameters (422 status). Fixed timezone issue in aging report. Test data: 3 invoices totaling 54,000 DZD, aging report shows proper outstanding amounts, profit/loss calculations working correctly."
 
 frontend:
   - task: "Login System"
