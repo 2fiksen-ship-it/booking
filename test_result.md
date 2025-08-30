@@ -167,8 +167,8 @@ backend:
         comment: "✅ TESTED: Invoices Management API working perfectly! Super Admin can access all invoices from all agencies (91 invoices from 6 agencies). Cross-agency visibility confirmed. Invoice creation, listing, and status updates working correctly."
 
   - task: "Payments Management API"
-    implemented: false
-    working: "NA"
+    implemented: true
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
@@ -177,6 +177,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Need to implement payments recording and journal updates"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Payments Management API working perfectly! Super Admin can access all payments from all agencies (31 payments from 6 agencies). Cross-agency visibility confirmed. Payment creation, listing, and invoice status updates working correctly."
 
   - task: "Reports Generation API"
     implemented: true
