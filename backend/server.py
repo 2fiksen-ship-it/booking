@@ -65,6 +65,11 @@ class AccountType(str, Enum):
     REVENUE = "revenue"
     EXPENSE = "expense"
 
+class ReportStatus(str, Enum):
+    PENDING = "pending"  # في انتظار الموافقة
+    APPROVED = "approved"  # تم الموافقة من المحاسب العام
+    REJECTED = "rejected"  # مرفوض
+
 # Database Models
 class Agency(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
