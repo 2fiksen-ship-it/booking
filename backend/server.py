@@ -412,6 +412,110 @@ async def login(login_data: UserLogin):
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+# Google Authentication Endpoints
+@api_router.post("/auth/google")
+async def google_auth_callback(session_id: str = None):
+    """Handle Google OAuth callback with session ID"""
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Session ID required")
+    
+    try:
+        # Call Emergent Auth API to get user data
+        async with aiohttp.ClientSession() as session:
+            headers = {"X-Session-ID": session_id}
+            async with session.get(
+                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                headers=headers
+            ) as response:
+                if response.status != 200:
+                    raise HTTPException(status_code=401, detail="Invalid session ID")
+                
+                google_user_data = await response.json()
+                
+        # Check if user exists
+        existing_user = await db.users.find_one({"email": google_user_data["email"]})
+        
+        if existing_user:
+            # User exists, update session token
+            user = User(**existing_user)
+        else:
+            # Create new user with Google data - assign to default agency (first agency)
+            agencies = await db.agencies.find({}).to_list(1)
+            if not agencies:
+                raise HTTPException(status_code=500, detail="No agencies available")
+            
+            new_user = User(
+                id=str(uuid.uuid4()),
+                name=google_user_data["name"],
+                email=google_user_data["email"],
+                password_hash="",  # No password for Google auth users
+                role=UserRole.AGENCY_STAFF,  # Default role
+                agency_id=agencies[0]["id"],  # Assign to first agency
+                created_at=datetime.now(timezone.utc)
+            )
+            
+            await db.users.insert_one(new_user.dict())
+            user = new_user
+        
+        # Create session token with 7-day expiry
+        session_token_record = SessionToken(
+            session_token=google_user_data["session_token"],
+            user_id=user.id,
+            email=user.email,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7)
+        )
+        
+        # Store session in database
+        await db.sessions.insert_one(session_token_record.dict())
+        
+        # Prepare response with user data
+        response_data = {
+            "user": user.dict(),
+            "session_token": google_user_data["session_token"],
+            "message": "Google authentication successful"
+        }
+        
+        # Create response with session cookie
+        response = JSONResponse(content=response_data)
+        response.set_cookie(
+            key="session_token",
+            value=google_user_data["session_token"],
+            max_age=7 * 24 * 60 * 60,  # 7 days in seconds
+            httponly=True,
+            secure=True,
+            samesite="none",
+            path="/"
+        )
+        
+        return response
+        
+    except Exception as e:
+        print(f"Google auth error: {e}")
+        raise HTTPException(status_code=500, detail=f"Google authentication failed: {str(e)}")
+
+@api_router.post("/auth/logout")
+async def logout(session_token: Optional[str] = Cookie(None)):
+    """Logout user and invalidate session"""
+    if session_token:
+        # Remove session from database
+        await db.sessions.delete_one({"session_token": session_token})
+    
+    # Create response that clears the cookie
+    response = JSONResponse(content={"message": "Logged out successfully"})
+    response.delete_cookie(
+        key="session_token",
+        path="/",
+        secure=True,
+        samesite="none"
+    )
+    
+    return response
+
+@api_router.get("/auth/profile")
+async def get_profile(current_user: User = Depends(get_current_user)):
+    """Get current user profile"""
+    return {"user": current_user.dict()}
+
 # Agency Routes (Updated permissions)
 @api_router.post("/agencies", response_model=Agency)
 async def create_agency(agency_data: AgencyCreate, current_user: User = Depends(get_current_user)):
