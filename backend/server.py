@@ -311,11 +311,10 @@ async def login(login_data: UserLogin):
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
-# Agency Routes
+# Agency Routes (Updated permissions)
 @api_router.post("/agencies", response_model=Agency)
 async def create_agency(agency_data: AgencyCreate, current_user: User = Depends(get_current_user)):
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Only admins can create agencies")
+    require_super_admin(current_user)  # Only super admin can create agencies
     
     agency = Agency(**agency_data.dict())
     await db.agencies.insert_one(agency.dict())
@@ -323,9 +322,11 @@ async def create_agency(agency_data: AgencyCreate, current_user: User = Depends(
 
 @api_router.get("/agencies", response_model=List[Agency])
 async def get_agencies(current_user: User = Depends(get_current_user)):
-    if current_user.role == UserRole.ADMIN:
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        # Super admin and general accountant see all agencies
         agencies = await db.agencies.find().to_list(1000)
     else:
+        # Agency staff see only their agency
         agencies = await db.agencies.find({"id": current_user.agency_id}).to_list(1000)
     return [Agency(**agency) for agency in agencies]
 
