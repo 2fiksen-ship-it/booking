@@ -1091,7 +1091,11 @@ async def create_payment(payment_data: PaymentCreate, current_user: User = Depen
 
 @api_router.get("/payments", response_model=List[Payment])
 async def get_payments(current_user: User = Depends(get_current_user)):
-    payments = await db.payments.find({"agency_id": current_user.agency_id}).to_list(1000)
+    # Super Admin sees all payments from all agencies
+    if current_user.role == UserRole.SUPER_ADMIN:
+        payments = await db.payments.find({}).to_list(1000)
+    else:
+        payments = await db.payments.find({"agency_id": current_user.agency_id}).to_list(1000)
     return [Payment(**payment) for payment in payments]
 
 # Dashboard Route
