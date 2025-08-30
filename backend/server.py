@@ -1220,7 +1220,13 @@ async def generate_aging_report(current_user: User = Depends(get_current_user)):
     
     for invoice in unpaid_invoices:
         # Calculate days overdue
-        days_overdue = (datetime.now(timezone.utc) - invoice["created_at"]).days
+        invoice_date = invoice["created_at"]
+        if isinstance(invoice_date, str):
+            invoice_date = datetime.fromisoformat(invoice_date.replace('Z', '+00:00'))
+        elif invoice_date.tzinfo is None:
+            invoice_date = invoice_date.replace(tzinfo=timezone.utc)
+        
+        days_overdue = (datetime.now(timezone.utc) - invoice_date).days
         
         aging_data.append({
             "client": clients_dict.get(invoice["client_id"], "Unknown"),
