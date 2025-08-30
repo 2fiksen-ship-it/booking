@@ -70,11 +70,34 @@ async def create_seed_data():
     
     await db.agencies.insert_many(agencies)
     
-    # Create Users for each agency
+    # Create Users with new role hierarchy
     print("👥 Creating users...")
     users = []
+    
+    # Create Super Admin (مدير عام واحد)
+    users.append({
+        'id': str(uuid.uuid4()),
+        'name': 'المدير العام لوكالات صنهاجة',
+        'email': 'superadmin@sanhaja.com',
+        'password_hash': hash_password('super123'),
+        'role': 'super_admin',
+        'agency_id': agencies[0]['id'],  # Can manage all agencies
+        'created_at': datetime.now(timezone.utc)
+    })
+    
+    # Create General Accountant (محاسب عام واحد)
+    users.append({
+        'id': str(uuid.uuid4()),
+        'name': 'المحاسب العام لوكالات صنهاجة',
+        'email': 'generalaccountant@sanhaja.com',
+        'password_hash': hash_password('acc123'),
+        'role': 'general_accountant',
+        'agency_id': agencies[0]['id'],  # Can see all agencies
+        'created_at': datetime.now(timezone.utc)
+    })
+    
+    # Create Agency Staff for each agency
     for agency in agencies:
-        # Create email-friendly city name for Western Algeria
         city_code = {
             'تلمسان': 'tlemcen', 
             'مغنية': 'maghnia', 
@@ -85,38 +108,17 @@ async def create_seed_data():
         }
         email_city = city_code.get(agency["city"], agency["city"].lower())
         
-        # Admin user
-        users.append({
-            'id': str(uuid.uuid4()),
-            'name': f'مدير {agency["name"]}',
-            'email': f'admin@{email_city}.sanhaja.com',
-            'password_hash': hash_password('admin123'),
-            'role': 'admin',
-            'agency_id': agency['id'],
-            'created_at': datetime.now(timezone.utc)
-        })
-        
-        # Accountant user
-        users.append({
-            'id': str(uuid.uuid4()),
-            'name': f'محاسب {agency["name"]}',
-            'email': f'accountant@{email_city}.sanhaja.com',
-            'password_hash': hash_password('acc123'),
-            'role': 'accountant',
-            'agency_id': agency['id'],
-            'created_at': datetime.now(timezone.utc)
-        })
-        
-        # Agent user
-        users.append({
-            'id': str(uuid.uuid4()),
-            'name': f'وكيل {agency["name"]}',
-            'email': f'agent@{email_city}.sanhaja.com',
-            'password_hash': hash_password('agent123'),
-            'role': 'agent',
-            'agency_id': agency['id'],
-            'created_at': datetime.now(timezone.utc)
-        })
+        # Create 2 staff members per agency
+        for i in range(2):
+            users.append({
+                'id': str(uuid.uuid4()),
+                'name': f'موظف {agency["name"]} {i+1}',
+                'email': f'staff{i+1}@{email_city}.sanhaja.com',
+                'password_hash': hash_password('staff123'),
+                'role': 'agency_staff',
+                'agency_id': agency['id'],
+                'created_at': datetime.now(timezone.utc)
+            })
     
     await db.users.insert_many(users)
     
