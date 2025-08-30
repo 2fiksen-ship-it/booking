@@ -927,7 +927,16 @@ async def create_booking(booking_data: BookingCreate, current_user: User = Depen
 
 @api_router.get("/bookings", response_model=List[Booking])
 async def get_bookings(current_user: User = Depends(get_current_user)):
-    bookings = await db.bookings.find({"agency_id": current_user.agency_id}).to_list(1000)
+    if current_user.role == UserRole.SUPER_ADMIN:
+        # Super admin sees all bookings
+        bookings = await db.bookings.find().to_list(1000)
+    elif current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        # General accountant sees all bookings
+        bookings = await db.bookings.find().to_list(1000)
+    else:
+        # Agency staff see only their agency's bookings
+        bookings = await db.bookings.find({"agency_id": current_user.agency_id}).to_list(1000)
+    
     return [Booking(**booking) for booking in bookings]
 
 # Invoice Routes
