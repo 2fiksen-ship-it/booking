@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './components/ui/textarea';
 import { Calendar } from './components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
-import { CalendarIcon, Home, Users, Building2, Package, FileText, CreditCard, Wallet, BarChart3, Settings, LogOut, Globe } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
+import { CalendarIcon, Home, Users, Building2, Package, FileText, CreditCard, Wallet, BarChart3, Settings, LogOut, Globe, Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar, fr } from 'date-fns/locale';
 
@@ -65,15 +66,20 @@ const translations = {
     status: 'الحالة',
     date: 'التاريخ',
     amount: 'المبلغ',
+    search: 'بحث',
+    loading: 'جاري التحميل...',
+    noData: 'لا توجد بيانات',
     
     // Clients
     addClient: 'إضافة عميل',
     cinPassport: 'رقم الهوية/جواز السفر',
+    clientsList: 'قائمة العملاء',
     
     // Suppliers
     addSupplier: 'إضافة مورد',
     supplierType: 'نوع المورد',
     contact: 'جهة الاتصال',
+    suppliersList: 'قائمة الموردين',
     
     // Bookings
     addBooking: 'إضافة حجز',
@@ -85,6 +91,7 @@ const translations = {
     sellPrice: 'سعر البيع',
     startDate: 'تاريخ البداية',
     endDate: 'تاريخ النهاية',
+    bookingsList: 'قائمة الحجوزات',
     
     // Booking Types
     'عمرة': 'عمرة',
@@ -99,6 +106,7 @@ const translations = {
     tvaRate: 'معدل الضريبة %',
     amountTTC: 'المبلغ شامل الضريبة',
     dueDate: 'تاريخ الاستحقاق',
+    invoicesList: 'قائمة الفواتير',
     
     // Invoice Status
     pending: 'معلقة',
@@ -111,11 +119,18 @@ const translations = {
     invoice: 'الفاتورة',
     paymentMethod: 'طريقة الدفع',
     paymentDate: 'تاريخ الدفع',
+    paymentsList: 'قائمة المدفوعات',
     
     // Payment Methods
     cash: 'نقدي',
     bank: 'بنكي',
-    card: 'بطاقة'
+    card: 'بطاقة',
+    
+    // Messages
+    success: 'تم بنجاح',
+    error: 'حدث خطأ',
+    confirm: 'تأكيد',
+    confirmDelete: 'هل أنت متأكد من الحذف؟'
   },
   fr: {
     // Navigation
@@ -152,15 +167,20 @@ const translations = {
     status: 'Statut',
     date: 'Date',
     amount: 'Montant',
+    search: 'Rechercher',
+    loading: 'Chargement...',
+    noData: 'Aucune donnée',
     
     // Clients
     addClient: 'Ajouter un client',
     cinPassport: 'CIN/Passeport',
+    clientsList: 'Liste des clients',
     
     // Suppliers
     addSupplier: 'Ajouter un fournisseur',
     supplierType: 'Type de fournisseur',
     contact: 'Contact',
+    suppliersList: 'Liste des fournisseurs',
     
     // Bookings
     addBooking: 'Ajouter une réservation',
@@ -172,6 +192,7 @@ const translations = {
     sellPrice: 'Prix de vente',
     startDate: 'Date de début',
     endDate: 'Date de fin',
+    bookingsList: 'Liste des réservations',
     
     // Booking Types
     'عمرة': 'Omra',
@@ -186,6 +207,7 @@ const translations = {
     tvaRate: 'Taux TVA %',
     amountTTC: 'Montant TTC',
     dueDate: "Date d'échéance",
+    invoicesList: 'Liste des factures',
     
     // Invoice Status
     pending: 'En attente',
@@ -198,11 +220,18 @@ const translations = {
     invoice: 'Facture',
     paymentMethod: 'Méthode de paiement',
     paymentDate: 'Date de paiement',
+    paymentsList: 'Liste des paiements',
     
     // Payment Methods
     cash: 'Espèces',
     bank: 'Banque',
-    card: 'Carte'
+    card: 'Carte',
+    
+    // Messages
+    success: 'Succès',
+    error: 'Erreur',
+    confirm: 'Confirmer',
+    confirmDelete: 'Êtes-vous sûr de vouloir supprimer?'
   }
 };
 
@@ -564,12 +593,410 @@ const Dashboard = () => {
   );
 };
 
+// Clients Management Component
+const ClientsManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    cin_passport: ''
+  });
+
+  const fetchClients = async () => {
+    try {
+      const response = await axios.get(`${API}/clients`);
+      setClients(response.data);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingClient) {
+        await axios.put(`${API}/clients/${editingClient.id}`, formData);
+      } else {
+        await axios.post(`${API}/clients`, formData);
+      }
+      setFormData({ name: '', phone: '', cin_passport: '' });
+      setEditingClient(null);
+      setIsDialogOpen(false);
+      fetchClients();
+    } catch (error) {
+      console.error('Error saving client:', error);
+    }
+  };
+
+  const handleEdit = (client) => {
+    setEditingClient(client);
+    setFormData({
+      name: client.name,
+      phone: client.phone,
+      cin_passport: client.cin_passport
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (clientId) => {
+    if (window.confirm(t('confirmDelete'))) {
+      try {
+        await axios.delete(`${API}/clients/${clientId}`);
+        fetchClients();
+      } catch (error) {
+        console.error('Error deleting client:', error);
+      }
+    }
+  };
+
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.phone.includes(searchTerm) ||
+    client.cin_passport.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return <div className="text-center py-8">{t('loading')}</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">{t('clientsList')}</h2>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('addClient')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingClient ? t('edit') : t('addClient')}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="name">{t('name')}</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">{t('phone')}</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="cin_passport">{t('cinPassport')}</Label>
+                <Input
+                  id="cin_passport"
+                  value={formData.cin_passport}
+                  onChange={(e) => setFormData({ ...formData, cin_passport: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  {t('cancel')}
+                </Button>
+                <Button type="submit">{t('save')}</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="flex items-center space-x-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder={t('search') + '...'}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('name')}</TableHead>
+                <TableHead>{t('phone')}</TableHead>
+                <TableHead>{t('cinPassport')}</TableHead>
+                <TableHead>{t('actions')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredClients.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                    {t('noData')}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredClients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell>{client.phone}</TableCell>
+                    <TableCell>{client.cin_passport}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(client)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(client.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Suppliers Management Component  
+const SuppliersManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    type: '',
+    contact: ''
+  });
+
+  const fetchSuppliers = async () => {
+    try {
+      const response = await axios.get(`${API}/suppliers`);
+      setSuppliers(response.data);
+    } catch (error) {
+      console.error('Error fetching suppliers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingSupplier) {
+        await axios.put(`${API}/suppliers/${editingSupplier.id}`, formData);
+      } else {
+        await axios.post(`${API}/suppliers`, formData);
+      }
+      setFormData({ name: '', type: '', contact: '' });
+      setEditingSupplier(null);
+      setIsDialogOpen(false);
+      fetchSuppliers();
+    } catch (error) {
+      console.error('Error saving supplier:', error);
+    }
+  };
+
+  const handleEdit = (supplier) => {
+    setEditingSupplier(supplier);
+    setFormData({
+      name: supplier.name,
+      type: supplier.type,
+      contact: supplier.contact
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (supplierId) => {
+    if (window.confirm(t('confirmDelete'))) {
+      try {
+        await axios.delete(`${API}/suppliers/${supplierId}`);
+        fetchSuppliers();
+      } catch (error) {
+        console.error('Error deleting supplier:', error);
+      }
+    }
+  };
+
+  const filteredSuppliers = suppliers.filter(supplier =>
+    supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    supplier.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    supplier.contact.includes(searchTerm)
+  );
+
+  if (loading) {
+    return <div className="text-center py-8">{t('loading')}</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">{t('suppliersList')}</h2>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('addSupplier')}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingSupplier ? t('edit') : t('addSupplier')}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="name">{t('name')}</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="type">{t('supplierType')}</Label>
+                <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('supplierType')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="طيران">طيران</SelectItem>
+                    <SelectItem value="فنادق">فنادق</SelectItem>
+                    <SelectItem value="نقل">نقل</SelectItem>
+                    <SelectItem value="تأشيرات">تأشيرات</SelectItem>
+                    <SelectItem value="تأمين">تأمين</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="contact">{t('contact')}</Label>
+                <Input
+                  id="contact"
+                  value={formData.contact}
+                  onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  {t('cancel')}
+                </Button>
+                <Button type="submit">{t('save')}</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="flex items-center space-x-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder={t('search') + '...'}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('name')}</TableHead>
+                <TableHead>{t('supplierType')}</TableHead>
+                <TableHead>{t('contact')}</TableHead>
+                <TableHead>{t('actions')}</TableHead>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredSuppliers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                    {t('noData')}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredSuppliers.map((supplier) => (
+                  <TableRow key={supplier.id}>
+                    <TableCell className="font-medium">{supplier.name}</TableCell>
+                    <TableCell>{supplier.type}</TableCell>
+                    <TableCell>{supplier.contact}</TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(supplier)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(supplier.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // Main App Component
 const MainApp = ({ activeTab }) => {
   const components = {
     dashboard: Dashboard,
-    clients: () => <div className="text-center py-8">قريباً - إدارة العملاء</div>,
-    suppliers: () => <div className="text-center py-8">قريباً - إدارة الموردين</div>,
+    clients: ClientsManagement,
+    suppliers: SuppliersManagement,
     bookings: () => <div className="text-center py-8">قريباً - إدارة الحجوزات</div>,
     invoices: () => <div className="text-center py-8">قريباً - إدارة الفواتير</div>,
     payments: () => <div className="text-center py-8">قريباً - إدارة المدفوعات</div>,
