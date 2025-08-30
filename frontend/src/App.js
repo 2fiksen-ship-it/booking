@@ -390,15 +390,62 @@ const Layout = ({ children }) => {
   const { language, toggleLanguage, t } = useContext(LanguageContext);
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  const navItems = [
-    { id: 'dashboard', label: t('dashboard'), icon: Home },
-    { id: 'clients', label: t('clients'), icon: Users },
-    { id: 'suppliers', label: t('suppliers'), icon: Building2 },
-    { id: 'bookings', label: t('bookings'), icon: Package },
-    { id: 'invoices', label: t('invoices'), icon: FileText },
-    { id: 'payments', label: t('payments'), icon: CreditCard },
-    { id: 'reports', label: t('reports'), icon: BarChart3 },
-  ];
+  // Navigation items based on user role
+  const getNavItems = () => {
+    const baseItems = [
+      { id: 'dashboard', label: t('dashboard'), icon: Home }
+    ];
+
+    // Super Admin sees everything
+    if (user?.role === 'super_admin') {
+      return [
+        ...baseItems,
+        { id: 'userManagement', label: t('userManagement'), icon: Settings },
+        { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 },
+        { id: 'clients', label: t('clients'), icon: Users },
+        { id: 'suppliers', label: t('suppliers'), icon: Building2 },
+        { id: 'bookings', label: t('bookings'), icon: Package },
+        { id: 'invoices', label: t('invoices'), icon: FileText },
+        { id: 'payments', label: t('payments'), icon: CreditCard },
+        { id: 'reports', label: t('reports'), icon: BarChart3 }
+      ];
+    }
+
+    // General Accountant sees reports and approvals
+    if (user?.role === 'general_accountant') {
+      return [
+        ...baseItems,
+        { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 },
+        { id: 'clients', label: t('clients'), icon: Users },
+        { id: 'suppliers', label: t('suppliers'), icon: Building2 },
+        { id: 'invoices', label: t('invoices'), icon: FileText },
+        { id: 'payments', label: t('payments'), icon: CreditCard },
+        { id: 'reports', label: t('reports'), icon: BarChart3 }
+      ];
+    }
+
+    // Agency Staff sees basic operations
+    return [
+      ...baseItems,
+      { id: 'clients', label: t('clients'), icon: Users },
+      { id: 'suppliers', label: t('suppliers'), icon: Building2 },
+      { id: 'bookings', label: t('bookings'), icon: Package },
+      { id: 'invoices', label: t('invoices'), icon: FileText },
+      { id: 'payments', label: t('payments'), icon: CreditCard }
+    ];
+  };
+
+  const navItems = getNavItems();
+
+  // Get role display name
+  const getRoleDisplay = (role) => {
+    switch(role) {
+      case 'super_admin': return t('superAdmin');
+      case 'general_accountant': return t('generalAccountant'); 
+      case 'agency_staff': return t('agencyStaff');
+      default: return role;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -424,7 +471,7 @@ const Layout = ({ children }) => {
               </Button>
               
               <div className="text-sm text-gray-600">
-                {user?.name} ({user?.role})
+                {user?.name} ({getRoleDisplay(user?.role)})
               </div>
               
               <Button
@@ -445,7 +492,7 @@ const Layout = ({ children }) => {
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-7 bg-gray-100">
+            <TabsList className={`grid w-full grid-cols-${navItems.length} bg-gray-100`}>
               {navItems.map((item) => (
                 <TabsTrigger
                   key={item.id}
