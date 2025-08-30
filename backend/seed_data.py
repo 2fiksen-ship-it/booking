@@ -284,12 +284,12 @@ async def create_seed_data():
     
     print("\n🔑 Login credentials:")
     city_code = {
-        'الجزائر العاصمة': 'algiers', 
+        'تلمسان': 'tlemcen', 
+        'مغنية': 'maghnia', 
+        'ندرومة': 'nedroma', 
         'وهران': 'oran', 
-        'قسنطينة': 'constantine', 
-        'عنابة': 'annaba', 
-        'سطيف': 'setif', 
-        'باتنة': 'batna'
+        'الرمشي': 'remchi', 
+        'سيدي بلعباس': 'sidibel'
     }
     
     print("Admin users:")
