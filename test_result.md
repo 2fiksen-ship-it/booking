@@ -140,8 +140,8 @@ backend:
         comment: "✅ TESTED: CRUD operations working correctly. GET /api/clients returns 9 clients, GET /api/suppliers returns 4 suppliers. All endpoints respond with proper JSON structure. Database connectivity confirmed through dashboard endpoint showing cashbox balance of 50,000 DZD."
 
   - task: "Bookings Management API"
-    implemented: false
-    working: "NA"
+    implemented: true
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
@@ -150,6 +150,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Need to implement bookings CRUD endpoints"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Bookings Management API working correctly! CRUD endpoints implemented and functional. Super Admin can access bookings from all agencies. Week bookings count: 37 across all agencies. Booking creation and listing working properly."
 
   - task: "Invoices Management API"
     implemented: true
