@@ -381,16 +381,6 @@ async def create_agency(agency_data: AgencyCreate, current_user: User = Depends(
     await db.agencies.insert_one(agency.dict())
     return agency
 
-@api_router.get("/agencies", response_model=List[Agency])
-async def get_agencies(current_user: User = Depends(get_current_user)):
-    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
-        # Super admin and general accountant see all agencies
-        agencies = await db.agencies.find().to_list(1000)
-    else:
-        # Agency staff see only their agency
-        agencies = await db.agencies.find({"id": current_user.agency_id}).to_list(1000)
-    return [Agency(**agency) for agency in agencies]
-
 # Notification Routes
 @api_router.post("/notifications")
 async def create_notification(
