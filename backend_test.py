@@ -1582,6 +1582,27 @@ def main():
         print(f"\n⚠️  القضايا الحرجة - Critical Issues:")
         critical_issues = []
         
+        # Google Authentication Critical Issues (PRIMARY FOCUS)
+        if not google_auth_results.get('google_auth_endpoint_accessible'):
+            critical_issues.append("❌ Google Auth endpoint not accessible")
+        if not google_auth_results.get('logout_endpoint'):
+            critical_issues.append("❌ Logout endpoint not working")
+        if not google_auth_results.get('profile_endpoint_authenticated'):
+            critical_issues.append("❌ Profile endpoint not working when authenticated")
+        if not google_auth_results.get('jwt_auth_compatibility'):
+            critical_issues.append("❌ JWT authentication backward compatibility broken")
+        if not google_auth_results.get('session_token_handling'):
+            critical_issues.append("❌ Session token handling not implemented")
+        if not google_auth_results.get('cors_configured'):
+            critical_issues.append("❌ CORS not configured for withCredentials requests")
+        if not google_auth_results.get('auth_dependency_working'):
+            critical_issues.append("❌ Dual authentication support not working")
+        
+        # Check infrastructure score
+        infrastructure_score = google_auth_results.get('infrastructure_score', 0)
+        if infrastructure_score < 0.5:
+            critical_issues.append(f"❌ Google Auth infrastructure score too low: {infrastructure_score*100:.1f}%")
+        
         # Bug Investigation Critical Issues (PRIMARY FOCUS)
         if not bug_investigation_results.get('super_admin_login'):
             critical_issues.append("❌ Super Admin login failed (superadmin@sanhaja.com)")
