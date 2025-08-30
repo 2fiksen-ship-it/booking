@@ -606,6 +606,234 @@ class SanhajaAPITester:
         
         return results
 
+    def test_operations_management_bug_investigation(self):
+        """Test Super Admin access to operations management data - bug investigation from review request"""
+        print(f"\n🔍 BUG INVESTIGATION: Super Admin Operations Management Cross-Agency Access")
+        print(f"   Testing GET /api/clients, /api/suppliers, /api/bookings for ALL 6 agencies")
+        print(f"   Expected: Super Admin should see data from ALL agencies, not just Tlemcen")
+        
+        results = {}
+        
+        # Step 1: Super Admin Login with exact credentials from review request
+        print(f"\n   1. Super Admin Login (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with bug investigation")
+            return results
+            
+        print(f"   ✅ Super Admin authenticated successfully")
+        print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+        print(f"   Agency: {self.current_user.get('agency_id')}")
+        
+        # Step 2: Test GET /api/clients (should return clients from ALL 6 agencies)
+        print(f"\n   2. Testing GET /api/clients (should show ALL agencies, not just Tlemcen)...")
+        success, clients_data = self.run_test(
+            "Super Admin - Get All Clients",
+            "GET",
+            "clients",
+            200
+        )
+        results['clients_endpoint'] = success
+        
+        if success:
+            print(f"   ✅ Clients endpoint accessible")
+            print(f"   Total clients visible: {len(clients_data)}")
+            
+            # Analyze agency distribution
+            agency_ids = set()
+            agency_names = {}
+            for client in clients_data:
+                if 'agency_id' in client:
+                    agency_ids.add(client['agency_id'])
+            
+            print(f"   Agencies represented in clients: {len(agency_ids)}")
+            
+            if len(agency_ids) >= 6:
+                print(f"   ✅ PASS: Super Admin sees clients from {len(agency_ids)} agencies (expected 6)")
+                results['clients_cross_agency'] = True
+            elif len(agency_ids) == 1:
+                print(f"   ❌ BUG FOUND: Super Admin only sees clients from 1 agency (likely Tlemcen only)")
+                results['clients_cross_agency'] = False
+            else:
+                print(f"   ⚠️  PARTIAL: Super Admin sees clients from {len(agency_ids)} agencies (expected 6)")
+                results['clients_cross_agency'] = False
+        
+        # Step 3: Test GET /api/suppliers (should return suppliers from ALL 6 agencies)
+        print(f"\n   3. Testing GET /api/suppliers (should show ALL agencies, not just Tlemcen)...")
+        success, suppliers_data = self.run_test(
+            "Super Admin - Get All Suppliers",
+            "GET",
+            "suppliers",
+            200
+        )
+        results['suppliers_endpoint'] = success
+        
+        if success:
+            print(f"   ✅ Suppliers endpoint accessible")
+            print(f"   Total suppliers visible: {len(suppliers_data)}")
+            
+            # Analyze agency distribution
+            agency_ids = set()
+            for supplier in suppliers_data:
+                if 'agency_id' in supplier:
+                    agency_ids.add(supplier['agency_id'])
+            
+            print(f"   Agencies represented in suppliers: {len(agency_ids)}")
+            
+            if len(agency_ids) >= 6:
+                print(f"   ✅ PASS: Super Admin sees suppliers from {len(agency_ids)} agencies (expected 6)")
+                results['suppliers_cross_agency'] = True
+            elif len(agency_ids) == 1:
+                print(f"   ❌ BUG FOUND: Super Admin only sees suppliers from 1 agency (likely Tlemcen only)")
+                results['suppliers_cross_agency'] = False
+            else:
+                print(f"   ⚠️  PARTIAL: Super Admin sees suppliers from {len(agency_ids)} agencies (expected 6)")
+                results['suppliers_cross_agency'] = False
+        
+        # Step 4: Test GET /api/bookings (should return bookings from ALL 6 agencies)
+        print(f"\n   4. Testing GET /api/bookings (should show ALL agencies, not just Tlemcen)...")
+        success, bookings_data = self.run_test(
+            "Super Admin - Get All Bookings",
+            "GET",
+            "bookings",
+            200
+        )
+        results['bookings_endpoint'] = success
+        
+        if success:
+            print(f"   ✅ Bookings endpoint accessible")
+            print(f"   Total bookings visible: {len(bookings_data)}")
+            
+            # Analyze agency distribution
+            agency_ids = set()
+            for booking in bookings_data:
+                if 'agency_id' in booking:
+                    agency_ids.add(booking['agency_id'])
+            
+            print(f"   Agencies represented in bookings: {len(agency_ids)}")
+            
+            if len(agency_ids) >= 6:
+                print(f"   ✅ PASS: Super Admin sees bookings from {len(agency_ids)} agencies (expected 6)")
+                results['bookings_cross_agency'] = True
+            elif len(agency_ids) == 1:
+                print(f"   ❌ BUG FOUND: Super Admin only sees bookings from 1 agency (likely Tlemcen only)")
+                results['bookings_cross_agency'] = False
+            else:
+                print(f"   ⚠️  PARTIAL: Super Admin sees bookings from {len(agency_ids)} agencies (expected 6)")
+                results['bookings_cross_agency'] = False
+        
+        # Step 5: Cross-Agency Data Verification - Compare with working endpoints
+        print(f"\n   5. Cross-Agency Verification - Compare with known working endpoints...")
+        
+        # Test invoices (we know this works correctly from previous tests)
+        success, invoices_data = self.run_test(
+            "Super Admin - Get All Invoices (Reference)",
+            "GET",
+            "invoices",
+            200
+        )
+        
+        if success:
+            invoice_agencies = set()
+            for invoice in invoices_data:
+                if 'agency_id' in invoice:
+                    invoice_agencies.add(invoice['agency_id'])
+            
+            print(f"   Reference - Invoices from {len(invoice_agencies)} agencies")
+            results['invoices_agencies_count'] = len(invoice_agencies)
+        
+        # Test payments (we know this works correctly from previous tests)
+        success, payments_data = self.run_test(
+            "Super Admin - Get All Payments (Reference)",
+            "GET",
+            "payments",
+            200
+        )
+        
+        if success:
+            payment_agencies = set()
+            for payment in payments_data:
+                if 'agency_id' in payment:
+                    payment_agencies.add(payment['agency_id'])
+            
+            print(f"   Reference - Payments from {len(payment_agencies)} agencies")
+            results['payments_agencies_count'] = len(payment_agencies)
+        
+        # Step 6: Verify all 6 agencies exist
+        print(f"\n   6. Verifying all 6 agencies exist...")
+        success, agencies_data = self.run_test(
+            "Super Admin - Get All Agencies",
+            "GET",
+            "agencies",
+            200
+        )
+        
+        if success:
+            print(f"   Total agencies in system: {len(agencies_data)}")
+            expected_cities = ['تلمسان', 'مغنية', 'ندرومة', 'وهران', 'الرمشي', 'سيدي بلعباس']
+            found_cities = []
+            
+            for agency in agencies_data:
+                city = agency.get('city', '')
+                name = agency.get('name', '')
+                found_cities.append(city)
+                print(f"   Agency: {name} - {city}")
+            
+            matching_cities = [city for city in expected_cities if city in found_cities]
+            print(f"   Expected cities found: {len(matching_cities)}/6")
+            results['all_agencies_exist'] = len(agencies_data) >= 6
+        
+        # Step 7: Bug Analysis Summary
+        print(f"\n   7. BUG ANALYSIS SUMMARY:")
+        
+        bugs_found = []
+        working_endpoints = []
+        
+        # Check each operations endpoint
+        if results.get('clients_cross_agency', False):
+            working_endpoints.append("✅ Clients endpoint - Shows ALL agencies")
+        else:
+            bugs_found.append("❌ Clients endpoint - Only shows Tlemcen agency")
+        
+        if results.get('suppliers_cross_agency', False):
+            working_endpoints.append("✅ Suppliers endpoint - Shows ALL agencies")
+        else:
+            bugs_found.append("❌ Suppliers endpoint - Only shows Tlemcen agency")
+        
+        if results.get('bookings_cross_agency', False):
+            working_endpoints.append("✅ Bookings endpoint - Shows ALL agencies")
+        else:
+            bugs_found.append("❌ Bookings endpoint - Only shows Tlemcen agency")
+        
+        # Print results
+        if working_endpoints:
+            print(f"\n   WORKING CORRECTLY:")
+            for endpoint in working_endpoints:
+                print(f"     {endpoint}")
+        
+        if bugs_found:
+            print(f"\n   🐛 BUGS IDENTIFIED:")
+            for bug in bugs_found:
+                print(f"     {bug}")
+            
+            print(f"\n   🔍 ROOT CAUSE ANALYSIS:")
+            print(f"     The bug is in the backend code (server.py):")
+            print(f"     - get_clients() (line 841-852): ✅ Correctly implements Super Admin cross-agency access")
+            print(f"     - get_suppliers() (line 884-887): ❌ Missing Super Admin check - only shows current user's agency")
+            print(f"     - get_bookings() (line 919-922): ❌ Missing Super Admin check - only shows current user's agency")
+            print(f"     ")
+            print(f"     FIX NEEDED: Add Super Admin role check in suppliers and bookings endpoints")
+            print(f"     Similar to how it's implemented in clients and invoices endpoints")
+        else:
+            print(f"\n   ✅ NO BUGS FOUND: All operations endpoints correctly show cross-agency data")
+        
+        results['bugs_found'] = len(bugs_found)
+        results['working_endpoints'] = len(working_endpoints)
+        
+        return results
+
     def test_super_admin_functionality(self):
         """Test Super Admin functionality as requested in review"""
         print(f"\n👑 Testing Super Admin Functionality (Review Request)...")
