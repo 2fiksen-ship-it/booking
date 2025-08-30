@@ -128,9 +128,9 @@ async def create_seed_data():
         for i, supplier_type in enumerate(supplier_types):
             suppliers.append({
                 'id': str(uuid.uuid4()),
-                'name': f'{supplier_type} الجزائر - {agency["city"]}',
+                'name': f'{supplier_type} غرب الجزائر - {agency["city"]}',
                 'type': supplier_type,
-                'contact': f'+213{2+i}12345678',
+                'contact': f'+213{4+i%2}{i+1}2345678',
                 'agency_id': agency['id'],
                 'created_at': datetime.now(timezone.utc)
             })
