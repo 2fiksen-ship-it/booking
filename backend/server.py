@@ -13,6 +13,8 @@ from datetime import datetime, timedelta, timezone
 import bcrypt
 import jwt
 from enum import Enum
+import requests  # For calling Emergent Auth API
+import aiohttp  # For async HTTP calls
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
