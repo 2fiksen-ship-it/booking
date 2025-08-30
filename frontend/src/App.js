@@ -23,6 +23,10 @@ import { ar, fr } from 'date-fns/locale';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+console.log('=== APP.JS LOADED ===');
+console.log('BACKEND_URL:', BACKEND_URL);
+console.log('API:', API);
+
 // Auth Context
 const AuthContext = createContext();
 
