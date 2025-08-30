@@ -285,6 +285,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
   const { t } = useContext(LanguageContext);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -292,7 +293,9 @@ const Login = () => {
     setError('');
 
     const result = await login(email, password);
-    if (!result.success) {
+    if (result.success) {
+      navigate('/'); // Redirect to dashboard after successful login
+    } else {
       setError(result.error);
     }
     setLoading(false);
