@@ -380,7 +380,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Super Admin Operations Management Cross-Agency Access Bug Investigation"
+    - "Google Authentication System"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
