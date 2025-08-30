@@ -65,10 +65,33 @@ class AccountType(str, Enum):
     REVENUE = "revenue"
     EXPENSE = "expense"
 
+# Add AccountType enum back
+class AccountType(str, Enum):
+    ASSET = "asset"
+    LIABILITY = "liability"
+    EQUITY = "equity"
+    REVENUE = "revenue"
+    EXPENSE = "expense"
+
 class ReportStatus(str, Enum):
     PENDING = "pending"  # في انتظار الموافقة
     APPROVED = "approved"  # تم الموافقة من المحاسب العام
     REJECTED = "rejected"  # مرفوض
+
+# Add Daily Report model
+class DailyReport(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    agency_id: str
+    report_date: datetime
+    total_income: float
+    total_expenses: float
+    transactions_count: int
+    status: ReportStatus = ReportStatus.PENDING
+    approved_by: Optional[str] = None  # user_id of general accountant
+    created_by: str  # user_id who created the report
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    approved_at: Optional[datetime] = None
 
 # Database Models
 class Agency(BaseModel):
