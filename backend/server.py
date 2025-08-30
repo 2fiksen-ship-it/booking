@@ -1322,6 +1322,209 @@ async def generate_profit_loss_report(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# User Management Routes (Super Admin Only)
+@api_router.get("/users", response_model=List[User])
+async def get_all_users(current_user: User = Depends(get_current_user)):
+    """Get all users - Super Admin only"""
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Only Super Admin can access user management")
+    
+    users = await db.users.find({}).to_list(1000)
+    return [User(**user) for user in users]
+
+@api_router.post("/users", response_model=User)
+async def create_user(user_data: UserCreate, current_user: User = Depends(get_current_user)):
+    """Create new user - Super Admin only"""
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Only Super Admin can create users")
+    
+    # Check if email already exists
+    existing_user = await db.users.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Validate agency exists
+    agency = await db.agencies.find_one({"id": user_data.agency_id})
+    if not agency:
+        raise HTTPException(status_code=400, detail="Agency not found")
+    
+    # Create new user
+    user = User(
+        id=str(uuid.uuid4()),
+        name=user_data.name,
+        email=user_data.email,
+        password_hash=bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+        role=user_data.role,
+        agency_id=user_data.agency_id,
+        created_at=datetime.now(timezone.utc)
+    )
+    
+    await db.users.insert_one(user.dict())
+    return user
+
+@api_router.put("/users/{user_id}", response_model=User)
+async def update_user(user_id: str, user_data: UserUpdate, current_user: User = Depends(get_current_user)):
+    """Update user - Super Admin only"""
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Only Super Admin can update users")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prepare update data
+    update_data = {"updated_at": datetime.now(timezone.utc)}
+    
+    if user_data.name:
+        update_data["name"] = user_data.name
+    if user_data.email:
+        # Check email uniqueness
+        existing_user = await db.users.find_one({"email": user_data.email, "id": {"$ne": user_id}})
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already exists")
+        update_data["email"] = user_data.email
+    if user_data.role:
+        update_data["role"] = user_data.role
+    if user_data.agency_id:
+        # Validate agency exists
+        agency = await db.agencies.find_one({"id": user_data.agency_id})
+        if not agency:
+            raise HTTPException(status_code=400, detail="Agency not found")
+        update_data["agency_id"] = user_data.agency_id
+    if user_data.password:
+        update_data["password_hash"] = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    # Return updated user
+    updated_user = await db.users.find_one({"id": user_id})
+    return User(**updated_user)
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
+    """Delete user - Super Admin only"""
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Only Super Admin can delete users")
+    
+    # Cannot delete self
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    await db.users.delete_one({"id": user_id})
+    return {"message": "User deleted successfully"}
+
+@api_router.get("/agencies", response_model=List[Agency])
+async def get_all_agencies(current_user: User = Depends(get_current_user)):
+    """Get all agencies for user management dropdowns"""
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    agencies = await db.agencies.find({}).to_list(1000)
+    return [Agency(**agency) for agency in agencies]
+
+# Daily Reports Management Routes
+@api_router.get("/daily-reports")
+async def get_daily_reports(current_user: User = Depends(get_current_user)):
+    """Get daily reports based on user role"""
+    if current_user.role == UserRole.SUPER_ADMIN:
+        # Super Admin sees all reports from all agencies
+        reports = await db.daily_reports.find({}).to_list(1000)
+    elif current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        # General Accountant sees all reports but can approve/reject
+        reports = await db.daily_reports.find({}).to_list(1000)
+    else:
+        # Agency staff sees only their agency reports
+        reports = await db.daily_reports.find({"agency_id": current_user.agency_id}).to_list(1000)
+    
+    return reports
+
+@api_router.post("/daily-reports")
+async def create_daily_report(report_data: DailyReportCreate, current_user: User = Depends(get_current_user)):
+    """Create daily report - Agency Staff"""
+    if current_user.role not in [UserRole.AGENCY_STAFF, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only agency staff can create daily reports")
+    
+    # Check if report already exists for this date and agency
+    existing_report = await db.daily_reports.find_one({
+        "date": report_data.date,
+        "agency_id": current_user.agency_id
+    })
+    
+    if existing_report:
+        raise HTTPException(status_code=400, detail="Daily report already exists for this date")
+    
+    # Create report
+    report = DailyReport(
+        id=str(uuid.uuid4()),
+        date=report_data.date,
+        income=report_data.income,
+        expenses=report_data.expenses,
+        cashbox_balance=report_data.cashbox_balance,
+        notes=report_data.notes or "",
+        status=ReportStatus.PENDING,
+        agency_id=current_user.agency_id,
+        created_by=current_user.id,
+        created_at=datetime.now(timezone.utc)
+    )
+    
+    await db.daily_reports.insert_one(report.dict())
+    return report
+
+@api_router.put("/daily-reports/{report_id}/approve")
+async def approve_daily_report(report_id: str, current_user: User = Depends(get_current_user)):
+    """Approve daily report - General Accountant or Super Admin"""
+    if current_user.role not in [UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only General Accountant or Super Admin can approve reports")
+    
+    report = await db.daily_reports.find_one({"id": report_id})
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    await db.daily_reports.update_one(
+        {"id": report_id},
+        {
+            "$set": {
+                "status": ReportStatus.APPROVED,
+                "approved_by": current_user.id,
+                "approved_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {"message": "Report approved successfully"}
+
+@api_router.put("/daily-reports/{report_id}/reject")
+async def reject_daily_report(
+    report_id: str, 
+    rejection_reason: str = "",
+    current_user: User = Depends(get_current_user)
+):
+    """Reject daily report - General Accountant or Super Admin"""
+    if current_user.role not in [UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only General Accountant or Super Admin can reject reports")
+    
+    report = await db.daily_reports.find_one({"id": report_id})
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    await db.daily_reports.update_one(
+        {"id": report_id},
+        {
+            "$set": {
+                "status": ReportStatus.REJECTED,
+                "approved_by": current_user.id,
+                "approved_at": datetime.now(timezone.utc),
+                "rejection_reason": rejection_reason
+            }
+        }
+    )
+    
+    return {"message": "Report rejected successfully"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
