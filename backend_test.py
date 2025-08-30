@@ -1310,7 +1310,23 @@ def main():
         print(f"\n⚠️  القضايا الحرجة - Critical Issues:")
         critical_issues = []
         
-        # Super Admin Critical Issues (PRIMARY FOCUS)
+        # Bug Investigation Critical Issues (PRIMARY FOCUS)
+        if not bug_investigation_results.get('super_admin_login'):
+            critical_issues.append("❌ Super Admin login failed (superadmin@sanhaja.com)")
+        if not bug_investigation_results.get('clients_endpoint'):
+            critical_issues.append("❌ Clients endpoint not accessible")
+        if not bug_investigation_results.get('suppliers_endpoint'):
+            critical_issues.append("❌ Suppliers endpoint not accessible")
+        if not bug_investigation_results.get('bookings_endpoint'):
+            critical_issues.append("❌ Bookings endpoint not accessible")
+        if not bug_investigation_results.get('clients_cross_agency'):
+            critical_issues.append("🐛 BUG: Clients endpoint only shows Tlemcen agency (should show ALL 6)")
+        if not bug_investigation_results.get('suppliers_cross_agency'):
+            critical_issues.append("🐛 BUG: Suppliers endpoint only shows Tlemcen agency (should show ALL 6)")
+        if not bug_investigation_results.get('bookings_cross_agency'):
+            critical_issues.append("🐛 BUG: Bookings endpoint only shows Tlemcen agency (should show ALL 6)")
+        
+        # Super Admin Critical Issues (SECONDARY FOCUS)
         if not super_admin_results.get('super_admin_login'):
             critical_issues.append("❌ Super Admin login failed (superadmin@sanhaja.com)")
         if not super_admin_results.get('super_admin_dashboard'):
