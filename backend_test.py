@@ -12,8 +12,14 @@ class SanhajaAPITester:
         self.tests_run = 0
         self.tests_passed = 0
         
-        # Correct user hierarchy for testing
+        # Test users - including the one from review request
         self.test_users = {
+            'admin_user': {
+                'email': 'admin@sanhaja-oran.dz',
+                'password': 'admin123',
+                'role': 'unknown',  # Will be determined after login
+                'name': 'Admin User'
+            },
             'super_admin': {
                 'email': 'superadmin@sanhaja.com',
                 'password': 'super123',
