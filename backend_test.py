@@ -226,7 +226,7 @@ def main():
     print("PHASE 1: AUTHENTICATION TESTING")
     print("="*60)
     
-    if not tester.test_login("admin@rabat.sanhaja.com", "admin123"):
+    if not tester.test_login("admin@tlemcen.sanhaja.com", "admin123"):
         print("❌ Login failed, stopping tests")
         return 1
     
