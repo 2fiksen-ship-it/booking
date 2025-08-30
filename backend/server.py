@@ -335,21 +335,42 @@ def create_access_token(data: dict):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    try:
-        token = credentials.credentials
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id is None:
+# Authentication dependency with session support
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    session_token: Optional[str] = Cookie(None)
+):
+    # Priority 1: Check for session token in cookie (Google Auth)
+    if session_token:
+        try:
+            # Verify session token in database
+            session = await db.sessions.find_one({"session_token": session_token})
+            if session and session["expires_at"] > datetime.now(timezone.utc):
+                user = await db.users.find_one({"id": session["user_id"]})
+                if user:
+                    return User(**user)
+        except Exception as e:
+            print(f"Session authentication error: {e}")
+    
+    # Priority 2: Check for JWT Bearer token (Traditional Auth)
+    if credentials:
+        try:
+            payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            user_id: str = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(status_code=401, detail="Invalid token")
+            
+            user = await db.users.find_one({"id": user_id})
+            if user is None:
+                raise HTTPException(status_code=401, detail="User not found")
+            
+            return User(**user)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Token expired")
+        except jwt.JWTError:
             raise HTTPException(status_code=401, detail="Invalid token")
-        
-        user = await db.users.find_one({"id": user_id})
-        if user is None:
-            raise HTTPException(status_code=401, detail="User not found")
-        
-        return User(**user)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    raise HTTPException(status_code=401, detail="Authentication required")
 
 # Permission helpers
 def require_super_admin(current_user: User):
