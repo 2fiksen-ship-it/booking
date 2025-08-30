@@ -40,8 +40,15 @@ const translations = {
     invoices: 'الفواتير',
     payments: 'المدفوعات',
     reports: 'التقارير',
+    userManagement: 'إدارة المستخدمين',
+    dailyReports: 'التقارير اليومية',
     settings: 'الإعدادات',
     logout: 'تسجيل الخروج',
+    
+    // Roles
+    superAdmin: 'مدير عام',
+    generalAccountant: 'محاسب عام',
+    agencyStaff: 'موظف وكالة',
     
     // Auth
     login: 'تسجيل الدخول',
@@ -53,6 +60,19 @@ const translations = {
     unpaidInvoices: 'الفواتير غير المسددة',
     weekBookings: 'حجوزات الأسبوع',
     cashboxBalance: 'رصيد الصندوق',
+    
+    // Daily Reports
+    createReport: 'إنشاء تقرير يومي',
+    approveReport: 'موافقة على التقرير',
+    rejectReport: 'رفض التقرير',
+    pendingApproval: 'في انتظار الموافقة',
+    approved: 'تمت الموافقة',
+    rejected: 'مرفوض',
+    
+    // User Management
+    addUser: 'إضافة مستخدم',
+    selectRole: 'اختر الدور',
+    selectAgency: 'اختر الوكالة',
     
     // Common
     name: 'الاسم',
@@ -70,19 +90,20 @@ const translations = {
     loading: 'جاري التحميل...',
     noData: 'لا توجد بيانات',
     
-    // Clients
+    // ... rest of translations remain the same
+    clients: 'العملاء',
+    suppliers: 'الموردين',
+    bookings: 'الحجوزات',
+    invoices: 'الفواتير',
+    payments: 'المدفوعات',
+    reports: 'التقارير',
     addClient: 'إضافة عميل',
     cinPassport: 'رقم الهوية/جواز السفر',
     clientsList: 'قائمة العملاء',
-    
-    // Suppliers
     addSupplier: 'إضافة مورد',
     supplierType: 'نوع المورد',
     contact: 'جهة الاتصال',
     suppliersList: 'قائمة الموردين',
-    
-    // Bookings
-    addBooking: 'إضافة حجز',
     reference: 'المرجع',
     client: 'العميل',
     supplier: 'المورد',
@@ -92,14 +113,10 @@ const translations = {
     startDate: 'تاريخ البداية',
     endDate: 'تاريخ النهاية',
     bookingsList: 'قائمة الحجوزات',
-    
-    // Booking Types
     'عمرة': 'عمرة',
     'طيران': 'طيران',
     'فندق': 'فندق',
     'تأشيرة': 'تأشيرة',
-    
-    // Invoices
     addInvoice: 'إضافة فاتورة',
     invoiceNo: 'رقم الفاتورة',
     amountHT: 'المبلغ قبل الضريبة',
@@ -107,34 +124,33 @@ const translations = {
     amountTTC: 'المبلغ شامل الضريبة',
     dueDate: 'تاريخ الاستحقاق',
     invoicesList: 'قائمة الفواتير',
-    
-    // Invoice Status
     pending: 'معلقة',
     paid: 'مدفوعة',
     overdue: 'متأخرة',
-    
-    // Payments
     addPayment: 'إضافة دفعة',
     paymentNo: 'رقم الدفعة',
     invoice: 'الفاتورة',
     paymentMethod: 'طريقة الدفع',
     paymentDate: 'تاريخ الدفع',
     paymentsList: 'قائمة المدفوعات',
-    
-    // Payment Methods
     cash: 'نقدي',
     bank: 'بنكي',
     card: 'بطاقة',
-    
-    // Messages
     success: 'تم بنجاح',
     error: 'حدث خطأ',
     confirm: 'تأكيد',
     confirmDelete: 'هل أنت متأكد من الحذف؟'
   },
   fr: {
-    // Navigation
+    // Navigation and roles
     dashboard: 'Tableau de bord',
+    userManagement: 'Gestion des utilisateurs',
+    dailyReports: 'Rapports quotidiens',
+    superAdmin: 'Super Admin',
+    generalAccountant: 'Comptable Général',
+    agencyStaff: 'Personnel Agence',
+    
+    // ... rest of French translations remain the same
     clients: 'Clients',
     suppliers: 'Fournisseurs',
     bookings: 'Réservations',
@@ -143,19 +159,13 @@ const translations = {
     reports: 'Rapports',
     settings: 'Paramètres',
     logout: 'Déconnexion',
-    
-    // Auth
     login: 'Connexion',
     email: 'Email',
     password: 'Mot de passe',
-    
-    // Dashboard
     todayIncome: "Revenus d'aujourd'hui",
     unpaidInvoices: 'Factures impayées',
     weekBookings: 'Réservations de la semaine',
     cashboxBalance: 'Solde de caisse',
-    
-    // Common
     name: 'Nom',
     phone: 'Téléphone',
     add: 'Ajouter',
@@ -170,20 +180,13 @@ const translations = {
     search: 'Rechercher',
     loading: 'Chargement...',
     noData: 'Aucune donnée',
-    
-    // Clients
     addClient: 'Ajouter un client',
     cinPassport: 'CIN/Passeport',
     clientsList: 'Liste des clients',
-    
-    // Suppliers
     addSupplier: 'Ajouter un fournisseur',
     supplierType: 'Type de fournisseur',
     contact: 'Contact',
     suppliersList: 'Liste des fournisseurs',
-    
-    // Bookings
-    addBooking: 'Ajouter une réservation',
     reference: 'Référence',
     client: 'Client',
     supplier: 'Fournisseur',
@@ -193,14 +196,10 @@ const translations = {
     startDate: 'Date de début',
     endDate: 'Date de fin',
     bookingsList: 'Liste des réservations',
-    
-    // Booking Types
     'عمرة': 'Omra',
     'طيران': 'Vol',
     'فندق': 'Hôtel',
     'تأشيرة': 'Visa',
-    
-    // Invoices
     addInvoice: 'Ajouter une facture',
     invoiceNo: 'N° Facture',
     amountHT: 'Montant HT',
@@ -208,26 +207,18 @@ const translations = {
     amountTTC: 'Montant TTC',
     dueDate: "Date d'échéance",
     invoicesList: 'Liste des factures',
-    
-    // Invoice Status
     pending: 'En attente',
     paid: 'Payée',
     overdue: 'En retard',
-    
-    // Payments
     addPayment: 'Ajouter un paiement',
     paymentNo: 'N° Paiement',
     invoice: 'Facture',
     paymentMethod: 'Méthode de paiement',
     paymentDate: 'Date de paiement',
     paymentsList: 'Liste des paiements',
-    
-    // Payment Methods
     cash: 'Espèces',
     bank: 'Banque',
     card: 'Carte',
-    
-    // Messages
     success: 'Succès',
     error: 'Erreur',
     confirm: 'Confirmer',
