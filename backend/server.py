@@ -272,6 +272,22 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+# Permission helpers
+def require_super_admin(current_user: User):
+    if current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+
+def require_general_accountant_or_above(current_user: User):
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        raise HTTPException(status_code=403, detail="General accountant or super admin access required")
+
+def can_manage_agency_data(current_user: User, agency_id: str = None):
+    if current_user.role == UserRole.SUPER_ADMIN:
+        return True
+    if agency_id and current_user.agency_id != agency_id:
+        raise HTTPException(status_code=403, detail="Access denied to this agency's data")
+    return True
+
 # Authentication Routes
 @api_router.post("/auth/login")
 async def login(login_data: UserLogin):
