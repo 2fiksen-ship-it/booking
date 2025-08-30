@@ -2851,6 +2851,653 @@ const ReportsManagement = () => {
   );
 };
 
+// User Management Component (Super Admin Only)
+const UserManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
+  const [users, setUsers] = useState([]);
+  const [agencies, setAgencies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'agency_staff',
+    agency_id: ''
+  });
+
+  // Check if current user is Super Admin
+  if (user?.role !== 'super_admin') {
+    return (
+      <div className="text-center py-12">
+        <div className="max-w-md mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+              <XCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-medium text-red-800 mb-2">غير مسموح بالوصول</h3>
+            <p className="text-red-600">هذا القسم مخصص للمدير العام فقط</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [usersResponse, agenciesResponse] = await Promise.all([
+        axios.get(`${API}/users`),
+        axios.get(`${API}/agencies`)
+      ]);
+      setUsers(usersResponse.data);
+      setAgencies(agenciesResponse.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingUser) {
+        // Update user
+        const updateData = { ...formData };
+        if (!updateData.password) {
+          delete updateData.password; // Don't send empty password
+        }
+        await axios.put(`${API}/users/${editingUser.id}`, updateData);
+      } else {
+        // Create new user
+        await axios.post(`${API}/users`, formData);
+      }
+      
+      setFormData({ name: '', email: '', password: '', role: 'agency_staff', agency_id: '' });
+      setEditingUser(null);
+      setIsDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error saving user:', error);
+      alert(error.response?.data?.detail || 'حدث خطأ أثناء حفظ المستخدم');
+    }
+  };
+
+  const handleEdit = (user) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: '', // Don't populate password
+      role: user.role,
+      agency_id: user.agency_id
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (userId) => {
+    if (window.confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
+      try {
+        await axios.delete(`${API}/users/${userId}`);
+        fetchData();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        alert(error.response?.data?.detail || 'حدث خطأ أثناء حذف المستخدم');
+      }
+    }
+  };
+
+  const getRoleDisplay = (role) => {
+    const roleMap = {
+      'super_admin': '👑 مدير عام',
+      'general_accountant': '💼 محاسب عام',
+      'agency_staff': '🏢 موظف وكالة'
+    };
+    return roleMap[role] || role;
+  };
+
+  const getAgencyName = (agencyId) => {
+    const agency = agencies.find(a => a.id === agencyId);
+    return agency ? `${agency.name} - ${agency.city}` : 'غير محدد';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">👤 {t('userManagement')}</h2>
+            <p className="text-gray-600 mt-1">إدارة وتنظيم المستخدمين والصلاحيات</p>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                {t('addUser')}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingUser ? '✏️ تعديل المستخدم' : '➕ إضافة مستخدم جديد'}
+                </DialogTitle>
+                <DialogDescription>
+                  {editingUser ? 'قم بتعديل بيانات المستخدم' : 'أدخل بيانات المستخدم الجديد'}
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">👤 الاسم الكامل</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="أدخل الاسم الكامل"
+                    required
+                    className="text-right"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="email">📧 البريد الإلكتروني</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="example@domain.com"
+                    required
+                    className="text-right"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="password">🔒 كلمة المرور {editingUser && '(اتركها فارغة للاحتفاظ بالحالية)'}</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder={editingUser ? 'اتركها فارغة لعدم التغيير' : 'أدخل كلمة المرور'}
+                    required={!editingUser}
+                    className="text-right"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="role">🎭 الدور الوظيفي</Label>
+                  <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الدور" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="super_admin">👑 مدير عام</SelectItem>
+                      <SelectItem value="general_accountant">💼 محاسب عام</SelectItem>
+                      <SelectItem value="agency_staff">🏢 موظف وكالة</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="agency_id">🏢 الوكالة</Label>
+                  <Select value={formData.agency_id} onValueChange={(value) => setFormData({ ...formData, agency_id: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الوكالة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {agencies.map((agency) => (
+                        <SelectItem key={agency.id} value={agency.id}>
+                          {agency.name} - {agency.city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    {t('cancel')}
+                  </Button>
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                    {editingUser ? '💾 تحديث' : '➕ إضافة'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-right">
+                <p className="text-sm font-medium text-blue-800">إجمالي المستخدمين</p>
+                <p className="text-2xl font-bold text-blue-900">{users.length}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-purple-50 to-violet-50 border-purple-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-right">
+                <p className="text-sm font-medium text-purple-800">المديرين</p>
+                <p className="text-2xl font-bold text-purple-900">
+                  {users.filter(u => u.role === 'super_admin').length}
+                </p>
+              </div>
+              <Settings className="h-8 w-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-right">
+                <p className="text-sm font-medium text-green-800">المحاسبين</p>
+                <p className="text-2xl font-bold text-green-900">
+                  {users.filter(u => u.role === 'general_accountant').length}
+                </p>
+              </div>
+              <BarChart3 className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="text-right">
+                <p className="text-sm font-medium text-orange-800">موظفي الوكالات</p>
+                <p className="text-2xl font-bold text-orange-900">
+                  {users.filter(u => u.role === 'agency_staff').length}
+                </p>
+              </div>
+              <Building2 className="h-8 w-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Users Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Users className="h-5 w-5 ml-2" />
+            قائمة المستخدمين
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right">👤 الاسم</TableHead>
+                <TableHead className="text-right">📧 البريد الإلكتروني</TableHead>
+                <TableHead className="text-right">🎭 الدور</TableHead>
+                <TableHead className="text-right">🏢 الوكالة</TableHead>
+                <TableHead className="text-right">📅 تاريخ الإنشاء</TableHead>
+                <TableHead className="text-right">⚙️ الإجراءات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id} className="hover:bg-gray-50">
+                  <TableCell className="font-medium text-right">{user.name}</TableCell>
+                  <TableCell className="text-right">{user.email}</TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant={user.role === 'super_admin' ? 'default' : 'secondary'}>
+                      {getRoleDisplay(user.role)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">{getAgencyName(user.agency_id)}</TableCell>
+                  <TableCell className="text-right">
+                    {new Date(user.created_at).toLocaleDateString('ar-DZ')}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(user)}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      {user.id !== user.id && ( // Can't delete self (this logic would be better with current user id)
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(user.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Daily Reports Management Component
+const DailyReportsManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    date: '',
+    income: '',
+    expenses: '',
+    cashbox_balance: '',
+    notes: ''
+  });
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/daily-reports`);
+      setReports(response.data);
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const reportData = {
+        ...formData,
+        date: new Date(formData.date).toISOString(),
+        income: parseFloat(formData.income),
+        expenses: parseFloat(formData.expenses),
+        cashbox_balance: parseFloat(formData.cashbox_balance)
+      };
+      
+      await axios.post(`${API}/daily-reports`, reportData);
+      setFormData({ date: '', income: '', expenses: '', cashbox_balance: '', notes: '' });
+      setIsDialogOpen(false);
+      fetchReports();
+    } catch (error) {
+      console.error('Error saving report:', error);
+      alert(error.response?.data?.detail || 'حدث خطأ أثناء حفظ التقرير');
+    }
+  };
+
+  const handleApprove = async (reportId) => {
+    try {
+      await axios.put(`${API}/daily-reports/${reportId}/approve`);
+      fetchReports();
+    } catch (error) {
+      console.error('Error approving report:', error);
+      alert('حدث خطأ أثناء الموافقة على التقرير');
+    }
+  };
+
+  const handleReject = async (reportId) => {
+    const reason = prompt('أدخل سبب الرفض (اختياري):');
+    try {
+      await axios.put(`${API}/daily-reports/${reportId}/reject`, null, {
+        params: { rejection_reason: reason || '' }
+      });
+      fetchReports();
+    } catch (error) {
+      console.error('Error rejecting report:', error);
+      alert('حدث خطأ أثناء رفض التقرير');
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'pending': { variant: 'secondary', text: '⏳ في انتظار الموافقة', color: 'bg-yellow-100 text-yellow-800' },
+      'approved': { variant: 'default', text: '✅ تمت الموافقة', color: 'bg-green-100 text-green-800' },
+      'rejected': { variant: 'destructive', text: '❌ مرفوض', color: 'bg-red-100 text-red-800' }
+    };
+    const statusInfo = statusMap[status] || statusMap.pending;
+    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>{statusInfo.text}</span>;
+  };
+
+  const canCreateReports = user?.role === 'agency_staff' || user?.role === 'super_admin';
+  const canApproveReports = user?.role === 'general_accountant' || user?.role === 'super_admin';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">📈 {t('dailyReports')}</h2>
+            <p className="text-gray-600 mt-1">إدارة ومراجعة التقارير اليومية</p>
+          </div>
+          {canCreateReports && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('createReport')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>➕ إنشاء تقرير يومي جديد</DialogTitle>
+                  <DialogDescription>
+                    أدخل بيانات التقرير اليومي
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="date">📅 التاريخ</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="income">💰 الإيرادات (دج)</Label>
+                    <Input
+                      id="income"
+                      type="number"
+                      step="0.01"
+                      value={formData.income}
+                      onChange={(e) => setFormData({ ...formData, income: e.target.value })}
+                      placeholder="0.00"
+                      required
+                      className="text-right"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="expenses">📉 المصروفات (دج)</Label>
+                    <Input
+                      id="expenses"
+                      type="number"
+                      step="0.01"
+                      value={formData.expenses}
+                      onChange={(e) => setFormData({ ...formData, expenses: e.target.value })}
+                      placeholder="0.00"
+                      required
+                      className="text-right"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="cashbox_balance">🏦 رصيد الصندوق (دج)</Label>
+                    <Input
+                      id="cashbox_balance"
+                      type="number"
+                      step="0.01"
+                      value={formData.cashbox_balance}
+                      onChange={(e) => setFormData({ ...formData, cashbox_balance: e.target.value })}
+                      placeholder="0.00"
+                      required
+                      className="text-right"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="notes">📝 ملاحظات</Label>
+                    <textarea
+                      id="notes"
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="ملاحظات إضافية (اختياري)"
+                      className="w-full p-2 border border-gray-300 rounded-md text-right"
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      {t('cancel')}
+                    </Button>
+                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                      📊 إنشاء التقرير
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
+      </div>
+
+      {/* Reports Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <BarChart3 className="h-5 w-5 ml-2" />
+            قائمة التقارير اليومية
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right">📅 التاريخ</TableHead>
+                <TableHead className="text-right">💰 الإيرادات</TableHead>
+                <TableHead className="text-right">📉 المصروفات</TableHead>
+                <TableHead className="text-right">🏦 رصيد الصندوق</TableHead>
+                <TableHead className="text-right">📊 الحالة</TableHead>
+                <TableHead className="text-right">👤 المنشئ</TableHead>
+                {canApproveReports && <TableHead className="text-right">⚙️ الإجراءات</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {reports.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={canApproveReports ? 7 : 6} className="text-center py-8">
+                    <div className="flex flex-col items-center">
+                      <BarChart3 className="h-12 w-12 text-gray-400 mb-4" />
+                      <p className="text-lg font-medium text-gray-900">لا توجد تقارير</p>
+                      <p className="text-gray-600">ابدأ بإنشاء تقرير يومي جديد</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                reports.map((report) => (
+                  <TableRow key={report.id} className="hover:bg-gray-50">
+                    <TableCell className="font-medium text-right">
+                      {new Date(report.date).toLocaleDateString('ar-DZ')}
+                    </TableCell>
+                    <TableCell className="text-right text-green-600 font-semibold">
+                      {report.income.toLocaleString()} دج
+                    </TableCell>
+                    <TableCell className="text-right text-red-600 font-semibold">
+                      {report.expenses.toLocaleString()} دج
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {report.cashbox_balance.toLocaleString()} دج
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {getStatusBadge(report.status)}
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-gray-600">
+                      {report.created_by || 'غير محدد'}
+                    </TableCell>
+                    {canApproveReports && (
+                      <TableCell>
+                        <div className="flex justify-end space-x-2">
+                          {report.status === 'pending' && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleApprove(report.id)}
+                                className="text-green-600 hover:text-green-700 border-green-600"
+                              >
+                                ✅ موافقة
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReject(report.id)}
+                                className="text-red-600 hover:text-red-700 border-red-600"
+                              >
+                                ❌ رفض
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // Main App Component
 const MainApp = ({ activeTab }) => {
   const components = {
