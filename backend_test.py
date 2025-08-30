@@ -149,10 +149,10 @@ class SanhajaAPITester:
         """Test that users only see their agency's data"""
         print(f"\n🏢 Testing Agency Isolation...")
         
-        # Test with different agency users
+        # Test with different Algerian agency users
         test_users = [
-            ("admin@rabat.sanhaja.com", "admin123", "Rabat"),
-            ("admin@casa.sanhaja.com", "admin123", "Casa"),
+            ("admin@tlemcen.sanhaja.com", "admin123", "تلمسان"),
+            ("admin@oran.sanhaja.com", "admin123", "وهران"),
         ]
         
         agency_data = {}
