@@ -391,39 +391,6 @@ async def get_agencies(current_user: User = Depends(get_current_user)):
         agencies = await db.agencies.find({"id": current_user.agency_id}).to_list(1000)
     return [Agency(**agency) for agency in agencies]
 
-# User Management Routes (Super Admin Only)
-@api_router.post("/users", response_model=User)
-async def create_user(user_data: UserCreate, current_user: User = Depends(get_current_user)):
-    require_super_admin(current_user)  # Only super admin can create users
-    
-    # Check if email already exists
-    existing_user = await db.users.find_one({"email": user_data.email})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    password_hash = hash_password(user_data.password)
-    user_dict = user_data.dict()
-    del user_dict["password"]
-    user_dict["password_hash"] = password_hash
-    
-    user = User(**user_dict)
-    await db.users.insert_one({**user.dict(), "password_hash": password_hash})
-    return user
-
-@api_router.get("/users", response_model=List[User])
-async def get_users(current_user: User = Depends(get_current_user)):
-    if current_user.role == UserRole.SUPER_ADMIN:
-        # Super admin sees all users
-        users = await db.users.find().to_list(1000)
-    elif current_user.role == UserRole.GENERAL_ACCOUNTANT:
-        # General accountant sees all agency staff
-        users = await db.users.find({"role": UserRole.AGENCY_STAFF}).to_list(1000)
-    else:
-        # Agency staff see only themselves
-        users = await db.users.find({"id": current_user.id}).to_list(1000)
-    
-    return [User(**user) for user in users]
-
 # Notification Routes
 @api_router.post("/notifications")
 async def create_notification(
