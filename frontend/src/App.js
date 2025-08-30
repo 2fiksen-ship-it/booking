@@ -349,7 +349,7 @@ const Login = () => {
             {t('login')}
           </CardTitle>
           <CardDescription className="text-center text-gray-600">
-            نظام محاسبة وكالات صنهاجة للسفر - الجزائر
+            نظام محاسبة وكالات صنهاجة للسفر - غرب الجزائر
           </CardDescription>
         </CardHeader>
         <CardContent>
