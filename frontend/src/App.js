@@ -422,9 +422,9 @@ const Login = () => {
             )}
             <button
               type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                handleSubmit(e);
+              onClick={() => {
+                console.log('=== BUTTON CLICKED ===');
+                alert('Button clicked!');
               }}
               className="w-full h-9 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md font-medium inline-flex items-center justify-center disabled:opacity-50"
               disabled={loading}
