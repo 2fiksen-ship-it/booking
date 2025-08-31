@@ -84,18 +84,19 @@ class ReportStatus(str, Enum):
 # Add Daily Report model
 class DailyReport(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    agency_id: str
-    date: datetime  # Changed from report_date to date
-    income: float   # Changed from total_income to income
-    expenses: float # Changed from total_expenses to expenses
-    cashbox_balance: float  # Added cashbox_balance field
+    date: datetime
+    date_str: Optional[str] = None  # For easy querying (YYYY-MM-DD format)
+    income: float
+    expenses: float
+    cashbox_balance: float
+    notes: Optional[str] = ""
     status: ReportStatus = ReportStatus.PENDING
-    approved_by: Optional[str] = None  # user_id of general accountant
-    created_by: str  # user_id who created the report
-    notes: Optional[str] = None
+    agency_id: str
+    created_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    approved_by: Optional[str] = None  # user_id of general accountant
     approved_at: Optional[datetime] = None
-    rejection_reason: Optional[str] = None  # Added rejection_reason field
+    rejection_reason: Optional[str] = None
 
 # Notification System Models
 class NotificationType(str, Enum):
