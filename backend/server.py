@@ -1527,31 +1527,65 @@ async def create_daily_report(report_data: DailyReportCreate, current_user: User
     if current_user.role not in [UserRole.AGENCY_STAFF, UserRole.SUPER_ADMIN]:
         raise HTTPException(status_code=403, detail="Only agency staff can create daily reports")
     
-    # Check if report already exists for this date and agency
-    existing_report = await db.daily_reports.find_one({
-        "date": report_data.date,
-        "agency_id": current_user.agency_id
-    })
-    
-    if existing_report:
-        raise HTTPException(status_code=400, detail="Daily report already exists for this date")
-    
-    # Create report
-    report = DailyReport(
-        id=str(uuid.uuid4()),
-        date=report_data.date,
-        income=report_data.income,
-        expenses=report_data.expenses,
-        cashbox_balance=report_data.cashbox_balance,
-        notes=report_data.notes or "",
-        status=ReportStatus.PENDING,
-        agency_id=current_user.agency_id,
-        created_by=current_user.id,
-        created_at=datetime.now(timezone.utc)
-    )
-    
-    await db.daily_reports.insert_one(report.dict())
-    return report
+    try:
+        # Parse the date properly
+        report_date = report_data.date
+        if isinstance(report_date, str):
+            report_date = datetime.fromisoformat(report_date.replace('Z', '+00:00'))
+        
+        # Ensure date is timezone-aware
+        if report_date.tzinfo is None:
+            report_date = report_date.replace(tzinfo=timezone.utc)
+        
+        # Convert to date-only string for unique constraint
+        date_str = report_date.strftime('%Y-%m-%d')
+        
+        # Check if report already exists for this date and agency
+        existing_report = await db.daily_reports.find_one({
+            "date_str": date_str,
+            "agency_id": current_user.agency_id
+        })
+        
+        if existing_report:
+            # Update existing report instead of creating new one
+            update_data = {
+                "income": report_data.income,
+                "expenses": report_data.expenses,
+                "cashbox_balance": report_data.cashbox_balance,
+                "notes": report_data.notes or "",
+                "updated_at": datetime.now(timezone.utc)
+            }
+            
+            await db.daily_reports.update_one(
+                {"id": existing_report["id"]},
+                {"$set": update_data}
+            )
+            
+            # Return updated report
+            updated_report = await db.daily_reports.find_one({"id": existing_report["id"]})
+            return DailyReport(**updated_report)
+        
+        # Create new report
+        report = DailyReport(
+            id=str(uuid.uuid4()),
+            date=report_date,
+            date_str=date_str,  # Add date string for easy querying
+            income=report_data.income,
+            expenses=report_data.expenses,
+            cashbox_balance=report_data.cashbox_balance,
+            notes=report_data.notes or "",
+            status=ReportStatus.PENDING,
+            agency_id=current_user.agency_id,
+            created_by=current_user.id,
+            created_at=datetime.now(timezone.utc)
+        )
+        
+        await db.daily_reports.insert_one(report.dict())
+        return report
+        
+    except Exception as e:
+        print(f"Error creating daily report: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error creating daily report: {str(e)}")
 
 @api_router.put("/daily-reports/{report_id}/approve")
 async def approve_daily_report(report_id: str, current_user: User = Depends(get_current_user)):
