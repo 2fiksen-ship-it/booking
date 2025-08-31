@@ -2713,7 +2713,7 @@ const PaymentsManagement = () => {
   );
 };
 
-// Reports Component
+// Enhanced Reports Management Component with Real APIs
 const ReportsManagement = () => {
   const { t } = useContext(LanguageContext);
   const [reportType, setReportType] = useState('daily_sales');
@@ -2721,83 +2721,419 @@ const ReportsManagement = () => {
   const [endDate, setEndDate] = useState('');
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Set default dates (last 30 days)
+  useEffect(() => {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    setStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
+    setEndDate(today.toISOString().split('T')[0]);
+  }, []);
 
   const generateReport = async () => {
-    setLoading(true);
-    try {
-      // Simulate report generation
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock report data based on type
-      const mockData = {
-        daily_sales: {
-          title: 'تقرير المبيعات اليومية',
-          data: [
-            { date: '2024-01-01', sales: 25000, bookings: 5, profit: 5000 },
-            { date: '2024-01-02', sales: 18000, bookings: 3, profit: 3600 },
-            { date: '2024-01-03', sales: 32000, bookings: 7, profit: 6400 }
-          ],
-          totals: { sales: 75000, bookings: 15, profit: 15000 }
-        },
-        monthly_sales: {
-          title: 'تقرير المبيعات الشهرية',
-          data: [
-            { month: 'يناير', sales: 450000, bookings: 85, profit: 90000 },
-            { month: 'فبراير', sales: 380000, bookings: 72, profit: 76000 },
-            { month: 'مارس', sales: 520000, bookings: 98, profit: 104000 }
-          ],
-          totals: { sales: 1350000, bookings: 255, profit: 270000 }
-        },
-        aging: {
-          title: 'تقرير أعمار الديون',
-          data: [
-            { client: 'أحمد محمد', invoice: 'INV-001', amount: 15000, days: 10 },
-            { client: 'فاطمة علي', invoice: 'INV-003', amount: 22000, days: 25 },
-            { client: 'محمد حسن', invoice: 'INV-007', amount: 8000, days: 45 }
-          ],
-          totals: { amount: 45000, count: 3 }
-        },
-        profit_loss: {
-          title: 'تقرير الأرباح والخسائر',
-          data: {
-            income: { sales: 850000, services: 125000 },
-            expenses: { suppliers: 680000, operations: 95000 },
-            profit: 200000
-          }
-        }
-      };
+    if (!startDate || !endDate) {
+      setError('يرجى تحديد تاريخ البداية والنهاية');
+      return;
+    }
 
-      setReportData(mockData[reportType]);
+    setLoading(true);
+    setError('');
+    
+    try {
+      let endpoint = '';
+      let params = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate
+      });
+
+      switch (reportType) {
+        case 'daily_sales':
+          endpoint = 'reports/sales';
+          params.append('report_type', 'daily');
+          break;
+        case 'monthly_sales':
+          endpoint = 'reports/sales';
+          params.append('report_type', 'monthly');
+          break;
+        case 'aging':
+          endpoint = 'reports/aging';
+          // Aging report doesn't need date params
+          params = new URLSearchParams();
+          break;
+        case 'profit_loss':
+          endpoint = 'reports/profit-loss';
+          break;
+        default:
+          throw new Error('نوع التقرير غير مدعوم');
+      }
+
+      console.log(`Generating ${reportType} report...`);
+      console.log(`API call: ${API}/${endpoint}?${params.toString()}`);
+
+      const response = await axios.get(`${API}/${endpoint}?${params.toString()}`);
+      console.log('Report response:', response.data);
+      
+      setReportData(response.data);
     } catch (error) {
       console.error('Error generating report:', error);
+      setError(error.response?.data?.detail || 'فشل في إنتاج التقرير');
     } finally {
       setLoading(false);
     }
   };
 
   const exportReport = () => {
-    // Mock export functionality
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "التاريخ,المبيعات,الحجوزات,الربح\n"
-      + reportData.data.map(row => Object.values(row).join(",")).join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `report_${reportType}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (!reportData) return;
+
+    try {
+      let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM for UTF-8
+      
+      if (reportType === 'daily_sales' || reportType === 'monthly_sales') {
+        csvContent += "التاريخ,المبيعات (دج),عدد الحجوزات,الربح (دج)\n";
+        reportData.data.forEach(row => {
+          const date = reportType === 'monthly_sales' ? row.month : row.date;
+          csvContent += `${date},${row.sales},${row.bookings},${row.profit}\n`;
+        });
+        csvContent += `الإجمالي,${reportData.totals.sales},${reportData.totals.bookings},${reportData.totals.profit}\n`;
+      } else if (reportType === 'aging') {
+        csvContent += "العميل,رقم الفاتورة,المبلغ (دج),عدد الأيام\n";
+        reportData.data.forEach(row => {
+          csvContent += `${row.client},${row.invoice},${row.amount},${row.days}\n`;
+        });
+        csvContent += `الإجمالي,,${reportData.totals.amount},\n`;
+      } else if (reportType === 'profit_loss') {
+        csvContent += "البيان,المبلغ (دج)\n";
+        csvContent += `المبيعات,${reportData.data.income.sales}\n`;
+        csvContent += `الخدمات,${reportData.data.income.services}\n`;
+        csvContent += `إجمالي الإيرادات,${reportData.data.income.sales + reportData.data.income.services}\n`;
+        csvContent += `تكلفة الموردين,${reportData.data.expenses.suppliers}\n`;
+        csvContent += `المصروفات التشغيلية,${reportData.data.expenses.operations}\n`;
+        csvContent += `إجمالي المصروفات,${reportData.data.expenses.suppliers + reportData.data.expenses.operations}\n`;
+        csvContent += `صافي الربح,${reportData.data.profit}\n`;
+      }
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `تقرير_${reportType}_${startDate}_${endDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('فشل في تصدير التقرير');
+    }
   };
+
+  const getReportTypeOptions = () => [
+    { value: 'daily_sales', label: '📈 تقرير المبيعات اليومية' },
+    { value: 'monthly_sales', label: '📊 تقرير المبيعات الشهرية' },
+    { value: 'aging', label: '⏰ تقرير أعمار الديون' },
+    { value: 'profit_loss', label: '💹 تقرير الأرباح والخسائر' }
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">{t('reports')}</h2>
-        {reportData && (
-          <Button onClick={exportReport} variant="outline">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            {t('export')}
+      {/* Header */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">📊 {t('reports')}</h2>
+            <p className="text-gray-600 mt-1">إنتاج وتصدير التقارير المالية والإحصائية</p>
+          </div>
+          {reportData && (
+            <Button onClick={exportReport} variant="outline" className="bg-green-50 hover:bg-green-100 border-green-200">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              📤 {t('export')} CSV
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Report Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Settings className="h-5 w-5 ml-2" />
+            ⚙️ إعدادات التقرير
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <Label htmlFor="reportType">📋 نوع التقرير</Label>
+              <Select value={reportType} onValueChange={setReportType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر نوع التقرير" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getReportTypeOptions().map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {reportType !== 'aging' && (
+              <>
+                <div>
+                  <Label htmlFor="startDate">📅 {t('from')}</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="text-right"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="endDate">📅 {t('to')}</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="text-right"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex items-end">
+              <Button 
+                onClick={generateReport} 
+                disabled={loading || (!startDate || !endDate) && reportType !== 'aging'}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    جاري الإنتاج...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    🔄 {t('generateReport')}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <XCircle className="h-5 w-5 text-red-500 mr-2" />
+                <span className="text-red-700">{error}</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Report Display */}
+      {reportData && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center">
+                <BarChart3 className="h-5 w-5 ml-2" />
+                {reportData.title}
+              </span>
+              {reportData.period && (
+                <Badge variant="secondary">{reportData.period}</Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {reportType === 'daily_sales' || reportType === 'monthly_sales' ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-green-800">إجمالي المبيعات</p>
+                        <p className="text-2xl font-bold text-green-900">
+                          {reportData.totals.sales.toLocaleString()} دج
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-blue-800">إجمالي الحجوزات</p>
+                        <p className="text-2xl font-bold text-blue-900">
+                          {reportData.totals.bookings}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-r from-purple-50 to-violet-50 border-purple-200">
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-purple-800">إجمالي الربح</p>
+                        <p className="text-2xl font-bold text-purple-900">
+                          {reportData.totals.profit.toLocaleString()} دج
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">
+                        {reportType === 'monthly_sales' ? '📅 الشهر' : '📅 التاريخ'}
+                      </TableHead>
+                      <TableHead className="text-right">💰 المبيعات (دج)</TableHead>
+                      <TableHead className="text-right">📋 عدد الحجوزات</TableHead>
+                      <TableHead className="text-right">💹 الربح (دج)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reportData.data.map((row, index) => (
+                      <TableRow key={index} className="hover:bg-gray-50">
+                        <TableCell className="font-medium text-right">
+                          {reportType === 'monthly_sales' ? row.month : row.date}
+                        </TableCell>
+                        <TableCell className="text-right text-green-600 font-semibold">
+                          {row.sales.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right">{row.bookings}</TableCell>
+                        <TableCell className="text-right text-purple-600 font-semibold">
+                          {row.profit.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
+            ) : reportType === 'aging' ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-orange-800">عدد الفواتير المعلقة</p>
+                        <p className="text-2xl font-bold text-orange-900">
+                          {reportData.totals.count}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-gradient-to-r from-red-50 to-rose-50 border-red-200">
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-red-800">إجمالي المبلغ المعلق</p>
+                        <p className="text-2xl font-bold text-red-900">
+                          {reportData.totals.amount.toLocaleString()} دج
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">👤 العميل</TableHead>
+                      <TableHead className="text-right">📄 رقم الفاتورة</TableHead>
+                      <TableHead className="text-right">💰 المبلغ (دج)</TableHead>
+                      <TableHead className="text-right">⏰ عدد الأيام</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reportData.data.map((row, index) => (
+                      <TableRow key={index} className="hover:bg-gray-50">
+                        <TableCell className="font-medium text-right">{row.client}</TableCell>
+                        <TableCell className="text-right">{row.invoice}</TableCell>
+                        <TableCell className="text-right text-red-600 font-semibold">
+                          {row.amount.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={row.days > 30 ? 'destructive' : row.days > 15 ? 'default' : 'secondary'}>
+                            {row.days} يوم
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
+            ) : reportType === 'profit_loss' ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+                    <CardContent className="p-6">
+                      <h3 className="font-semibold text-green-800 mb-3">💰 الإيرادات</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span>المبيعات:</span>
+                          <span className="font-semibold">{reportData.data.income.sales.toLocaleString()} دج</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>الخدمات:</span>
+                          <span className="font-semibold">{reportData.data.income.services.toLocaleString()} دج</span>
+                        </div>
+                        <hr />
+                        <div className="flex justify-between font-bold">
+                          <span>الإجمالي:</span>
+                          <span>{(reportData.data.income.sales + reportData.data.income.services).toLocaleString()} دج</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-r from-red-50 to-rose-50 border-red-200">
+                    <CardContent className="p-6">
+                      <h3 className="font-semibold text-red-800 mb-3">📉 المصروفات</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span>الموردين:</span>
+                          <span className="font-semibold">{reportData.data.expenses.suppliers.toLocaleString()} دج</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>التشغيل:</span>
+                          <span className="font-semibold">{reportData.data.expenses.operations.toLocaleString()} دج</span>
+                        </div>
+                        <hr />
+                        <div className="flex justify-between font-bold">
+                          <span>الإجمالي:</span>
+                          <span>{(reportData.data.expenses.suppliers + reportData.data.expenses.operations).toLocaleString()} دج</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                    <CardContent className="p-6">
+                      <h3 className="font-semibold text-blue-800 mb-3">💹 صافي الربح</h3>
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-blue-900">
+                          {reportData.data.profit.toLocaleString()} دج
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
           </Button>
         )}
       </div>
