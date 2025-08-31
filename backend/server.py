@@ -1205,14 +1205,42 @@ async def generate_sales_report(
     """Generate sales reports (daily/monthly)"""
     try:
         from datetime import datetime
-        start = datetime.fromisoformat(start_date)
-        end = datetime.fromisoformat(end_date)
+        
+        # Parse dates with flexible format support
+        try:
+            # Try simple date format first (YYYY-MM-DD)
+            if 'T' not in start_date and 'T' not in end_date:
+                start = datetime.fromisoformat(start_date + 'T00:00:00')
+                end = datetime.fromisoformat(end_date + 'T23:59:59')
+            else:
+                # Handle ISO datetime format
+                start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError as e:
+            # Fallback to manual parsing
+            try:
+                start = datetime.strptime(start_date[:10], '%Y-%m-%d')
+                end = datetime.strptime(end_date[:10], '%Y-%m-%d')
+                end = end.replace(hour=23, minute=59, second=59)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid date format. Use YYYY-MM-DD or ISO format. Error: {str(e)}")
+        
+        # Ensure timezone awareness
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        
+        print(f"Generating {report_type} sales report from {start} to {end}")
+        
+        # Build query filter based on user role
+        query_filter = {} if current_user.role == UserRole.SUPER_ADMIN else {"agency_id": current_user.agency_id}
+        query_filter["created_at"] = {"$gte": start, "$lte": end}
         
         # Get invoices for the period
-        invoices = await db.invoices.find({
-            "agency_id": current_user.agency_id,
-            "created_at": {"$gte": start, "$lte": end}
-        }).to_list(1000)
+        invoices = await db.invoices.find(query_filter).to_list(1000)
+        
+        print(f"Found {len(invoices)} invoices for the period")
         
         if report_type == "monthly":
             # Group by month
@@ -1253,6 +1281,9 @@ async def generate_sales_report(
                 daily_data[date_key]["profit"] += invoice["amount_ttc"] * 0.1  # 10% profit margin
             
             data = list(daily_data.values())
+            # Sort by date
+            data.sort(key=lambda x: x['date'])
+            
             totals = {
                 "sales": sum(item["sales"] for item in data),
                 "bookings": sum(item["bookings"] for item in data),
@@ -1261,12 +1292,15 @@ async def generate_sales_report(
         
         return {
             "title": f"تقرير المبيعات {('الشهري' if report_type == 'monthly' else 'اليومي')}",
+            "period": f"من {start_date} إلى {end_date}",
             "data": data,
-            "totals": totals
+            "totals": totals,
+            "invoice_count": len(invoices)
         }
         
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        print(f"Sales report error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error generating sales report: {str(e)}")
 
 @api_router.get("/reports/aging")
 async def generate_aging_report(current_user: User = Depends(get_current_user)):
