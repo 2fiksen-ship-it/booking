@@ -1520,7 +1520,8 @@ async def get_daily_reports(current_user: User = Depends(get_current_user)):
         # Agency staff sees only their agency reports
         reports = await db.daily_reports.find({"agency_id": current_user.agency_id}).to_list(1000)
     
-    return reports
+    # Convert to DailyReport models to ensure proper JSON serialization
+    return [DailyReport(**report) for report in reports]
 
 @api_router.post("/daily-reports")
 async def create_daily_report(report_data: DailyReportCreate, current_user: User = Depends(get_current_user)):
