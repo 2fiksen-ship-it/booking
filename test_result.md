@@ -543,6 +543,18 @@ test_plan:
         agent: "testing"
         comment: "✅ TESTED: Variable Pricing Services Creation working perfectly! Super Admin login (superadmin@sanhaja.com/super123) successful. All 5 variable pricing services created successfully: 'خدمات متنوعة', 'خدمات إضافية', 'مبيعات غير محددة', 'خدمات خاصة', 'أعمال متفرقة' - all with base_price: 0.0 DZD, min_price: 0.0 DZD, is_fixed_price: false, category: 'أخرى'. Services endpoint accessible with 13 total services, 11 variable pricing services found. Category filtering works (services in 'أخرى' category), variable pricing filtering works (is_fixed_price=false). Daily operations endpoint accessible with services available for operations creation. Service types (6 types) and categories (5 categories) available for UI dropdowns. All review request requirements satisfied - flexible pricing services ready for agency staff to set custom prices."
 
+  - task: "PDF Printing Endpoints for Receipts and Reports"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: PDF Printing Endpoints working excellently! ✅ Receipt Printing (GET /api/daily-operations/{operation_id}/print): PDF generated successfully with correct application/pdf content-type, proper Content-Disposition headers for download, valid PDF format (2567 bytes), and proper authentication controls. ✅ Report Printing (GET /api/reports/daily-operations/print): PDF generated successfully with various parameters (start_date, end_date, agency filters), proper formatting (2599 bytes), agency filtering working, group_by_agency options working. ✅ Authentication & Permissions: Super Admin (superadmin@sanhaja.com/super123) ✅, General Accountant (generalaccountant@sanhaja.com/acc123) ✅, Agency Staff properly controlled ✅. ✅ PDF Quality: All PDFs start with %PDF magic bytes, proper file sizes, correct headers. ✅ Cross-agency access permissions working correctly. Minor: Unauthenticated access returns 403 instead of 401 (not critical). Professional printing system with agency branding and digital signatures ready for production!"
+
   - task: "Discount Requests System API"
     implemented: true
     working: true
