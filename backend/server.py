@@ -2614,14 +2614,27 @@ async def get_discount_requests(
     for req in discount_requests:
         operation = operations_dict.get(req["operation_id"])
         if operation:
-            result.append({
-                **req,
+            # Clean request data to avoid MongoDB ObjectId serialization issues
+            clean_req = {
+                "id": req["id"],
+                "operation_id": req["operation_id"],
+                "original_price": req["original_price"],
+                "discount_amount": req["discount_amount"],
+                "discount_percentage": req["discount_percentage"],
+                "reason": req["reason"],
+                "requested_by": req["requested_by"],
+                "status": req["status"],
+                "approved_by": req.get("approved_by"),
+                "approved_at": req.get("approved_at").isoformat() if req.get("approved_at") else None,
+                "rejection_reason": req.get("rejection_reason"),
+                "created_at": req["created_at"].isoformat() if req.get("created_at") else None,
                 "operation_no": operation["operation_no"],
                 "service_name": operation["service_name"],
                 "client_id": operation["client_id"],
                 "requested_by_name": users_dict.get(req["requested_by"], "غير معروف"),
                 "approved_by_name": users_dict.get(req.get("approved_by"), "") if req.get("approved_by") else ""
-            })
+            }
+            result.append(clean_req)
     
     return result
 
