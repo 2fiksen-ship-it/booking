@@ -81,6 +81,39 @@ class ReportStatus(str, Enum):
     APPROVED = "approved"  # تم الموافقة من المحاسب العام
     REJECTED = "rejected"  # مرفوض
 
+# Service Types
+class ServiceType(str, Enum):
+    UMRAH = "عمرة"
+    HAJJ = "حج"
+    FLIGHT_TICKET = "تذكرة طيران"
+    HOTEL_BOOKING = "حجز فندق"
+    VISA_SERVICE = "خدمة تأشيرة"
+    TRANSPORT = "نقل"
+    INSURANCE = "تأمين"
+    PASSPORT_SERVICE = "خدمة جواز سفر"
+    OTHER = "أخرى"
+
+# Service Category
+class ServiceCategory(str, Enum):
+    RELIGIOUS = "خدمات دينية"
+    TRAVEL = "خدمات سفر"
+    DOCUMENTATION = "خدمات وثائق"
+    ACCOMMODATION = "خدمات إقامة"
+    OTHER = "أخرى"
+
+# Operation Status
+class OperationStatus(str, Enum):
+    DRAFT = "مسودة"
+    PENDING_APPROVAL = "في انتظار الموافقة"
+    APPROVED = "معتمد"
+    REJECTED = "مرفوض"
+
+# Discount Status
+class DiscountStatus(str, Enum):
+    PENDING = "في انتظار الموافقة"
+    APPROVED = "معتمد"
+    REJECTED = "مرفوض"
+
 # Add Daily Report model
 class DailyReport(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
