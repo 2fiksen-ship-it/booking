@@ -4568,13 +4568,29 @@ const DailyOperationsManagement = () => {
 
   const handleApprove = async (operationId) => {
     try {
-      await axios.put(`${API}/daily-operations/${operationId}/approve`, {}, {
+      console.log('=== APPROVING OPERATION ===');
+      console.log('Operation ID:', operationId);
+      console.log('API endpoint:', `${API}/daily-operations/${operationId}/approve`);
+      console.log('Token:', localStorage.getItem('token') ? 'Present' : 'Missing');
+      
+      const response = await axios.put(`${API}/daily-operations/${operationId}/approve`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
+      
+      console.log('Approval response:', response.data);
+      console.log('=== APPROVAL SUCCESS ===');
+      
+      // Show success message
+      alert('✅ تم اعتماد العملية بنجاح');
+      
+      // Refresh operations list
       fetchOperations();
     } catch (error) {
+      console.error('=== APPROVAL ERROR ===');
       console.error('Error approving operation:', error);
-      alert('خطأ في اعتماد العملية');
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      alert('خطأ في اعتماد العملية: ' + (error.response?.data?.detail || error.message));
     }
   };
 
@@ -4582,14 +4598,30 @@ const DailyOperationsManagement = () => {
     const reason = prompt('سبب الرفض:');
     if (reason) {
       try {
-        await axios.put(`${API}/daily-operations/${operationId}/reject`, 
+        console.log('=== REJECTING OPERATION ===');
+        console.log('Operation ID:', operationId);
+        console.log('Rejection reason:', reason);
+        console.log('API endpoint:', `${API}/daily-operations/${operationId}/reject`);
+        
+        const response = await axios.put(`${API}/daily-operations/${operationId}/reject`, 
           { rejection_reason: reason }, 
           { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
         );
+        
+        console.log('Rejection response:', response.data);
+        console.log('=== REJECTION SUCCESS ===');
+        
+        // Show success message
+        alert('❌ تم رفض العملية بنجاح');
+        
+        // Refresh operations list
         fetchOperations();
       } catch (error) {
+        console.error('=== REJECTION ERROR ===');
         console.error('Error rejecting operation:', error);
-        alert('خطأ في رفض العملية');
+        console.error('Error response:', error.response?.data);
+        console.error('Error status:', error.response?.status);
+        alert('خطأ في رفض العملية: ' + (error.response?.data?.detail || error.message));
       }
     }
   };
