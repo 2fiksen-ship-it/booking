@@ -2609,6 +2609,249 @@ async def generate_daily_operations_report(
         print(f"Daily operations report error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Error generating report: {str(e)}")
 
+# PDF Generation Utilities
+def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict, client_data: dict, service_data: dict):
+    """Generate professional PDF receipt for daily operations"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    
+    # Container for the 'Flowable' objects
+    elements = []
+    
+    # Define styles
+    styles = getSampleStyleSheet()
+    
+    # Create custom styles for Arabic text
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Normal'],
+        fontSize=18,
+        spaceAfter=30,
+        alignment=TA_CENTER,
+        textColor=colors.darkblue,
+        fontName='Helvetica-Bold'
+    )
+    
+    header_style = ParagraphStyle(
+        'CustomHeader',
+        parent=styles['Normal'],
+        fontSize=14,
+        spaceAfter=12,
+        alignment=TA_RIGHT,
+        fontName='Helvetica-Bold'
+    )
+    
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontSize=10,
+        spaceAfter=6,
+        alignment=TA_RIGHT,
+        fontName='Helvetica'
+    )
+    
+    # Agency Header
+    if agency_data.get('logo_url'):
+        # If logo exists, add it (placeholder for now)
+        elements.append(Spacer(1, 12))
+    
+    # Agency name and title
+    agency_title = f"<b>{agency_data['name']}</b><br/>{agency_data.get('header_text', 'وصل استلام')}"
+    elements.append(Paragraph(agency_title, title_style))
+    elements.append(Spacer(1, 12))
+    
+    # Agency details
+    agency_info = f"""
+    العنوان: {agency_data['address']}, {agency_data['city']}<br/>
+    الهاتف: {agency_data.get('phone', 'غير محدد')}<br/>
+    البريد: {agency_data.get('email', 'غير محدد')}<br/>
+    """
+    if agency_data.get('tax_number'):
+        agency_info += f"رقم التسجيل الضريبي: {agency_data['tax_number']}<br/>"
+    if agency_data.get('commercial_register'):
+        agency_info += f"السجل التجاري: {agency_data['commercial_register']}<br/>"
+    
+    elements.append(Paragraph(agency_info, normal_style))
+    elements.append(Spacer(1, 20))
+    
+    # Receipt details
+    elements.append(Paragraph("<b>تفاصيل الوصل</b>", header_style))
+    
+    # Create receipt details table
+    receipt_data = [
+        ['رقم الوصل:', operation_data['operation_no']],
+        ['التاريخ:', operation_data['date'][:10] if isinstance(operation_data['date'], str) else operation_data['date'].strftime('%Y-%m-%d')],
+        ['اسم العميل:', client_data.get('name', 'غير محدد')],
+        ['الخدمة:', operation_data['service_name']],
+        ['السعر الأساسي:', f"{operation_data['base_price']:,.0f} دج"],
+        ['مبلغ التخفيض:', f"{operation_data.get('discount_amount', 0):,.0f} دج"],
+        ['المبلغ النهائي:', f"{operation_data['final_price']:,.0f} دج"],
+        ['الحالة:', operation_data['status']],
+    ]
+    
+    if operation_data.get('notes'):
+        receipt_data.append(['ملاحظات:', operation_data['notes']])
+    
+    # Create table
+    receipt_table = Table(receipt_data, colWidths=[3*inch, 3*inch])
+    receipt_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('BACKGROUND', (1, 0), (1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    elements.append(receipt_table)
+    elements.append(Spacer(1, 30))
+    
+    # Employee signature section
+    elements.append(Paragraph("<b>توقيع الموظف</b>", header_style))
+    
+    employee_info = f"""
+    الاسم: {user_data['name']}<br/>
+    المنصب: {user_data.get('job_title', 'موظف')}<br/>
+    التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}<br/>
+    """
+    
+    elements.append(Paragraph(employee_info, normal_style))
+    
+    if user_data.get('signature_url'):
+        # Placeholder for digital signature
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("التوقيع الإلكتروني", normal_style))
+    else:
+        elements.append(Spacer(1, 40))
+        elements.append(Paragraph("التوقيع: ________________", normal_style))
+    
+    elements.append(Spacer(1, 30))
+    
+    # Footer
+    if agency_data.get('footer_text'):
+        elements.append(Paragraph(agency_data['footer_text'], normal_style))
+    
+    elements.append(Paragraph(f"تم إنشاء هذا الوصل بتاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
+    
+    # Build PDF
+    doc.build(elements)
+    
+    # Get the value of the BytesIO buffer and return it
+    pdf_data = buffer.getvalue()
+    buffer.close()
+    
+    return pdf_data
+
+def create_operations_report_pdf(report_data: dict, agencies_data: List[dict], current_user: dict):
+    """Generate professional PDF report for daily operations"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'ReportTitle',
+        parent=styles['Normal'],
+        fontSize=16,
+        spaceAfter=20,
+        alignment=TA_CENTER,
+        textColor=colors.darkblue,
+        fontName='Helvetica-Bold'
+    )
+    
+    header_style = ParagraphStyle(
+        'ReportHeader',
+        parent=styles['Normal'],
+        fontSize=12,
+        spaceAfter=10,
+        alignment=TA_RIGHT,
+        fontName='Helvetica-Bold'
+    )
+    
+    normal_style = ParagraphStyle(
+        'ReportNormal',
+        parent=styles['Normal'],
+        fontSize=9,
+        spaceAfter=4,
+        alignment=TA_RIGHT,
+        fontName='Helvetica'
+    )
+    
+    # Report header
+    elements.append(Paragraph(report_data['title'], title_style))
+    elements.append(Paragraph(report_data['period'], header_style))
+    elements.append(Spacer(1, 20))
+    
+    # Report generated by
+    elements.append(Paragraph(f"تم إنشاء التقرير بواسطة: {current_user['name']}", normal_style))
+    elements.append(Paragraph(f"تاريخ الإنشاء: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
+    elements.append(Spacer(1, 20))
+    
+    # Grand totals summary
+    if report_data.get('grand_totals'):
+        elements.append(Paragraph("<b>الملخص العام</b>", header_style))
+        
+        totals_data = [
+            ['إجمالي العمليات', f"{report_data['grand_totals']['operations_count']:,}"],
+            ['إجمالي الإيرادات', f"{report_data['grand_totals']['total_revenue']:,.0f} دج"],
+            ['إجمالي التخفيضات', f"{report_data['grand_totals']['total_discounts']:,.0f} دج"],
+            ['صافي الإيرادات', f"{report_data['grand_totals']['net_revenue']:,.0f} دج"],
+        ]
+        
+        totals_table = Table(totals_data, colWidths=[2.5*inch, 2*inch])
+        totals_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        
+        elements.append(totals_table)
+        elements.append(Spacer(1, 30))
+    
+    # Agency-wise breakdown
+    if report_data.get('agencies_data'):
+        elements.append(Paragraph("<b>تفصيل حسب الوكالة</b>", header_style))
+        
+        for agency in report_data['agencies_data']:
+            elements.append(Paragraph(f"<b>{agency['agency_name']}</b>", header_style))
+            
+            agency_data = [
+                ['العمليات', f"{agency['totals']['operations_count']:,}"],
+                ['الإيرادات', f"{agency['totals']['total_revenue']:,.0f} دج"],
+                ['التخفيضات', f"{agency['totals']['total_discounts']:,.0f} دج"],
+                ['الصافي', f"{agency['totals']['net_revenue']:,.0f} دج"],
+            ]
+            
+            agency_table = Table(agency_data, colWidths=[2*inch, 2*inch])
+            agency_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+                ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            elements.append(agency_table)
+            elements.append(Spacer(1, 15))
+    
+    # Build PDF
+    doc.build(elements)
+    
+    pdf_data = buffer.getvalue()
+    buffer.close()
+    
+    return pdf_data
+
 # Discount Requests Routes
 @api_router.get("/discount-requests")
 async def get_discount_requests(
