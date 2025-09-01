@@ -4153,7 +4153,10 @@ const MainApp = ({ activeTab }) => {
     payments: PaymentsManagement,
     reports: ReportsManagement,
     userManagement: UserManagement,
-    dailyReports: DailyReportsManagement
+    dailyReports: DailyReportsManagement,
+    servicesManagement: ServicesManagement,
+    dailyOperations: DailyOperationsManagement,
+    dailyOperationsReports: DailyOperationsReports
   };
 
   const Component = components[activeTab] || components.dashboard;
