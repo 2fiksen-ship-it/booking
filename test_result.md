@@ -380,7 +380,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "NEW ENHANCED Reports System with Agency Breakdown"
+    - "Daily Operations Management System - Services & Pricing"
+    - "Daily Operations Receipts with Approval System"
+    - "Comprehensive Daily Operations Reports"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
