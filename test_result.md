@@ -107,6 +107,11 @@ user_problem_statement: |
   1. Implementing the remaining "Coming Soon" interfaces for Bookings, Invoices, Payments, and Reports
   2. Implement a notification system for invoice due dates, low cashbox alerts, and backup failures
   3. Fix any login redirection issues and ensure all modules work correctly
+  4. NEW REQUIREMENT: Implement comprehensive Daily Operations Management System with:
+     - Services catalog with fixed pricing and discount management with justification
+     - Daily operations receipts system with approval workflow
+     - Comprehensive daily operations reports with filtering capabilities
+     - Only General Manager and General Accountant can approve receipts and manage pricing
 
 backend:
   - task: "Authentication System"
