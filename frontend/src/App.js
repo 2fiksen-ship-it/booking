@@ -4660,6 +4660,16 @@ const DailyOperationsManagement = () => {
                   {canApproveOperations && (
                     <TableCell>
                       <div className="flex justify-end space-x-2">
+                        {/* Print Receipt Button - Always visible */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePrintReceipt(operation.id, operation.operation_no)}
+                          className="text-blue-600 hover:text-blue-700 border-blue-600"
+                        >
+                          🖨️ طباعة الوصل
+                        </Button>
+                        
                         {operation.status === 'في انتظار الموافقة' && (
                           <>
                             <Button
