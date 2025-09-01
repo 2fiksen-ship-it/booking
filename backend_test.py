@@ -1631,6 +1631,364 @@ class SanhajaAPITester:
         
         return results
 
+    def test_enhanced_reports_system_with_agency_breakdown(self):
+        """Test NEW ENHANCED Reports System with Agency Breakdown functionality (Review Request)"""
+        print(f"\n📊 Testing NEW ENHANCED Reports System with Agency Breakdown (Review Request)...")
+        print(f"   Testing enhanced sales, aging, and summary reports with agency filtering")
+        
+        results = {}
+        
+        # Test date ranges for reports
+        today = datetime.now()
+        start_date = (today - timedelta(days=30)).strftime('%Y-%m-%d')
+        end_date = today.strftime('%Y-%m-%d')
+        
+        print(f"\n   Using date range: {start_date} to {end_date}")
+        
+        # Step 1: Test with Super Admin (superadmin@sanhaja.com / super123)
+        print(f"\n   1. Testing Enhanced Reports with Super Admin...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if auth_success:
+            print(f"   ✅ Super Admin authenticated successfully")
+            
+            # Test 1.1: Enhanced Sales Reports with Agency Breakdown
+            print(f"\n   1.1 Testing Enhanced Sales Reports with Agency Breakdown...")
+            
+            # Test group_by_agency=true with agency_ids=all (daily)
+            success, response = self.run_test(
+                "Enhanced Sales Report - Daily with Agency Breakdown (all agencies)",
+                "GET",
+                f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=daily&group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['sales_daily_agency_breakdown_all'] = success
+            if success:
+                print(f"   ✅ Daily sales report with agency breakdown generated")
+                if 'agencies_data' in response:
+                    print(f"   Agencies in report: {len(response['agencies_data'])}")
+                    for agency in response['agencies_data']:
+                        print(f"     - {agency.get('agency_name', 'Unknown')}: {agency.get('totals', {}).get('sales', 0)} DZD")
+                if 'grand_totals' in response:
+                    print(f"   Grand Totals - Sales: {response['grand_totals'].get('sales', 0)} DZD, Bookings: {response['grand_totals'].get('bookings', 0)}")
+            
+            # Test group_by_agency=true with agency_ids=all (monthly)
+            success, response = self.run_test(
+                "Enhanced Sales Report - Monthly with Agency Breakdown (all agencies)",
+                "GET",
+                f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=monthly&group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['sales_monthly_agency_breakdown_all'] = success
+            if success:
+                print(f"   ✅ Monthly sales report with agency breakdown generated")
+            
+            # Test group_by_agency=false (traditional format)
+            success, response = self.run_test(
+                "Enhanced Sales Report - Traditional Format (no agency breakdown)",
+                "GET",
+                f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=daily&group_by_agency=false",
+                200
+            )
+            results['sales_traditional_format'] = success
+            if success:
+                print(f"   ✅ Traditional sales report format working")
+                if 'data' in response and 'totals' in response:
+                    print(f"   Traditional Totals - Sales: {response['totals'].get('sales', 0)} DZD, Bookings: {response['totals'].get('bookings', 0)}")
+            
+            # Get agencies for specific agency testing
+            success, agencies_data = self.run_test("Get Agencies for Filtering", "GET", "agencies", 200)
+            if success and agencies_data:
+                test_agency_id = agencies_data[0]['id']
+                test_agency_name = agencies_data[0].get('name', 'Unknown')
+                
+                # Test with specific agency_id
+                success, response = self.run_test(
+                    f"Enhanced Sales Report - Specific Agency ({test_agency_name})",
+                    "GET",
+                    f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=daily&group_by_agency=true&agency_ids={test_agency_id}",
+                    200
+                )
+                results['sales_specific_agency'] = success
+                if success:
+                    print(f"   ✅ Sales report for specific agency ({test_agency_name}) working")
+            
+            # Test 1.2: Enhanced Aging Reports with Agency Breakdown
+            print(f"\n   1.2 Testing Enhanced Aging Reports with Agency Breakdown...")
+            
+            # Test group_by_agency=true with agency_ids=all
+            success, response = self.run_test(
+                "Enhanced Aging Report - with Agency Breakdown (all agencies)",
+                "GET",
+                "reports/aging?group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['aging_agency_breakdown_all'] = success
+            if success:
+                print(f"   ✅ Aging report with agency breakdown generated")
+                if 'agencies_data' in response:
+                    print(f"   Agencies in aging report: {len(response['agencies_data'])}")
+                    for agency in response['agencies_data']:
+                        agency_name = agency.get('agency_name', 'Unknown')
+                        totals = agency.get('totals', {})
+                        print(f"     - {agency_name}: {totals.get('count', 0)} invoices, {totals.get('amount', 0)} DZD")
+                if 'grand_totals' in response:
+                    print(f"   Grand Totals - Count: {response['grand_totals'].get('count', 0)}, Amount: {response['grand_totals'].get('amount', 0)} DZD")
+            
+            # Test group_by_agency=false (traditional format)
+            success, response = self.run_test(
+                "Enhanced Aging Report - Traditional Format (no agency breakdown)",
+                "GET",
+                "reports/aging?group_by_agency=false",
+                200
+            )
+            results['aging_traditional_format'] = success
+            if success:
+                print(f"   ✅ Traditional aging report format working")
+            
+            # Test with specific agency filtering
+            if agencies_data:
+                success, response = self.run_test(
+                    f"Enhanced Aging Report - Specific Agency ({test_agency_name})",
+                    "GET",
+                    f"reports/aging?group_by_agency=true&agency_ids={test_agency_id}",
+                    200
+                )
+                results['aging_specific_agency'] = success
+                if success:
+                    print(f"   ✅ Aging report for specific agency ({test_agency_name}) working")
+            
+            # Test 1.3: New Summary Reports (replaces profit-loss)
+            print(f"\n   1.3 Testing New Summary Reports (replaces profit-loss)...")
+            
+            # Test summary report with agency breakdown
+            success, response = self.run_test(
+                "New Summary Report - with Agency Breakdown (all agencies)",
+                "GET",
+                f"reports/summary?start_date={start_date}&end_date={end_date}&group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['summary_agency_breakdown_all'] = success
+            if success:
+                print(f"   ✅ Summary report with agency breakdown generated")
+                if 'agencies_data' in response:
+                    print(f"   Agencies in summary report: {len(response['agencies_data'])}")
+                    for agency in response['agencies_data']:
+                        agency_name = agency.get('agency_name', 'Unknown')
+                        sales = agency.get('sales', 0)
+                        bookings = agency.get('bookings', 0)
+                        invoices = agency.get('invoices', 0)
+                        print(f"     - {agency_name}: Sales: {sales} DZD, Bookings: {bookings}, Invoices: {invoices}")
+                if 'grand_totals' in response:
+                    gt = response['grand_totals']
+                    print(f"   Grand Totals - Sales: {gt.get('sales', 0)} DZD, Bookings: {gt.get('bookings', 0)}, Invoices: {gt.get('invoices', 0)}")
+            
+            # Test summary report without agency breakdown
+            success, response = self.run_test(
+                "New Summary Report - Traditional Format (no agency breakdown)",
+                "GET",
+                f"reports/summary?start_date={start_date}&end_date={end_date}&group_by_agency=false",
+                200
+            )
+            results['summary_traditional_format'] = success
+            if success:
+                print(f"   ✅ Traditional summary report format working")
+                if 'data' in response:
+                    data = response['data']
+                    print(f"   Summary Data - Sales: {data.get('sales', 0)} DZD, Bookings: {data.get('bookings', 0)}, Invoices: {data.get('invoices', 0)}")
+            
+            # Test summary report with specific agency
+            if agencies_data:
+                success, response = self.run_test(
+                    f"New Summary Report - Specific Agency ({test_agency_name})",
+                    "GET",
+                    f"reports/summary?start_date={start_date}&end_date={end_date}&group_by_agency=true&agency_ids={test_agency_id}",
+                    200
+                )
+                results['summary_specific_agency'] = success
+                if success:
+                    print(f"   ✅ Summary report for specific agency ({test_agency_name}) working")
+        
+        # Step 2: Test with General Accountant (generalaccountant@sanhaja.com / acc123)
+        print(f"\n   2. Testing Enhanced Reports with General Accountant...")
+        auth_success = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['general_accountant_login'] = auth_success
+        
+        if auth_success:
+            print(f"   ✅ General Accountant authenticated successfully")
+            
+            # Test all reports with General Accountant access
+            success, response = self.run_test(
+                "General Accountant - Enhanced Sales Report with Agency Breakdown",
+                "GET",
+                f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=daily&group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['ga_sales_agency_breakdown'] = success
+            if success:
+                print(f"   ✅ General Accountant can access enhanced sales reports with agency breakdown")
+            
+            success, response = self.run_test(
+                "General Accountant - Enhanced Aging Report with Agency Breakdown",
+                "GET",
+                "reports/aging?group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['ga_aging_agency_breakdown'] = success
+            if success:
+                print(f"   ✅ General Accountant can access enhanced aging reports with agency breakdown")
+            
+            success, response = self.run_test(
+                "General Accountant - New Summary Report with Agency Breakdown",
+                "GET",
+                f"reports/summary?start_date={start_date}&end_date={end_date}&group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['ga_summary_agency_breakdown'] = success
+            if success:
+                print(f"   ✅ General Accountant can access new summary reports with agency breakdown")
+        
+        # Step 3: Test with Agency Staff to ensure they still see only their agency
+        print(f"\n   3. Testing Enhanced Reports with Agency Staff (should see only their agency)...")
+        auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['agency_staff_login'] = auth_success
+        
+        if auth_success:
+            print(f"   ✅ Agency Staff authenticated successfully")
+            staff_agency_id = self.current_user.get('agency_id')
+            print(f"   Staff Agency ID: {staff_agency_id}")
+            
+            # Test that agency staff still see only their agency data
+            success, response = self.run_test(
+                "Agency Staff - Enhanced Sales Report (should be isolated to their agency)",
+                "GET",
+                f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=daily&group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['staff_sales_isolation'] = success
+            if success:
+                print(f"   ✅ Agency Staff can access enhanced sales reports")
+                # Verify isolation - should only see their agency
+                if 'agencies_data' in response:
+                    agencies_count = len(response['agencies_data'])
+                    if agencies_count == 1:
+                        print(f"   ✅ Agency Staff isolation working - sees only 1 agency (their own)")
+                        results['staff_sales_isolation_verified'] = True
+                    else:
+                        print(f"   ❌ Agency Staff isolation broken - sees {agencies_count} agencies")
+                        results['staff_sales_isolation_verified'] = False
+                elif 'data' in response:
+                    print(f"   ✅ Agency Staff sees traditional format (isolated to their agency)")
+                    results['staff_sales_isolation_verified'] = True
+            
+            success, response = self.run_test(
+                "Agency Staff - Enhanced Aging Report (should be isolated to their agency)",
+                "GET",
+                "reports/aging?group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['staff_aging_isolation'] = success
+            if success:
+                print(f"   ✅ Agency Staff can access enhanced aging reports")
+                # Verify isolation
+                if 'agencies_data' in response:
+                    agencies_count = len(response['agencies_data'])
+                    if agencies_count <= 1:
+                        print(f"   ✅ Agency Staff aging report isolation working")
+                        results['staff_aging_isolation_verified'] = True
+                    else:
+                        print(f"   ❌ Agency Staff aging report isolation broken")
+                        results['staff_aging_isolation_verified'] = False
+            
+            success, response = self.run_test(
+                "Agency Staff - New Summary Report (should be isolated to their agency)",
+                "GET",
+                f"reports/summary?start_date={start_date}&end_date={end_date}&group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['staff_summary_isolation'] = success
+            if success:
+                print(f"   ✅ Agency Staff can access new summary reports")
+        
+        # Step 4: Data Verification - Agency names in Arabic and totals calculation
+        print(f"\n   4. Testing Data Verification (Arabic names and totals calculation)...")
+        
+        # Re-login as Super Admin for verification
+        if self.test_login('superadmin@sanhaja.com', 'super123'):
+            # Test Arabic agency names
+            success, response = self.run_test(
+                "Data Verification - Arabic Agency Names in Sales Report",
+                "GET",
+                f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=daily&group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['arabic_names_verification'] = success
+            if success and 'agencies_data' in response:
+                print(f"   ✅ Agency names verification:")
+                arabic_names_found = 0
+                for agency in response['agencies_data']:
+                    agency_name = agency.get('agency_name', '')
+                    if any(ord(char) > 127 for char in agency_name):  # Check for Arabic characters
+                        arabic_names_found += 1
+                    print(f"     - {agency_name}")
+                
+                if arabic_names_found > 0:
+                    print(f"   ✅ Arabic agency names confirmed ({arabic_names_found} agencies with Arabic names)")
+                    results['arabic_names_confirmed'] = True
+                else:
+                    print(f"   ⚠️  No Arabic agency names detected")
+                    results['arabic_names_confirmed'] = False
+            
+            # Test totals calculation verification
+            success, response = self.run_test(
+                "Data Verification - Totals Calculation in Summary Report",
+                "GET",
+                f"reports/summary?start_date={start_date}&end_date={end_date}&group_by_agency=true&agency_ids=all",
+                200
+            )
+            results['totals_calculation_verification'] = success
+            if success and 'agencies_data' in response and 'grand_totals' in response:
+                print(f"   ✅ Totals calculation verification:")
+                
+                # Calculate manual totals from agencies data
+                manual_sales = sum(agency.get('sales', 0) for agency in response['agencies_data'])
+                manual_bookings = sum(agency.get('bookings', 0) for agency in response['agencies_data'])
+                manual_invoices = sum(agency.get('invoices', 0) for agency in response['agencies_data'])
+                
+                # Compare with grand totals
+                grand_totals = response['grand_totals']
+                gt_sales = grand_totals.get('sales', 0)
+                gt_bookings = grand_totals.get('bookings', 0)
+                gt_invoices = grand_totals.get('invoices', 0)
+                
+                print(f"     Manual calculation - Sales: {manual_sales}, Bookings: {manual_bookings}, Invoices: {manual_invoices}")
+                print(f"     Grand totals - Sales: {gt_sales}, Bookings: {gt_bookings}, Invoices: {gt_invoices}")
+                
+                if (manual_sales == gt_sales and manual_bookings == gt_bookings and manual_invoices == gt_invoices):
+                    print(f"   ✅ Totals calculation is accurate")
+                    results['totals_accurate'] = True
+                else:
+                    print(f"   ❌ Totals calculation mismatch")
+                    results['totals_accurate'] = False
+        
+        # Step 5: Test Date Range Filtering with Agency Breakdown
+        print(f"\n   5. Testing Date Range Filtering with Agency Breakdown...")
+        
+        # Test with different date ranges
+        short_start = (today - timedelta(days=7)).strftime('%Y-%m-%d')
+        success, response = self.run_test(
+            "Date Range Filtering - 7 days with Agency Breakdown",
+            "GET",
+            f"reports/sales?start_date={short_start}&end_date={end_date}&report_type=daily&group_by_agency=true&agency_ids=all",
+            200
+        )
+        results['date_range_filtering'] = success
+        if success:
+            print(f"   ✅ Date range filtering works with agency breakdown")
+        
+        return results
+
 def main():
     print("🚀 Starting Sanhaja Travel Agencies Backend API Testing...")
     print("نظام محاسبة وكالات صنهاجة للسفر - اختبار واجهات برمجة التطبيقات")
