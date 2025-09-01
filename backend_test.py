@@ -2862,6 +2862,399 @@ class SanhajaAPITester:
         
         return results
 
+    def test_daily_operations_approval_rejection_debug(self):
+        """Test Daily Operations approval and rejection functionality - DEBUG FOCUS"""
+        print(f"\n🔍 DEBUGGING DAILY OPERATIONS APPROVAL/REJECTION FUNCTIONALITY")
+        print(f"   Focus: PUT /api/daily-operations/{{operation_id}}/approve")
+        print(f"   Focus: PUT /api/daily-operations/{{operation_id}}/reject")
+        print(f"   Focus: GET /api/daily-operations/{{operation_id}}/print")
+        print(f"   Testing with Super Admin credentials: superadmin@sanhaja.com / super123")
+        
+        results = {}
+        
+        # Step 1: Super Admin Login
+        print(f"\n   1. Super Admin Authentication...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with testing")
+            return results
+            
+        print(f"   ✅ Super Admin authenticated successfully")
+        print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+        
+        # Step 2: Check existing daily operations
+        print(f"\n   2. Checking existing daily operations...")
+        success, operations_data = self.run_test(
+            "Get Daily Operations",
+            "GET",
+            "daily-operations",
+            200
+        )
+        results['get_operations'] = success
+        
+        if success:
+            print(f"   ✅ Daily operations endpoint accessible")
+            print(f"   Total operations found: {len(operations_data)}")
+            
+            # Analyze operation statuses
+            status_counts = {}
+            pending_operations = []
+            
+            for operation in operations_data:
+                status = operation.get('status', 'unknown')
+                status_counts[status] = status_counts.get(status, 0) + 1
+                
+                if status == "في انتظار الموافقة":
+                    pending_operations.append(operation)
+            
+            print(f"   Operation statuses: {status_counts}")
+            print(f"   Pending approval operations: {len(pending_operations)}")
+            
+            if pending_operations:
+                print(f"   Found {len(pending_operations)} operations pending approval - good for testing!")
+                results['has_pending_operations'] = True
+            else:
+                print(f"   ⚠️  No operations in 'في انتظار الموافقة' status - need to create one for testing")
+                results['has_pending_operations'] = False
+        
+        # Step 3: Create a test operation if no pending operations exist
+        test_operation_id = None
+        if not results.get('has_pending_operations', False):
+            print(f"\n   3. Creating test operation for approval/rejection testing...")
+            
+            # First get clients and services for operation creation
+            success, clients_data = self.run_test("Get Clients", "GET", "clients", 200)
+            success2, services_data = self.run_test("Get Services", "GET", "services", 200)
+            
+            if success and success2 and clients_data and services_data:
+                test_client_id = clients_data[0]['id']
+                test_service_id = services_data[0]['id']
+                
+                # Create operation with discount to trigger approval requirement
+                success, create_response = self.run_test(
+                    "Create Test Operation (with discount)",
+                    "POST",
+                    "daily-operations",
+                    200,
+                    data={
+                        "service_id": test_service_id,
+                        "client_id": test_client_id,
+                        "discount_amount": 5000.0,  # Add discount to require approval
+                        "discount_reason": "تخفيض للاختبار",
+                        "notes": "عملية اختبار لنظام الموافقة والرفض"
+                    }
+                )
+                results['create_test_operation'] = success
+                
+                if success and 'id' in create_response:
+                    test_operation_id = create_response['id']
+                    print(f"   ✅ Test operation created successfully: {test_operation_id}")
+                    print(f"   Operation should be in 'في انتظار الموافقة' status due to discount")
+                else:
+                    print(f"   ❌ Failed to create test operation")
+            else:
+                print(f"   ❌ Cannot create test operation - missing clients or services data")
+        else:
+            # Use existing pending operation
+            test_operation_id = pending_operations[0]['id']
+            print(f"\n   3. Using existing pending operation for testing: {test_operation_id}")
+        
+        # Step 4: Test Operation Approval
+        if test_operation_id:
+            print(f"\n   4. Testing Operation Approval...")
+            print(f"   Testing PUT /api/daily-operations/{test_operation_id}/approve")
+            
+            success, approve_response = self.run_test(
+                f"Approve Operation {test_operation_id}",
+                "PUT",
+                f"daily-operations/{test_operation_id}/approve",
+                200,
+                data={}
+            )
+            results['approve_operation'] = success
+            
+            if success:
+                print(f"   ✅ Operation approval successful")
+                print(f"   Response: {approve_response}")
+                
+                # Verify status change
+                success, updated_operation = self.run_test(
+                    f"Verify Approved Operation Status",
+                    "GET",
+                    f"daily-operations",
+                    200
+                )
+                
+                if success:
+                    # Find the updated operation
+                    for op in updated_operation:
+                        if op.get('id') == test_operation_id:
+                            new_status = op.get('status')
+                            approved_by = op.get('approved_by')
+                            approved_at = op.get('approved_at')
+                            
+                            print(f"   Operation Status: {new_status}")
+                            print(f"   Approved By: {approved_by}")
+                            print(f"   Approved At: {approved_at}")
+                            
+                            if new_status == "معتمد":
+                                print(f"   ✅ Status correctly changed to 'معتمد'")
+                                results['status_changed_to_approved'] = True
+                            else:
+                                print(f"   ❌ Status not changed correctly - Expected: 'معتمد', Got: '{new_status}'")
+                                results['status_changed_to_approved'] = False
+                            break
+            else:
+                print(f"   ❌ Operation approval failed")
+                print(f"   Error response: {approve_response}")
+        
+        # Step 5: Create another operation for rejection testing
+        print(f"\n   5. Creating another operation for rejection testing...")
+        
+        # Get clients and services again
+        success, clients_data = self.run_test("Get Clients", "GET", "clients", 200)
+        success2, services_data = self.run_test("Get Services", "GET", "services", 200)
+        
+        reject_operation_id = None
+        if success and success2 and clients_data and services_data:
+            test_client_id = clients_data[0]['id']
+            test_service_id = services_data[0]['id']
+            
+            success, create_response = self.run_test(
+                "Create Operation for Rejection Test",
+                "POST",
+                "daily-operations",
+                200,
+                data={
+                    "service_id": test_service_id,
+                    "client_id": test_client_id,
+                    "discount_amount": 3000.0,
+                    "discount_reason": "تخفيض لاختبار الرفض",
+                    "notes": "عملية اختبار لنظام الرفض"
+                }
+            )
+            
+            if success and 'id' in create_response:
+                reject_operation_id = create_response['id']
+                print(f"   ✅ Operation for rejection test created: {reject_operation_id}")
+        
+        # Step 6: Test Operation Rejection
+        if reject_operation_id:
+            print(f"\n   6. Testing Operation Rejection...")
+            print(f"   Testing PUT /api/daily-operations/{reject_operation_id}/reject")
+            
+            success, reject_response = self.run_test(
+                f"Reject Operation {reject_operation_id}",
+                "PUT",
+                f"daily-operations/{reject_operation_id}/reject",
+                200,
+                data={
+                    "rejection_reason": "التخفيض غير مبرر بما فيه الكفاية"
+                }
+            )
+            results['reject_operation'] = success
+            
+            if success:
+                print(f"   ✅ Operation rejection successful")
+                print(f"   Response: {reject_response}")
+                
+                # Verify status change
+                success, updated_operations = self.run_test(
+                    f"Verify Rejected Operation Status",
+                    "GET",
+                    f"daily-operations",
+                    200
+                )
+                
+                if success:
+                    # Find the updated operation
+                    for op in updated_operations:
+                        if op.get('id') == reject_operation_id:
+                            new_status = op.get('status')
+                            rejected_reason = op.get('rejected_reason')
+                            approved_by = op.get('approved_by')  # This field is used for both approve and reject
+                            
+                            print(f"   Operation Status: {new_status}")
+                            print(f"   Rejection Reason: {rejected_reason}")
+                            print(f"   Processed By: {approved_by}")
+                            
+                            if new_status == "مرفوض":
+                                print(f"   ✅ Status correctly changed to 'مرفوض'")
+                                results['status_changed_to_rejected'] = True
+                            else:
+                                print(f"   ❌ Status not changed correctly - Expected: 'مرفوض', Got: '{new_status}'")
+                                results['status_changed_to_rejected'] = False
+                            break
+            else:
+                print(f"   ❌ Operation rejection failed")
+                print(f"   Error response: {reject_response}")
+        
+        # Step 7: Test Print Functionality
+        print(f"\n   7. Testing Print Functionality...")
+        
+        # Use the approved operation for print testing
+        if test_operation_id:
+            print(f"   Testing GET /api/daily-operations/{test_operation_id}/print")
+            
+            # Test PDF receipt generation
+            url = f"{self.api_url}/daily-operations/{test_operation_id}/print"
+            headers = {'Authorization': f'Bearer {self.token}'}
+            
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+                
+                if response.status_code == 200:
+                    print(f"   ✅ Print functionality working")
+                    
+                    # Check content type
+                    content_type = response.headers.get('content-type', '')
+                    if 'application/pdf' in content_type:
+                        print(f"   ✅ Correct content-type: {content_type}")
+                        results['print_content_type'] = True
+                    else:
+                        print(f"   ❌ Wrong content-type: {content_type}")
+                        results['print_content_type'] = False
+                    
+                    # Check Content-Disposition header
+                    content_disposition = response.headers.get('content-disposition', '')
+                    if 'attachment' in content_disposition:
+                        print(f"   ✅ Correct Content-Disposition header")
+                        results['print_disposition'] = True
+                    else:
+                        print(f"   ❌ Missing Content-Disposition header")
+                        results['print_disposition'] = False
+                    
+                    # Check PDF file size
+                    pdf_size = len(response.content)
+                    if pdf_size > 1000:  # PDF should be at least 1KB
+                        print(f"   ✅ PDF generated with size: {pdf_size} bytes")
+                        results['print_pdf_size'] = True
+                    else:
+                        print(f"   ❌ PDF too small: {pdf_size} bytes")
+                        results['print_pdf_size'] = False
+                    
+                    # Check PDF magic bytes
+                    if response.content.startswith(b'%PDF'):
+                        print(f"   ✅ Valid PDF format")
+                        results['print_pdf_format'] = True
+                    else:
+                        print(f"   ❌ Invalid PDF format")
+                        results['print_pdf_format'] = False
+                    
+                    results['print_operation'] = True
+                else:
+                    print(f"   ❌ Print failed - Status: {response.status_code}")
+                    results['print_operation'] = False
+                    
+            except Exception as e:
+                print(f"   ❌ Print error: {str(e)}")
+                results['print_operation'] = False
+        
+        # Step 8: Test Authentication and Permissions
+        print(f"\n   8. Testing Authentication and Permissions...")
+        
+        # Test with General Accountant
+        print(f"   8a. Testing with General Accountant...")
+        ga_auth_success = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['general_accountant_login'] = ga_auth_success
+        
+        if ga_auth_success:
+            print(f"   ✅ General Accountant authenticated")
+            
+            # General Accountant should be able to approve/reject operations
+            if reject_operation_id:
+                # Create another operation for GA testing
+                success, clients_data = self.run_test("Get Clients", "GET", "clients", 200)
+                success2, services_data = self.run_test("Get Services", "GET", "services", 200)
+                
+                if success and success2 and clients_data and services_data:
+                    success, create_response = self.run_test(
+                        "Create Operation for GA Test",
+                        "POST",
+                        "daily-operations",
+                        200,
+                        data={
+                            "service_id": services_data[0]['id'],
+                            "client_id": clients_data[0]['id'],
+                            "discount_amount": 2000.0,
+                            "discount_reason": "اختبار المحاسب العام",
+                            "notes": "عملية اختبار للمحاسب العام"
+                        }
+                    )
+                    
+                    if success and 'id' in create_response:
+                        ga_operation_id = create_response['id']
+                        
+                        # Test GA approval
+                        success, ga_approve_response = self.run_test(
+                            f"General Accountant - Approve Operation",
+                            "PUT",
+                            f"daily-operations/{ga_operation_id}/approve",
+                            200,
+                            data={}
+                        )
+                        results['ga_can_approve'] = success
+                        
+                        if success:
+                            print(f"   ✅ General Accountant can approve operations")
+                        else:
+                            print(f"   ❌ General Accountant cannot approve operations")
+        
+        # Test with Agency Staff (should not be able to approve/reject)
+        print(f"   8b. Testing with Agency Staff (should be denied)...")
+        staff_auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['agency_staff_login'] = staff_auth_success
+        
+        if staff_auth_success and test_operation_id:
+            print(f"   ✅ Agency Staff authenticated")
+            
+            # Agency Staff should NOT be able to approve operations
+            success, staff_approve_response = self.run_test(
+                f"Agency Staff - Try Approve Operation (Should Fail)",
+                "PUT",
+                f"daily-operations/{test_operation_id}/approve",
+                403,  # Should be forbidden
+                data={}
+            )
+            results['staff_cannot_approve'] = success
+            
+            if success:
+                print(f"   ✅ Agency Staff correctly denied approval permission")
+            else:
+                print(f"   ❌ Agency Staff incorrectly allowed to approve operations")
+        
+        # Step 9: Test Enum Values
+        print(f"\n   9. Testing Enum Values...")
+        
+        # Check if the status enums are working correctly
+        expected_statuses = ["مسودة", "في انتظار الموافقة", "معتمد", "مرفوض"]
+        
+        # Get all operations and check status values
+        success, all_operations = self.run_test("Get All Operations for Enum Check", "GET", "daily-operations", 200)
+        
+        if success:
+            found_statuses = set()
+            for operation in all_operations:
+                status = operation.get('status')
+                if status:
+                    found_statuses.add(status)
+            
+            print(f"   Found operation statuses: {list(found_statuses)}")
+            
+            valid_statuses = [status for status in found_statuses if status in expected_statuses]
+            print(f"   Valid statuses: {valid_statuses}")
+            
+            if len(valid_statuses) >= 2:  # At least approved and pending/rejected
+                print(f"   ✅ Enum values working correctly")
+                results['enum_values_working'] = True
+            else:
+                print(f"   ⚠️  Limited enum values found")
+                results['enum_values_working'] = False
+        
+        return results
+
     def test_services_and_daily_operations_comprehensive(self):
         """Comprehensive test of Services Management and Daily Operations as requested in review"""
         print(f"\n🎯 COMPREHENSIVE SERVICES & DAILY OPERATIONS TESTING (REVIEW REQUEST)")
@@ -2869,7 +3262,15 @@ class SanhajaAPITester:
         
         all_results = {}
         
-        # Test 1: Services Management API
+        # Test 1: Daily Operations Approval/Rejection Debug (PRIORITY TEST)
+        print(f"\n" + "="*80)
+        print(f"DAILY OPERATIONS APPROVAL/REJECTION DEBUG (PRIORITY)")
+        print(f"="*80)
+        
+        daily_ops_debug_results = self.test_daily_operations_approval_rejection_debug()
+        all_results.update(daily_ops_debug_results)
+        
+        # Test 2: Services Management API
         print(f"\n" + "="*80)
         print(f"SERVICES MANAGEMENT API TESTING")
         print(f"="*80)
@@ -2877,7 +3278,7 @@ class SanhajaAPITester:
         services_results = self.test_services_management_api()
         all_results.update(services_results)
         
-        # Test 2: Daily Operations API
+        # Test 3: Daily Operations API
         print(f"\n" + "="*80)
         print(f"DAILY OPERATIONS API TESTING")
         print(f"="*80)
@@ -2885,7 +3286,7 @@ class SanhajaAPITester:
         operations_results = self.test_daily_operations_api()
         all_results.update(operations_results)
         
-        # Test 3: Daily Operations Reports API
+        # Test 4: Daily Operations Reports API
         print(f"\n" + "="*80)
         print(f"DAILY OPERATIONS REPORTS API TESTING")
         print(f"="*80)
@@ -2893,7 +3294,7 @@ class SanhajaAPITester:
         reports_results = self.test_daily_operations_reports_api()
         all_results.update(reports_results)
         
-        # Test 4: Discount Requests System
+        # Test 5: Discount Requests System
         print(f"\n" + "="*80)
         print(f"DISCOUNT REQUESTS SYSTEM TESTING")
         print(f"="*80)
@@ -2901,7 +3302,7 @@ class SanhajaAPITester:
         discount_results = self.test_discount_requests_system()
         all_results.update(discount_results)
         
-        # Test 5: Cross-Agency Access Testing
+        # Test 6: Cross-Agency Access Testing
         print(f"\n" + "="*80)
         print(f"CROSS-AGENCY ACCESS PERMISSIONS TESTING")
         print(f"="*80)
@@ -2909,7 +3310,7 @@ class SanhajaAPITester:
         access_results = self.test_cross_agency_access_permissions()
         all_results.update(access_results)
         
-        # Test 6: Authentication and Authorization Testing
+        # Test 7: Authentication and Authorization Testing
         print(f"\n" + "="*80)
         print(f"AUTHENTICATION AND AUTHORIZATION TESTING")
         print(f"="*80)
