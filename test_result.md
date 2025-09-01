@@ -416,6 +416,9 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Implemented Daily Operations Reports component with date range selection, agency and service grouping options, comprehensive revenue/discount analytics, grand totals calculation, and Arabic UI. Component includes report generation controls and visual data presentation."
+      - working: "NA"
+        agent: "main"
+        comment: "ENHANCED: Added agency filter functionality to allow users to view all agencies or filter by specific agency. Added agency dropdown with 'All Agencies' option, enhanced report display with agency-specific context, added detailed operations table showing individual records, and improved user experience with visual indicators."
     status_history:
       - working: "NA"
         agent: "main"
