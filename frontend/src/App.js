@@ -3140,7 +3140,7 @@ const ReportsManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Report Display */}
+      {/* Report Display with Agency Breakdown */}
       {reportData && (
         <Card>
           <CardHeader>
@@ -3149,189 +3149,280 @@ const ReportsManagement = () => {
                 <BarChart3 className="h-5 w-5 ml-2" />
                 {reportData.title}
               </span>
-              {reportData.period && (
-                <Badge variant="secondary">{reportData.period}</Badge>
-              )}
+              <div className="flex items-center space-x-2">
+                {reportData.period && (
+                  <Badge variant="secondary">{reportData.period}</Badge>
+                )}
+                {reportData.group_by_agency && (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                    📊 مجمع حسب الوكالة
+                  </Badge>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {reportType === 'daily_sales' || reportType === 'monthly_sales' ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-green-800">إجمالي المبيعات</p>
-                        <p className="text-2xl font-bold text-green-900">
-                          {reportData.totals.sales.toLocaleString()} دج
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-blue-800">إجمالي الحجوزات</p>
-                        <p className="text-2xl font-bold text-blue-900">
-                          {reportData.totals.bookings}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-gradient-to-r from-purple-50 to-violet-50 border-purple-200">
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-purple-800">إجمالي الربح</p>
-                        <p className="text-2xl font-bold text-purple-900">
-                          {reportData.totals.profit.toLocaleString()} دج
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+            {/* Agency-Grouped Reports Display */}
+            {reportData.group_by_agency && reportData.agencies_data ? (
+              <div className="space-y-8">
+                {/* Grand Totals Summary */}
+                <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-indigo-900 mb-4 text-center">
+                    📊 الإجمالي العام - جميع الوكالات
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-indigo-800">إجمالي المبيعات</p>
+                      <p className="text-3xl font-bold text-indigo-900">
+                        {reportData.grand_totals.sales?.toLocaleString() || reportData.grand_totals.amount?.toLocaleString() || 0} دج
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-indigo-800">
+                        {reportType === 'aging' ? 'عدد الفواتير' : 'عدد الحجوزات'}
+                      </p>
+                      <p className="text-3xl font-bold text-indigo-900">
+                        {reportData.grand_totals.bookings || reportData.grand_totals.count || 0}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-indigo-800">عدد الوكالات</p>
+                      <p className="text-3xl font-bold text-indigo-900">
+                        {reportData.agencies_data.length}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-right">
-                        {reportType === 'monthly_sales' ? '📅 الشهر' : '📅 التاريخ'}
-                      </TableHead>
-                      <TableHead className="text-right">💰 المبيعات (دج)</TableHead>
-                      <TableHead className="text-right">📋 عدد الحجوزات</TableHead>
-                      <TableHead className="text-right">💹 الربح (دج)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reportData.data.map((row, index) => (
-                      <TableRow key={index} className="hover:bg-gray-50">
-                        <TableCell className="font-medium text-right">
-                          {reportType === 'monthly_sales' ? row.month : row.date}
-                        </TableCell>
-                        <TableCell className="text-right text-green-600 font-semibold">
-                          {row.sales.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right">{row.bookings}</TableCell>
-                        <TableCell className="text-right text-purple-600 font-semibold">
-                          {row.profit.toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </>
-            ) : reportType === 'aging' ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-orange-800">عدد الفواتير المعلقة</p>
-                        <p className="text-2xl font-bold text-orange-900">
-                          {reportData.totals.count}
-                        </p>
+                {/* Individual Agency Reports */}
+                <div className="space-y-6">
+                  {reportData.agencies_data.map((agency, agencyIndex) => (
+                    <div key={agencyIndex} className="border rounded-lg overflow-hidden">
+                      {/* Agency Header */}
+                      <div className="bg-gray-50 px-6 py-4 border-b">
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            🏢 {agency.agency_name}
+                          </h3>
+                          <div className="flex space-x-4 text-sm">
+                            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                              💰 {agency.totals?.sales?.toLocaleString() || agency.totals?.amount?.toLocaleString() || 0} دج
+                            </span>
+                            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                              📋 {agency.totals?.bookings || agency.totals?.count || 0} 
+                              {reportType === 'aging' ? ' فاتورة' : ' حجز'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-gradient-to-r from-red-50 to-rose-50 border-red-200">
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-red-800">إجمالي المبلغ المعلق</p>
-                        <p className="text-2xl font-bold text-red-900">
-                          {reportData.totals.amount.toLocaleString()} دج
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-right">👤 العميل</TableHead>
-                      <TableHead className="text-right">📄 رقم الفاتورة</TableHead>
-                      <TableHead className="text-right">💰 المبلغ (دج)</TableHead>
-                      <TableHead className="text-right">⏰ عدد الأيام</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reportData.data.map((row, index) => (
-                      <TableRow key={index} className="hover:bg-gray-50">
-                        <TableCell className="font-medium text-right">{row.client}</TableCell>
-                        <TableCell className="text-right">{row.invoice}</TableCell>
-                        <TableCell className="text-right text-red-600 font-semibold">
-                          {row.amount.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={row.days > 30 ? 'destructive' : row.days > 15 ? 'default' : 'secondary'}>
-                            {row.days} يوم
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </>
-            ) : reportType === 'profit_loss' ? (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold text-green-800 mb-3">💰 الإيرادات</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>المبيعات:</span>
-                          <span className="font-semibold">{reportData.data.income.sales.toLocaleString()} دج</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>الخدمات:</span>
-                          <span className="font-semibold">{reportData.data.income.services.toLocaleString()} دج</span>
-                        </div>
-                        <hr />
-                        <div className="flex justify-between font-bold">
-                          <span>الإجمالي:</span>
-                          <span>{(reportData.data.income.sales + reportData.data.income.services).toLocaleString()} دج</span>
-                        </div>
+                      {/* Agency Data */}
+                      <div className="p-6">
+                        {reportType === 'aging' ? (
+                          // Aging Report - show invoices table
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-right">👤 العميل</TableHead>
+                                <TableHead className="text-right">📄 رقم الفاتورة</TableHead>
+                                <TableHead className="text-right">💰 المبلغ (دج)</TableHead>
+                                <TableHead className="text-right">⏰ عدد الأيام</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {agency.invoices.map((invoice, index) => (
+                                <TableRow key={index} className="hover:bg-gray-50">
+                                  <TableCell className="font-medium text-right">{invoice.client}</TableCell>
+                                  <TableCell className="text-right">{invoice.invoice}</TableCell>
+                                  <TableCell className="text-right text-red-600 font-semibold">
+                                    {invoice.amount.toLocaleString()}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Badge variant={invoice.days > 30 ? 'destructive' : invoice.days > 15 ? 'default' : 'secondary'}>
+                                      {invoice.days} يوم
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          // Sales Reports - show periods table
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-right">
+                                  {reportType === 'monthly_sales' ? '📅 الشهر' : '📅 التاريخ'}
+                                </TableHead>
+                                <TableHead className="text-right">💰 المبيعات (دج)</TableHead>
+                                <TableHead className="text-right">📋 عدد الحجوزات</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {(agency.periods || []).map((period, index) => (
+                                <TableRow key={index} className="hover:bg-gray-50">
+                                  <TableCell className="font-medium text-right">
+                                    {period.month || period.date || period.period}
+                                  </TableCell>
+                                  <TableCell className="text-right text-green-600 font-semibold">
+                                    {period.sales.toLocaleString()}
+                                  </TableCell>
+                                  <TableCell className="text-right">{period.bookings}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-gradient-to-r from-red-50 to-rose-50 border-red-200">
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold text-red-800 mb-3">📉 المصروفات</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>الموردين:</span>
-                          <span className="font-semibold">{reportData.data.expenses.suppliers.toLocaleString()} دج</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>التشغيل:</span>
-                          <span className="font-semibold">{reportData.data.expenses.operations.toLocaleString()} دج</span>
-                        </div>
-                        <hr />
-                        <div className="flex justify-between font-bold">
-                          <span>الإجمالي:</span>
-                          <span>{(reportData.data.expenses.suppliers + reportData.data.expenses.operations).toLocaleString()} دج</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold text-blue-800 mb-3">💹 صافي الربح</h3>
-                      <div className="text-center">
-                        <p className="text-3xl font-bold text-blue-900">
-                          {reportData.data.profit.toLocaleString()} دج
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ) : null}
+            ) : (
+              // Traditional Report Display (non-grouped)
+              <div>
+                {reportType === 'daily_sales' || reportType === 'monthly_sales' ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+                        <CardContent className="p-4">
+                          <div className="text-center">
+                            <p className="text-sm font-medium text-green-800">إجمالي المبيعات</p>
+                            <p className="text-2xl font-bold text-green-900">
+                              {reportData.totals.sales.toLocaleString()} دج
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                        <CardContent className="p-4">
+                          <div className="text-center">
+                            <p className="text-sm font-medium text-blue-800">إجمالي الحجوزات</p>
+                            <p className="text-2xl font-bold text-blue-900">
+                              {reportData.totals.bookings}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-right">
+                            {reportType === 'monthly_sales' ? '📅 الشهر' : '📅 التاريخ'}
+                          </TableHead>
+                          <TableHead className="text-right">💰 المبيعات (دج)</TableHead>
+                          <TableHead className="text-right">📋 عدد الحجوزات</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {reportData.data.map((row, index) => (
+                          <TableRow key={index} className="hover:bg-gray-50">
+                            <TableCell className="font-medium text-right">
+                              {reportType === 'monthly_sales' ? row.month : row.date}
+                            </TableCell>
+                            <TableCell className="text-right text-green-600 font-semibold">
+                              {row.sales.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">{row.bookings}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </>
+                ) : reportType === 'aging' ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
+                        <CardContent className="p-4">
+                          <div className="text-center">
+                            <p className="text-sm font-medium text-orange-800">عدد الفواتير المعلقة</p>
+                            <p className="text-2xl font-bold text-orange-900">
+                              {reportData.totals.count}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="bg-gradient-to-r from-red-50 to-rose-50 border-red-200">
+                        <CardContent className="p-4">
+                          <div className="text-center">
+                            <p className="text-sm font-medium text-red-800">إجمالي المبلغ المعلق</p>
+                            <p className="text-2xl font-bold text-red-900">
+                              {reportData.totals.amount.toLocaleString()} دج
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-right">👤 العميل</TableHead>
+                          <TableHead className="text-right">📄 رقم الفاتورة</TableHead>
+                          <TableHead className="text-right">💰 المبلغ (دج)</TableHead>
+                          <TableHead className="text-right">⏰ عدد الأيام</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {reportData.data.map((row, index) => (
+                          <TableRow key={index} className="hover:bg-gray-50">
+                            <TableCell className="font-medium text-right">{row.client}</TableCell>
+                            <TableCell className="text-right">{row.invoice}</TableCell>
+                            <TableCell className="text-right text-red-600 font-semibold">
+                              {row.amount.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant={row.days > 30 ? 'destructive' : row.days > 15 ? 'default' : 'secondary'}>
+                                {row.days} يوم
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </>
+                ) : reportType === 'summary' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+                      <CardContent className="p-6">
+                        <h3 className="font-semibold text-green-800 mb-3">💰 إجمالي المبيعات</h3>
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-green-900">
+                            {reportData.data.sales.toLocaleString()} دج
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                      <CardContent className="p-6">
+                        <h3 className="font-semibold text-blue-800 mb-3">📋 إجمالي الحجوزات</h3>
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-blue-900">
+                            {reportData.data.bookings}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-r from-purple-50 to-violet-50 border-purple-200">
+                      <CardContent className="p-6">
+                        <h3 className="font-semibold text-purple-800 mb-3">📄 إجمالي الفواتير</h3>
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-purple-900">
+                            {reportData.data.invoices}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
