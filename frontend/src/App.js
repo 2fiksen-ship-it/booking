@@ -27,8 +27,8 @@ console.log('=== APP.JS LOADED ===');
 console.log('BACKEND_URL:', BACKEND_URL);
 console.log('API:', API);
 
-// Configure axios to include credentials for session cookies
-axios.defaults.withCredentials = true;
+// Configure axios - Remove global withCredentials to fix CORS issues
+// axios.defaults.withCredentials = true; // This causes CORS issues with JWT auth
 
 // Auth Context
 const AuthContext = createContext();
