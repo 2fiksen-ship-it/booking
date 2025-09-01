@@ -4628,26 +4628,72 @@ const DailyOperationsManagement = () => {
 
   const handlePrintReceipt = async (operationId, operationNo) => {
     try {
+      console.log('=== PRINTING RECEIPT ===');
+      console.log('Operation ID:', operationId);
+      console.log('Operation No:', operationNo);
+      console.log('API endpoint:', `${API}/daily-operations/${operationId}/print`);
+      console.log('Token:', localStorage.getItem('token') ? 'Present' : 'Missing');
+      
       const response = await axios.get(`${API}/daily-operations/${operationId}/print`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         responseType: 'blob'
       });
       
+      console.log('Print response received');
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      console.log('Response data type:', typeof response.data);
+      console.log('Response data size:', response.data.size);
+      
+      // Check if response is actually a PDF
+      if (response.data.size === 0) {
+        throw new Error('PDF file is empty');
+      }
+      
       // Create blob URL and download
       const blob = new Blob([response.data], { type: 'application/pdf' });
+      console.log('Blob created, size:', blob.size);
+      
       const url = window.URL.createObjectURL(blob);
+      console.log('Blob URL created:', url);
+      
       const link = document.createElement('a');
       link.href = url;
       link.download = `receipt_${operationNo}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      link.style.display = 'none';
       
-      console.log('Receipt printed successfully');
+      // Add to document, click, and remove
+      document.body.appendChild(link);
+      console.log('Link added to document, triggering click...');
+      link.click();
+      
+      // Clean up after a short delay
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        console.log('Cleanup completed');
+      }, 100);
+      
+      console.log('=== PRINT SUCCESS ===');
+      alert('✅ تم تحميل الوصل بنجاح!');
+      
     } catch (error) {
+      console.error('=== PRINT ERROR ===');
       console.error('Error printing receipt:', error);
-      alert('خطأ في طباعة الوصل');
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      // Check if it's a blob error response
+      if (error.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          console.log('Error blob content:', text);
+        } catch (blobError) {
+          console.log('Could not read error blob');
+        }
+      }
+      
+      alert('خطأ في طباعة الوصل: ' + (error.response?.data?.detail || error.message));
     }
   };
 
