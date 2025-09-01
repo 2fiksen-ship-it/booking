@@ -131,6 +131,69 @@ class DailyReport(BaseModel):
     approved_at: Optional[datetime] = None
     rejection_reason: Optional[str] = None
 
+# Service Management Models
+class Service(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    service_type: ServiceType
+    category: ServiceCategory
+    base_price: float  # السعر الأساسي الثابت
+    min_price: Optional[float] = None  # أقل سعر مسموح
+    is_fixed_price: bool = True  # هل السعر ثابت أم متغير
+    is_active: bool = True
+    agency_id: Optional[str] = None  # إذا كان للوكالة المحددة، أو None للعام
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+# Daily Operations Models
+class DailyOperation(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    operation_no: str  # رقم الوصل
+    date: datetime
+    service_id: str
+    client_id: str
+    service_name: str  # نسخة من اسم الخدمة للحفظ
+    base_price: float  # السعر الأساسي
+    discount_amount: float = 0.0  # مبلغ التخفيض
+    final_price: float  # السعر النهائي بعد التخفيض
+    discount_reason: Optional[str] = None  # سبب التخفيض
+    discount_approved_by: Optional[str] = None  # من وافق على التخفيض
+    status: OperationStatus = OperationStatus.DRAFT
+    agency_id: str
+    created_by: str  # الموظف الذي أنشأ العملية
+    approved_by: Optional[str] = None  # المحاسب/المدير الذي اعتمد
+    approved_at: Optional[datetime] = None
+    rejected_reason: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Service Pricing History
+class ServicePriceHistory(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    service_id: str
+    old_price: float
+    new_price: float
+    change_reason: str
+    changed_by: str
+    changed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Discount Request Model
+class DiscountRequest(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    operation_id: str
+    original_price: float
+    discount_amount: float
+    discount_percentage: float
+    reason: str
+    requested_by: str
+    status: DiscountStatus = DiscountStatus.PENDING
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # Notification System Models
 class NotificationType(str, Enum):
     INVOICE_DUE = "invoice_due"  # اقتراب استحقاق فاتورة
