@@ -705,7 +705,9 @@ const Layout = ({ children }) => {
           label: t('reportsCenter'),
           items: [
             { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 },
-            { id: 'reports', label: t('reports'), icon: BarChart3 }
+            { id: 'reports', label: t('reports'), icon: BarChart3 },
+            { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 },
+            { id: 'servicesManagement', label: t('servicesManagement'), icon: Package }
           ]
         },
         // Full Operations Management (All Agencies)
@@ -715,7 +717,8 @@ const Layout = ({ children }) => {
           items: [
             { id: 'clients', label: t('clients') + ' (جميع الوكالات)', icon: Users },
             { id: 'suppliers', label: t('suppliers') + ' (جميع الوكالات)', icon: Building2 },
-            { id: 'bookings', label: t('bookings') + ' (جميع الوكالات)', icon: Package }
+            { id: 'bookings', label: t('bookings') + ' (جميع الوكالات)', icon: Package },
+            { id: 'dailyOperations', label: t('dailyOperations') + ' (جميع الوكالات)', icon: FileText }
           ]
         },
         // Full Financial Management (All Agencies)
