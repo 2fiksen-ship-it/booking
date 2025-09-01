@@ -4594,6 +4594,31 @@ const DailyOperationsManagement = () => {
     }
   };
 
+  const handlePrintReceipt = async (operationId, operationNo) => {
+    try {
+      const response = await axios.get(`${API}/daily-operations/${operationId}/print`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        responseType: 'blob'
+      });
+      
+      // Create blob URL and download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `receipt_${operationNo}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Receipt printed successfully');
+    } catch (error) {
+      console.error('Error printing receipt:', error);
+      alert('خطأ في طباعة الوصل');
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusMap = {
       'مسودة': { color: 'bg-gray-100 text-gray-800', text: t('draft') },
