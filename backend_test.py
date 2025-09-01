@@ -1024,6 +1024,311 @@ class SanhajaAPITester:
         
         return results
 
+    def test_general_accountant_enhanced_functionality(self):
+        """Test ENHANCED General Accountant functionality with cross-agency access and filtering"""
+        print(f"\n💼 Testing ENHANCED General Accountant Functionality (Review Request)...")
+        print(f"   Testing cross-agency access and filtering for General Accountant role")
+        
+        results = {}
+        
+        # Step 1: General Accountant Login with exact credentials from review request
+        print(f"\n   1. General Accountant Login (generalaccountant@sanhaja.com / acc123)...")
+        auth_success = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['general_accountant_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: General Accountant login failed - cannot proceed with tests")
+            return results
+            
+        print(f"   ✅ General Accountant authenticated successfully")
+        print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+        print(f"   Agency: {self.current_user.get('agency_id')}")
+        
+        # Step 2: Test GET /api/clients (should return all clients from all 6 agencies)
+        print(f"\n   2. Testing GET /api/clients (should show ALL 6 agencies)...")
+        success, clients_data = self.run_test(
+            "General Accountant - Get All Clients",
+            "GET",
+            "clients",
+            200
+        )
+        results['clients_cross_agency'] = success
+        
+        if success:
+            print(f"   ✅ Clients endpoint accessible")
+            print(f"   Total clients visible: {len(clients_data)}")
+            
+            # Analyze agency distribution
+            agency_ids = set()
+            for client in clients_data:
+                if 'agency_id' in client:
+                    agency_ids.add(client['agency_id'])
+            
+            print(f"   Agencies represented in clients: {len(agency_ids)}")
+            
+            if len(agency_ids) >= 6:
+                print(f"   ✅ PASS: General Accountant sees clients from {len(agency_ids)} agencies")
+                results['clients_all_agencies'] = True
+            else:
+                print(f"   ❌ FAIL: General Accountant only sees clients from {len(agency_ids)} agencies (expected 6)")
+                results['clients_all_agencies'] = False
+        
+        # Step 3: Test GET /api/suppliers (should return all suppliers from all 6 agencies)
+        print(f"\n   3. Testing GET /api/suppliers (should show ALL 6 agencies)...")
+        success, suppliers_data = self.run_test(
+            "General Accountant - Get All Suppliers",
+            "GET",
+            "suppliers",
+            200
+        )
+        results['suppliers_cross_agency'] = success
+        
+        if success:
+            print(f"   ✅ Suppliers endpoint accessible")
+            print(f"   Total suppliers visible: {len(suppliers_data)}")
+            
+            # Analyze agency distribution
+            agency_ids = set()
+            for supplier in suppliers_data:
+                if 'agency_id' in supplier:
+                    agency_ids.add(supplier['agency_id'])
+            
+            print(f"   Agencies represented in suppliers: {len(agency_ids)}")
+            
+            if len(agency_ids) >= 6:
+                print(f"   ✅ PASS: General Accountant sees suppliers from {len(agency_ids)} agencies")
+                results['suppliers_all_agencies'] = True
+            else:
+                print(f"   ❌ FAIL: General Accountant only sees suppliers from {len(agency_ids)} agencies (expected 6)")
+                results['suppliers_all_agencies'] = False
+        
+        # Step 4: Test GET /api/bookings (should return all bookings from all 6 agencies)
+        print(f"\n   4. Testing GET /api/bookings (should show ALL 6 agencies)...")
+        success, bookings_data = self.run_test(
+            "General Accountant - Get All Bookings",
+            "GET",
+            "bookings",
+            200
+        )
+        results['bookings_cross_agency'] = success
+        
+        if success:
+            print(f"   ✅ Bookings endpoint accessible")
+            print(f"   Total bookings visible: {len(bookings_data)}")
+            
+            # Analyze agency distribution
+            agency_ids = set()
+            for booking in bookings_data:
+                if 'agency_id' in booking:
+                    agency_ids.add(booking['agency_id'])
+            
+            print(f"   Agencies represented in bookings: {len(agency_ids)}")
+            
+            if len(agency_ids) >= 6:
+                print(f"   ✅ PASS: General Accountant sees bookings from {len(agency_ids)} agencies")
+                results['bookings_all_agencies'] = True
+            else:
+                print(f"   ❌ FAIL: General Accountant only sees bookings from {len(agency_ids)} agencies (expected 6)")
+                results['bookings_all_agencies'] = False
+        
+        # Step 5: Test GET /api/invoices (should return all invoices from all 6 agencies)
+        print(f"\n   5. Testing GET /api/invoices (should show ALL 6 agencies)...")
+        success, invoices_data = self.run_test(
+            "General Accountant - Get All Invoices",
+            "GET",
+            "invoices",
+            200
+        )
+        results['invoices_cross_agency'] = success
+        
+        if success:
+            print(f"   ✅ Invoices endpoint accessible")
+            print(f"   Total invoices visible: {len(invoices_data)}")
+            
+            # Analyze agency distribution
+            agency_ids = set()
+            for invoice in invoices_data:
+                if 'agency_id' in invoice:
+                    agency_ids.add(invoice['agency_id'])
+            
+            print(f"   Agencies represented in invoices: {len(agency_ids)}")
+            
+            if len(agency_ids) >= 6:
+                print(f"   ✅ PASS: General Accountant sees invoices from {len(agency_ids)} agencies")
+                results['invoices_all_agencies'] = True
+            else:
+                print(f"   ❌ FAIL: General Accountant only sees invoices from {len(agency_ids)} agencies (expected 6)")
+                results['invoices_all_agencies'] = False
+        
+        # Step 6: Test GET /api/payments (should return all payments from all 6 agencies)
+        print(f"\n   6. Testing GET /api/payments (should show ALL 6 agencies)...")
+        success, payments_data = self.run_test(
+            "General Accountant - Get All Payments",
+            "GET",
+            "payments",
+            200
+        )
+        results['payments_cross_agency'] = success
+        
+        if success:
+            print(f"   ✅ Payments endpoint accessible")
+            print(f"   Total payments visible: {len(payments_data)}")
+            
+            # Analyze agency distribution
+            agency_ids = set()
+            for payment in payments_data:
+                if 'agency_id' in payment:
+                    agency_ids.add(payment['agency_id'])
+            
+            print(f"   Agencies represented in payments: {len(agency_ids)}")
+            
+            if len(agency_ids) >= 6:
+                print(f"   ✅ PASS: General Accountant sees payments from {len(agency_ids)} agencies")
+                results['payments_all_agencies'] = True
+            else:
+                print(f"   ❌ FAIL: General Accountant only sees payments from {len(agency_ids)} agencies (expected 6)")
+                results['payments_all_agencies'] = False
+        
+        # Step 7: Test Agency Filtering Functionality
+        print(f"\n   7. Testing Agency Filtering Functionality...")
+        
+        # Get first agency ID for filtering tests
+        success, agencies_data = self.run_test(
+            "General Accountant - Get All Agencies",
+            "GET",
+            "agencies",
+            200
+        )
+        
+        if success and agencies_data:
+            test_agency_id = agencies_data[0]['id']
+            test_agency_name = agencies_data[0].get('name', 'Unknown')
+            
+            print(f"   Using agency '{test_agency_name}' (ID: {test_agency_id}) for filtering tests...")
+            
+            # Test GET /api/clients?agency_id=SPECIFIC_AGENCY_ID
+            success, filtered_clients = self.run_test(
+                f"General Accountant - Get Clients (Filtered by Agency)",
+                "GET",
+                f"clients?agency_id={test_agency_id}",
+                200
+            )
+            results['clients_agency_filter'] = success
+            
+            if success:
+                print(f"   ✅ Clients filtering works - {len(filtered_clients)} clients for agency {test_agency_name}")
+                
+                # Verify all returned clients belong to the specified agency
+                all_match_agency = all(client.get('agency_id') == test_agency_id for client in filtered_clients)
+                results['clients_filter_accuracy'] = all_match_agency
+                
+                if all_match_agency:
+                    print(f"   ✅ All filtered clients belong to the specified agency")
+                else:
+                    print(f"   ❌ Some filtered clients don't belong to the specified agency")
+            
+            # Test GET /api/dashboard?agency_id=SPECIFIC_AGENCY_ID
+            success, filtered_dashboard = self.run_test(
+                f"General Accountant - Get Dashboard (Filtered by Agency)",
+                "GET",
+                f"dashboard?agency_id={test_agency_id}",
+                200
+            )
+            results['dashboard_agency_filter'] = success
+            
+            if success:
+                print(f"   ✅ Dashboard filtering works for agency {test_agency_name}")
+                print(f"   Filtered Dashboard - Today Income: {filtered_dashboard.get('today_income', 0)} DZD")
+                print(f"   Filtered Dashboard - Unpaid Invoices: {filtered_dashboard.get('unpaid_invoices', 0)}")
+                print(f"   Filtered Dashboard - Week Bookings: {filtered_dashboard.get('week_bookings', 0)}")
+                print(f"   Filtered Dashboard - Cashbox Balance: {filtered_dashboard.get('cashbox_balance', 0)} DZD")
+        
+        # Step 8: Test Cross-Agency Statistics (no filter)
+        print(f"\n   8. Testing Cross-Agency Statistics (no filter)...")
+        success, consolidated_dashboard = self.run_test(
+            "General Accountant - Get Dashboard (Consolidated)",
+            "GET",
+            "dashboard",
+            200
+        )
+        results['dashboard_consolidated'] = success
+        
+        if success:
+            print(f"   ✅ Consolidated dashboard accessible")
+            print(f"   Consolidated - Today Income: {consolidated_dashboard.get('today_income', 0)} DZD")
+            print(f"   Consolidated - Unpaid Invoices: {consolidated_dashboard.get('unpaid_invoices', 0)}")
+            print(f"   Consolidated - Week Bookings: {consolidated_dashboard.get('week_bookings', 0)}")
+            print(f"   Consolidated - Cashbox Balance: {consolidated_dashboard.get('cashbox_balance', 0)} DZD")
+        
+        # Step 9: Verify Agency Staff Isolation Still Works
+        print(f"\n   9. Testing Agency Staff Isolation (staff1@tlemcen.sanhaja.com / staff123)...")
+        
+        # Login as agency staff
+        staff_auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['agency_staff_login'] = staff_auth_success
+        
+        if staff_auth_success:
+            print(f"   ✅ Agency staff authenticated successfully")
+            print(f"   Staff User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+            print(f"   Staff Agency: {self.current_user.get('agency_id')}")
+            
+            staff_agency_id = self.current_user.get('agency_id')
+            
+            # Test that agency staff only see their own agency data
+            success, staff_clients = self.run_test(
+                "Agency Staff - Get Clients (Should be isolated)",
+                "GET",
+                "clients",
+                200
+            )
+            results['staff_clients_isolated'] = success
+            
+            if success:
+                # Check if all clients belong to staff's agency
+                staff_agency_ids = set()
+                for client in staff_clients:
+                    if 'agency_id' in client:
+                        staff_agency_ids.add(client['agency_id'])
+                
+                if len(staff_agency_ids) == 1 and staff_agency_id in staff_agency_ids:
+                    print(f"   ✅ Agency staff isolation working - sees only their agency ({len(staff_clients)} clients)")
+                    results['staff_isolation_verified'] = True
+                else:
+                    print(f"   ❌ Agency staff isolation broken - sees {len(staff_agency_ids)} agencies")
+                    results['staff_isolation_verified'] = False
+            
+            # Test that agency filtering doesn't work for agency staff
+            if agencies_data:
+                other_agency_id = None
+                for agency in agencies_data:
+                    if agency['id'] != staff_agency_id:
+                        other_agency_id = agency['id']
+                        break
+                
+                if other_agency_id:
+                    success, filtered_staff_clients = self.run_test(
+                        "Agency Staff - Try Agency Filter (Should not work)",
+                        "GET",
+                        f"clients?agency_id={other_agency_id}",
+                        200
+                    )
+                    
+                    if success:
+                        # Should still only see their own agency data, not the filtered agency
+                        filtered_agency_ids = set()
+                        for client in filtered_staff_clients:
+                            if 'agency_id' in client:
+                                filtered_agency_ids.add(client['agency_id'])
+                        
+                        if len(filtered_agency_ids) == 1 and staff_agency_id in filtered_agency_ids:
+                            print(f"   ✅ Agency filtering properly ignored for staff - still sees only their agency")
+                            results['staff_filter_ignored'] = True
+                        else:
+                            print(f"   ❌ Agency filtering incorrectly applied for staff")
+                            results['staff_filter_ignored'] = False
+        
+        return results
+
     def test_google_authentication_system(self):
         """Test Google Authentication system as requested in review"""
         print(f"\n🔐 Testing Google Authentication System (Review Request)...")
