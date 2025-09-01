@@ -1388,9 +1388,11 @@ const Dashboard = () => {
 // Enhanced Clients Management Component
 const ClientsManagement = () => {
   const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedAgency, setSelectedAgency] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
@@ -1402,7 +1404,8 @@ const ClientsManagement = () => {
 
   const fetchClients = async () => {
     try {
-      const response = await axios.get(`${API}/clients`);
+      const params = selectedAgency ? `?agency_id=${selectedAgency}` : '';
+      const response = await axios.get(`${API}/clients${params}`);
       setClients(response.data);
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -1413,7 +1416,7 @@ const ClientsManagement = () => {
 
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [selectedAgency]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1469,12 +1472,33 @@ const ClientsManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Agency Filter */}
+      {['super_admin', 'general_accountant'].includes(user?.role) && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <AgencyFilter 
+              selectedAgency={selectedAgency}
+              onAgencyChange={setSelectedAgency}
+              showAllOption={true}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header Section */}
       <div className="bg-white rounded-lg p-6 shadow-sm border">
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{t('clients')}</h2>
-            <p className="text-gray-600 mt-1">إدارة وتنظيم بيانات العملاء</p>
+            <p className="text-gray-600 mt-1">
+              إدارة وتنظيم بيانات العملاء
+              {['super_admin', 'general_accountant'].includes(user?.role) && selectedAgency && (
+                <span className="text-blue-600"> - الوكالة المحددة</span>
+              )}
+              {['super_admin', 'general_accountant'].includes(user?.role) && !selectedAgency && (
+                <span className="text-green-600"> - جميع الوكالات</span>
+              )}
+            </p>
           </div>
           <div className="flex items-center space-x-3">
             {/* View Mode Toggle */}
