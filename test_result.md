@@ -372,6 +372,41 @@ frontend:
     stuck_count: 0
     priority: "high"
     needs_retesting: true
+  - task: "Services Management Interface"
+    implemented: false
+    working: "NA"
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Need to implement services catalog management interface"
+
+  - task: "Daily Operations Interface"
+    implemented: false
+    working: "NA"
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Need to implement daily operations receipts interface with approval system"
+
+  - task: "Daily Operations Reports Interface"
+    implemented: false
+    working: "NA"
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Need to implement comprehensive daily operations reports interface"
     status_history:
       - working: "NA"
         agent: "main"
