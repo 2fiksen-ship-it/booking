@@ -4914,6 +4914,42 @@ const DailyOperationsReports = () => {
     }
   };
 
+  const handlePrintReport = async () => {
+    try {
+      const params = new URLSearchParams({
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        group_by_agency: groupByAgency.toString()
+      });
+
+      // Add agency filter if specific agency is selected
+      if (selectedAgency !== 'all') {
+        params.append('agency_ids', selectedAgency);
+      }
+
+      const response = await axios.get(`${API}/reports/daily-operations/print?${params}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        responseType: 'blob'
+      });
+      
+      // Create blob URL and download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `daily_operations_report_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('Report printed successfully');
+    } catch (error) {
+      console.error('Error printing report:', error);
+      alert('خطأ في طباعة التقرير');
+    }
+  };
+
   return (
     <div className="p-6 space-y-6" dir="rtl">
       <h1 className="text-2xl font-bold text-gray-900">{t('dailyOperationsReports')}</h1>
