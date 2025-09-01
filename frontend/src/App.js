@@ -52,6 +52,11 @@ const translations = {
     settings: '⚙️ إعدادات النظام',
     logout: '🚪 تسجيل الخروج',
     
+    // NEW - Services and Operations Management
+    servicesManagement: '🛠️ إدارة الخدمات',
+    dailyOperations: '📋 العمليات اليومية',
+    dailyOperationsReports: '📊 تقارير العمليات',
+    
     // Sub-Navigation - القوائم الفرعية
     financialManagement: '💰 الإدارة المالية',
     systemAdministration: '🔧 إدارة النظام',
