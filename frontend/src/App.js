@@ -1049,6 +1049,65 @@ const NotificationBell = () => {
   );
 };
 
+// Agency Filter Component for Super Admin and General Accountant
+const AgencyFilter = ({ selectedAgency, onAgencyChange, showAllOption = true }) => {
+  const [agencies, setAgencies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useContext(AuthContext);
+
+  // Only show for Super Admin and General Accountant
+  if (!user || !['super_admin', 'general_accountant'].includes(user.role)) {
+    return null;
+  }
+
+  useEffect(() => {
+    const fetchAgencies = async () => {
+      try {
+        const response = await axios.get(`${API}/agencies`);
+        setAgencies(response.data);
+      } catch (error) {
+        console.error('Error fetching agencies:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAgencies();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center space-x-2">
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+        <span className="text-sm text-gray-600">جاري تحميل الوكالات...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center space-x-3">
+      <Label htmlFor="agencyFilter" className="text-sm font-medium text-gray-700">
+        🏢 فلترة الوكالة:
+      </Label>
+      <Select value={selectedAgency || 'all'} onValueChange={(value) => onAgencyChange(value === 'all' ? null : value)}>
+        <SelectTrigger className="w-48">
+          <SelectValue placeholder="اختر الوكالة" />
+        </SelectTrigger>
+        <SelectContent>
+          {showAllOption && (
+            <SelectItem value="all">🌐 جميع الوكالات</SelectItem>
+          )}
+          {agencies.map((agency) => (
+            <SelectItem key={agency.id} value={agency.id}>
+              🏢 {agency.name} - {agency.city}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
 // Enhanced Dashboard Component
 const Dashboard = () => {
   const [stats, setStats] = useState({});
