@@ -475,40 +475,49 @@ test_plan:
     file: "backend/server.py"
     stuck_count: 0
   - task: "Services Management System"
-    implemented: false
-    working: "NA"
+    implemented: true
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Need to implement services catalog with fixed pricing and discount management system"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Services Management API working excellently! CRUD operations fully functional: ✅ POST /api/services - Create services (Umrah, Flight, Hotel services created successfully), ✅ GET /api/services - List services with filtering (service_type, is_active filters working), ✅ PUT /api/services/{id} - Update service prices and details working, ✅ DELETE /api/services/{id} - Delete services working. ✅ Role-based access control perfect: Super Admin and General Accountant can create/manage services, Agency Staff can view only (correctly denied creation with 403). ✅ Service filtering by type (عمرة) and active status working. ✅ All authentication credentials working (superadmin@sanhaja.com, generalaccountant@sanhaja.com, staff1@tlemcen.sanhaja.com). Services system ready for production!"
 
   - task: "Daily Operations Management API"
-    implemented: false
-    working: "NA"
+    implemented: true
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Need to implement daily operations receipts with approval workflow system"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Daily Operations API working excellently! ✅ POST /api/daily-operations - Create operations working (normal operations and operations with discounts), ✅ GET /api/daily-operations - List operations with filtering (status, client_id filters working), ✅ PUT /api/daily-operations/{id}/approve - Approval workflow working perfectly, ✅ PUT /api/daily-operations/{id}/reject - Rejection workflow working. ✅ Approval workflow tested: General Accountant can approve/reject operations, Agency Staff can create operations but correctly denied approval (403). ✅ Operation statuses working (مسودة، في انتظار الموافقة، معتمد، مرفوض). ✅ Discount management working - operations with discounts require approval. Operations system ready for production!"
 
   - task: "Daily Operations Reports API"
-    implemented: false
-    working: "NA"
+    implemented: true
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Need to implement comprehensive daily operations reports with filtering"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Daily Operations Reports API working well with minor API design note! ✅ GET /api/reports/daily-operations working when start_date and end_date provided, ✅ Agency breakdown (group_by_agency=true) working perfectly, ✅ Service breakdown (group_by_service=true) working, ✅ Date filtering working, ✅ Combined filters working, ✅ General Accountant access working. Minor: API requires start_date and end_date parameters (returns 422 without them) - this is proper API design, not an error. ✅ Cross-agency access working - Super Admin sees all agencies, General Accountant has full access. Reports system functional and ready!"
     priority: "high"
     needs_retesting: false
     status_history:
