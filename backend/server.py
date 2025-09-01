@@ -1156,12 +1156,15 @@ async def get_payments(agency_id: Optional[str] = None, current_user: User = Dep
 
 # Dashboard Route
 @api_router.get("/dashboard")
-async def get_dashboard(current_user: User = Depends(get_current_user)):
+async def get_dashboard(agency_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today + timedelta(days=1)
     
-    # Query filter based on role
-    query_filter = {} if current_user.role == UserRole.SUPER_ADMIN else {"agency_id": current_user.agency_id}
+    # Query filter based on role and optional agency filter
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        query_filter = {"agency_id": agency_id} if agency_id else {}
+    else:
+        query_filter = {"agency_id": current_user.agency_id}
     
     # Today's income/expenses
     today_invoices = await db.invoices.find({
