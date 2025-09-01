@@ -520,19 +520,18 @@ test_plan:
 
   - task: "Discount Requests System API"
     implemented: true
-    working: false
+    working: true
     file: "backend/server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL ISSUE: GET /api/discount-requests endpoint returns 500 Internal Server Error for Super Admin and General Accountant. ✅ Agency Staff correctly denied access (403). ✅ Filtering by status works when no 500 error occurs. ✅ Role-based permissions working correctly where accessible. NEEDS FIX: Server error in discount requests endpoint - likely database query or model serialization issue."
-    priority: "high"
-    needs_retesting: false
-    status_history:
       - working: true
+        agent: "testing"
+        comment: "✅ FIXED AND VERIFIED: Discount Requests API endpoint is now working correctly! ✅ Super Admin (superadmin@sanhaja.com/super123) can access GET /api/discount-requests endpoint successfully (200 status). ✅ General Accountant (generalaccountant@sanhaja.com/acc123) can access GET /api/discount-requests endpoint successfully (200 status). ✅ Query parameters working: status filter (0 pending requests), agency_id filter (1 request for test agency). ✅ Response returns proper JSON array with enriched data including operation_no, service_name, client_id, requested_by_name, approved_by_name. ✅ No MongoDB ObjectId serialization errors - JSON serialization works perfectly. ✅ Role-based access control working: Agency Staff correctly denied access (403). ✅ No 500 server errors detected. The previous 500 error has been completely resolved. Endpoint is ready for production use."
   - agent: "main"
     message: "Starting implementation of comprehensive Daily Operations Management System. This will include: 1) Services catalog with fixed pricing, 2) Daily operations with approval workflow, 3) Comprehensive reports with filtering. Need to implement backend models and APIs first, then frontend interfaces."
         agent: "testing"
