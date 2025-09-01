@@ -2121,7 +2121,48 @@ def main():
         print(f"🎯 معدل النجاح: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         print(f"🎯 Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         
-        # General Accountant Results (PRIMARY FOCUS)
+        # Enhanced Reports System Results (PRIMARY FOCUS)
+        print(f"\n📊 نتائج نظام التقارير المحسن - ENHANCED REPORTS SYSTEM RESULTS (PRIMARY FOCUS):")
+        enhanced_reports_keys = [
+            ('super_admin_login', 'Super Admin Login (superadmin@sanhaja.com)'),
+            ('sales_daily_agency_breakdown_all', 'Enhanced Sales Report - Daily with Agency Breakdown'),
+            ('sales_monthly_agency_breakdown_all', 'Enhanced Sales Report - Monthly with Agency Breakdown'),
+            ('sales_traditional_format', 'Enhanced Sales Report - Traditional Format'),
+            ('sales_specific_agency', 'Enhanced Sales Report - Specific Agency Filter'),
+            ('aging_agency_breakdown_all', 'Enhanced Aging Report - with Agency Breakdown'),
+            ('aging_traditional_format', 'Enhanced Aging Report - Traditional Format'),
+            ('aging_specific_agency', 'Enhanced Aging Report - Specific Agency Filter'),
+            ('summary_agency_breakdown_all', 'New Summary Report - with Agency Breakdown'),
+            ('summary_traditional_format', 'New Summary Report - Traditional Format'),
+            ('summary_specific_agency', 'New Summary Report - Specific Agency Filter'),
+            ('general_accountant_login', 'General Accountant Login (generalaccountant@sanhaja.com)'),
+            ('ga_sales_agency_breakdown', 'General Accountant - Enhanced Sales Reports Access'),
+            ('ga_aging_agency_breakdown', 'General Accountant - Enhanced Aging Reports Access'),
+            ('ga_summary_agency_breakdown', 'General Accountant - New Summary Reports Access'),
+            ('agency_staff_login', 'Agency Staff Login (staff1@tlemcen.sanhaja.com)'),
+            ('staff_sales_isolation', 'Agency Staff - Sales Reports Isolation'),
+            ('staff_aging_isolation', 'Agency Staff - Aging Reports Isolation'),
+            ('staff_summary_isolation', 'Agency Staff - Summary Reports Isolation'),
+            ('staff_sales_isolation_verified', 'Agency Staff Sales Isolation Verified'),
+            ('staff_aging_isolation_verified', 'Agency Staff Aging Isolation Verified'),
+            ('arabic_names_verification', 'Arabic Agency Names Verification'),
+            ('arabic_names_confirmed', 'Arabic Agency Names Confirmed'),
+            ('totals_calculation_verification', 'Totals Calculation Verification'),
+            ('totals_accurate', 'Totals Calculation Accuracy'),
+            ('date_range_filtering', 'Date Range Filtering with Agency Breakdown')
+        ]
+        
+        for key, description in enhanced_reports_keys:
+            if key in enhanced_reports_results:
+                status = "✅" if enhanced_reports_results[key] else "❌"
+                print(f"   {status} {description}")
+        
+        # Enhanced Reports Functionality Score
+        er_working = sum(1 for key, _ in enhanced_reports_keys if enhanced_reports_results.get(key, False))
+        er_total = len(enhanced_reports_keys)
+        print(f"\n   📊 Enhanced Reports System Score: {er_working}/{er_total} ({(er_working/er_total)*100:.1f}%)")
+        
+        # General Accountant Results (SECONDARY FOCUS)
         print(f"\n💼 نتائج المحاسب العام المحسن - ENHANCED GENERAL ACCOUNTANT RESULTS (PRIMARY FOCUS):")
         general_accountant_keys = [
             ('general_accountant_login', 'General Accountant Login (generalaccountant@sanhaja.com)'),
