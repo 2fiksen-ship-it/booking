@@ -2852,6 +2852,193 @@ def create_operations_report_pdf(report_data: dict, agencies_data: List[dict], c
     
     return pdf_data
 
+# PDF Generation Endpoints
+@api_router.get("/daily-operations/{operation_id}/print")
+async def print_operation_receipt(operation_id: str, current_user: User = Depends(get_current_user)):
+    """Generate and return PDF receipt for a daily operation"""
+    try:
+        # Get operation details
+        operation = await db.daily_operations.find_one({"id": operation_id})
+        if not operation:
+            raise HTTPException(status_code=404, detail="Operation not found")
+        
+        # Check permissions
+        if current_user.role == UserRole.AGENCY_STAFF:
+            if operation["agency_id"] != current_user.agency_id:
+                raise HTTPException(status_code=403, detail="Cannot access operations of other agencies")
+        
+        # Get related data
+        agency = await db.agencies.find_one({"id": operation["agency_id"]})
+        client = await db.clients.find_one({"id": operation["client_id"]})
+        service = await db.services.find_one({"id": operation["service_id"]})
+        user = await db.users.find_one({"id": operation["created_by"]})
+        
+        if not agency:
+            raise HTTPException(status_code=404, detail="Agency not found")
+        
+        # Generate PDF
+        pdf_data = create_receipt_pdf(operation, agency, user or {}, client or {}, service or {})
+        
+        # Return PDF response
+        return Response(
+            content=pdf_data,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=receipt_{operation['operation_no']}.pdf"}
+        )
+        
+    except Exception as e:
+        print(f"Print receipt error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error generating receipt: {str(e)}")
+
+@api_router.get("/reports/daily-operations/print")
+async def print_daily_operations_report(
+    start_date: str,
+    end_date: str,
+    agency_ids: Optional[str] = None,
+    service_type: Optional[ServiceType] = None,
+    status: Optional[OperationStatus] = None,
+    group_by_agency: bool = True,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate and return PDF report for daily operations"""
+    try:
+        # Generate report data (reuse existing logic)
+        report_params = {
+            'start_date': start_date,
+            'end_date': end_date,
+            'agency_ids': agency_ids,
+            'service_type': service_type,
+            'status': status,
+            'group_by_agency': group_by_agency,
+            'group_by_service': False
+        }
+        
+        # Get report data using existing function logic
+        # Parse dates
+        try:
+            if 'T' not in start_date and 'T' not in end_date:
+                start = datetime.fromisoformat(start_date + 'T00:00:00')
+                end = datetime.fromisoformat(end_date + 'T23:59:59')
+            else:
+                start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            try:
+                start = datetime.strptime(start_date[:10], '%Y-%m-%d')
+                end = datetime.strptime(end_date[:10], '%Y-%m-%d')
+                end = end.replace(hour=23, minute=59, second=59)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid date format")
+        
+        # Ensure timezone awareness
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        
+        # Build query filter
+        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+            if agency_ids and agency_ids != "all":
+                selected_agency_ids = [id.strip() for id in agency_ids.split(',')]
+                query_filter = {"agency_id": {"$in": selected_agency_ids}}
+            else:
+                query_filter = {}
+        else:
+            query_filter = {"agency_id": current_user.agency_id}
+            
+        query_filter["date"] = {"$gte": start, "$lte": end}
+        
+        # Additional filters
+        if status:
+            query_filter["status"] = status
+        if service_type:
+            services = await db.services.find({"service_type": service_type}).to_list(1000)
+            service_ids = [service["id"] for service in services]
+            query_filter["service_id"] = {"$in": service_ids}
+        
+        # Get operations
+        operations = await db.daily_operations.find(query_filter).to_list(1000)
+        
+        # Get agencies data
+        agencies = await db.agencies.find({}).to_list(100)
+        agencies_dict = {agency["id"]: agency for agency in agencies}
+        
+        # Build report data structure
+        if group_by_agency:
+            agency_data = {}
+            grand_totals = {
+                "operations_count": 0,
+                "total_revenue": 0,
+                "total_discounts": 0,
+                "net_revenue": 0
+            }
+            
+            for operation in operations:
+                agency_id = operation["agency_id"]
+                agency_info = agencies_dict.get(agency_id, {"name": "وكالة غير معروفة", "city": "غير محدد"})
+                agency_name = f"{agency_info['name']} - {agency_info['city']}"
+                
+                if agency_name not in agency_data:
+                    agency_data[agency_name] = {
+                        "agency_id": agency_id,
+                        "agency_name": agency_name,
+                        "totals": {
+                            "operations_count": 0,
+                            "total_revenue": 0,
+                            "total_discounts": 0,
+                            "net_revenue": 0
+                        }
+                    }
+                
+                # Update agency totals
+                agency_data[agency_name]["totals"]["operations_count"] += 1
+                agency_data[agency_name]["totals"]["total_revenue"] += operation["base_price"]
+                agency_data[agency_name]["totals"]["total_discounts"] += operation["discount_amount"]
+                agency_data[agency_name]["totals"]["net_revenue"] += operation["final_price"]
+                
+                # Update grand totals
+                grand_totals["operations_count"] += 1
+                grand_totals["total_revenue"] += operation["base_price"]
+                grand_totals["total_discounts"] += operation["discount_amount"]
+                grand_totals["net_revenue"] += operation["final_price"]
+            
+            report_data = {
+                "title": "تقرير العمليات اليومية الشامل - حسب الوكالة",
+                "period": f"من {start_date} إلى {end_date}",
+                "agencies_data": list(agency_data.values()),
+                "grand_totals": grand_totals
+            }
+        else:
+            # Simple totals without grouping
+            totals = {
+                "operations_count": len(operations),
+                "total_revenue": sum(op["base_price"] for op in operations),
+                "total_discounts": sum(op["discount_amount"] for op in operations),
+                "net_revenue": sum(op["final_price"] for op in operations)
+            }
+            
+            report_data = {
+                "title": "تقرير العمليات اليومية الشامل",
+                "period": f"من {start_date} إلى {end_date}",
+                "grand_totals": totals
+            }
+        
+        # Generate PDF
+        agencies_list = list(agencies_dict.values())
+        pdf_data = create_operations_report_pdf(report_data, agencies_list, current_user.dict())
+        
+        # Return PDF response
+        filename = f"daily_operations_report_{start_date}_{end_date}.pdf"
+        return Response(
+            content=pdf_data,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        print(f"Print report error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error generating report: {str(e)}")
+
 # Discount Requests Routes
 @api_router.get("/discount-requests")
 async def get_discount_requests(
