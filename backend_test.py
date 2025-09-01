@@ -3046,7 +3046,7 @@ def main():
         print(f"\n   📊 Services & Daily Operations System Score: {so_working}/{so_total} ({(so_working/so_total)*100:.1f}%)")
         
         # Enhanced Reports System Results (SECONDARY FOCUS)
-        print(f"\n📊 نتائج نظام التقارير المحسن - ENHANCED REPORTS SYSTEM RESULTS (PRIMARY FOCUS):")
+        print(f"\n📊 نتائج نظام التقارير المحسن - ENHANCED REPORTS SYSTEM RESULTS (SECONDARY FOCUS):")
         enhanced_reports_keys = [
             ('super_admin_login', 'Super Admin Login (superadmin@sanhaja.com)'),
             ('sales_daily_agency_breakdown_all', 'Enhanced Sales Report - Daily with Agency Breakdown'),
