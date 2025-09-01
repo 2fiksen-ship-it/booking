@@ -3871,5 +3871,335 @@ def main():
         print("   Check if admin@sanhaja-oran.dz user exists with password admin123")
         return 1
 
+    def test_pdf_printing_endpoints(self):
+        """Test PDF generation endpoints for printing receipts and reports"""
+        print(f"\n📄 Testing PDF Printing Endpoints (Review Request)...")
+        print(f"   Testing receipt printing and report printing with PDF generation")
+        
+        results = {}
+        
+        # Step 1: Super Admin Login (as specified in review request)
+        print(f"\n   1. Super Admin Login (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with PDF tests")
+            return results
+            
+        print(f"   ✅ Super Admin authenticated successfully")
+        
+        # Step 2: Create a test daily operation if none exist
+        print(f"\n   2. Creating test daily operation for receipt printing...")
+        
+        # First get clients and services
+        success, clients_data = self.run_test("Get Clients for Operation", "GET", "clients", 200)
+        success2, services_data = self.run_test("Get Services for Operation", "GET", "services", 200)
+        
+        if success and success2 and clients_data and services_data:
+            client_id = clients_data[0]['id']
+            service_id = services_data[0]['id']
+            
+            # Create test operation
+            operation_data = {
+                "service_id": service_id,
+                "client_id": client_id,
+                "base_price": 150000.0,
+                "discount_amount": 10000.0,
+                "discount_reason": "خصم خاص للعميل المميز",
+                "notes": "عملية تجريبية لاختبار طباعة الوصل"
+            }
+            
+            success, operation_response = self.run_test(
+                "Create Test Daily Operation",
+                "POST",
+                "daily-operations",
+                200,
+                data=operation_data
+            )
+            results['create_test_operation'] = success
+            
+            if success:
+                operation_id = operation_response.get('id')
+                print(f"   ✅ Test operation created with ID: {operation_id}")
+                
+                # Step 3: Test Receipt Printing (GET /api/daily-operations/{operation_id}/print)
+                print(f"\n   3. Testing Receipt Printing (GET /api/daily-operations/{operation_id}/print)...")
+                
+                # Test PDF receipt generation
+                url = f"{self.api_url}/daily-operations/{operation_id}/print"
+                headers = {'Authorization': f'Bearer {self.token}'}
+                
+                try:
+                    response = requests.get(url, headers=headers, timeout=30)
+                    
+                    if response.status_code == 200:
+                        print(f"   ✅ Receipt PDF generated successfully")
+                        
+                        # Check content type
+                        content_type = response.headers.get('content-type', '')
+                        if 'application/pdf' in content_type:
+                            print(f"   ✅ Correct content-type: {content_type}")
+                            results['receipt_content_type'] = True
+                        else:
+                            print(f"   ❌ Wrong content-type: {content_type} (expected application/pdf)")
+                            results['receipt_content_type'] = False
+                        
+                        # Check Content-Disposition header
+                        content_disposition = response.headers.get('content-disposition', '')
+                        if 'attachment' in content_disposition and 'filename=' in content_disposition:
+                            print(f"   ✅ Correct Content-Disposition header: {content_disposition}")
+                            results['receipt_disposition'] = True
+                        else:
+                            print(f"   ❌ Missing or incorrect Content-Disposition header: {content_disposition}")
+                            results['receipt_disposition'] = False
+                        
+                        # Check PDF file size
+                        pdf_size = len(response.content)
+                        if pdf_size > 1000:  # PDF should be at least 1KB
+                            print(f"   ✅ PDF file generated with size: {pdf_size} bytes")
+                            results['receipt_pdf_size'] = True
+                        else:
+                            print(f"   ❌ PDF file too small: {pdf_size} bytes")
+                            results['receipt_pdf_size'] = False
+                        
+                        # Check PDF magic bytes
+                        if response.content.startswith(b'%PDF'):
+                            print(f"   ✅ Valid PDF file format (starts with %PDF)")
+                            results['receipt_pdf_format'] = True
+                        else:
+                            print(f"   ❌ Invalid PDF format (doesn't start with %PDF)")
+                            results['receipt_pdf_format'] = False
+                        
+                        results['receipt_printing'] = True
+                        
+                    else:
+                        print(f"   ❌ Receipt printing failed - Status: {response.status_code}")
+                        try:
+                            error_data = response.json()
+                            print(f"   Error: {error_data}")
+                        except:
+                            print(f"   Error: {response.text[:200]}")
+                        results['receipt_printing'] = False
+                        
+                except Exception as e:
+                    print(f"   ❌ Receipt printing error: {str(e)}")
+                    results['receipt_printing'] = False
+            else:
+                print(f"   ❌ Could not create test operation for receipt testing")
+        else:
+            print(f"   ❌ Could not get clients/services for operation creation")
+        
+        # Step 4: Test Report Printing (GET /api/reports/daily-operations/print)
+        print(f"\n   4. Testing Report Printing (GET /api/reports/daily-operations/print)...")
+        
+        # Test with various parameters
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        start_date = (today - timedelta(days=30)).strftime('%Y-%m-%d')
+        end_date = today.strftime('%Y-%m-%d')
+        
+        print(f"   Testing with date range: {start_date} to {end_date}")
+        
+        # Test 4a: Basic report printing
+        print(f"\n   4a. Testing basic report printing...")
+        url = f"{self.api_url}/reports/daily-operations/print?start_date={start_date}&end_date={end_date}"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                print(f"   ✅ Report PDF generated successfully")
+                
+                # Check content type
+                content_type = response.headers.get('content-type', '')
+                if 'application/pdf' in content_type:
+                    print(f"   ✅ Correct content-type: {content_type}")
+                    results['report_content_type'] = True
+                else:
+                    print(f"   ❌ Wrong content-type: {content_type} (expected application/pdf)")
+                    results['report_content_type'] = False
+                
+                # Check Content-Disposition header
+                content_disposition = response.headers.get('content-disposition', '')
+                if 'attachment' in content_disposition and 'filename=' in content_disposition:
+                    print(f"   ✅ Correct Content-Disposition header: {content_disposition}")
+                    results['report_disposition'] = True
+                else:
+                    print(f"   ❌ Missing or incorrect Content-Disposition header: {content_disposition}")
+                    results['report_disposition'] = False
+                
+                # Check PDF file size
+                pdf_size = len(response.content)
+                if pdf_size > 1000:  # PDF should be at least 1KB
+                    print(f"   ✅ PDF file generated with size: {pdf_size} bytes")
+                    results['report_pdf_size'] = True
+                else:
+                    print(f"   ❌ PDF file too small: {pdf_size} bytes")
+                    results['report_pdf_size'] = False
+                
+                # Check PDF magic bytes
+                if response.content.startswith(b'%PDF'):
+                    print(f"   ✅ Valid PDF file format (starts with %PDF)")
+                    results['report_pdf_format'] = True
+                else:
+                    print(f"   ❌ Invalid PDF format (doesn't start with %PDF)")
+                    results['report_pdf_format'] = False
+                
+                results['basic_report_printing'] = True
+                
+            else:
+                print(f"   ❌ Report printing failed - Status: {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print(f"   Error: {error_data}")
+                except:
+                    print(f"   Error: {response.text[:200]}")
+                results['basic_report_printing'] = False
+                
+        except Exception as e:
+            print(f"   ❌ Report printing error: {str(e)}")
+            results['basic_report_printing'] = False
+        
+        # Test 4b: Report printing with agency filter
+        print(f"\n   4b. Testing report printing with agency filter...")
+        
+        # Get agencies for filtering
+        success, agencies_data = self.run_test("Get Agencies for Filter", "GET", "agencies", 200)
+        if success and agencies_data:
+            agency_id = agencies_data[0]['id']
+            agency_name = agencies_data[0].get('name', 'Unknown')
+            
+            url = f"{self.api_url}/reports/daily-operations/print?start_date={start_date}&end_date={end_date}&agency_ids={agency_id}"
+            
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+                
+                if response.status_code == 200:
+                    print(f"   ✅ Filtered report PDF generated for agency: {agency_name}")
+                    results['filtered_report_printing'] = True
+                else:
+                    print(f"   ❌ Filtered report printing failed - Status: {response.status_code}")
+                    results['filtered_report_printing'] = False
+                    
+            except Exception as e:
+                print(f"   ❌ Filtered report printing error: {str(e)}")
+                results['filtered_report_printing'] = False
+        
+        # Test 4c: Report printing with group_by_agency=false
+        print(f"\n   4c. Testing report printing without agency grouping...")
+        
+        url = f"{self.api_url}/reports/daily-operations/print?start_date={start_date}&end_date={end_date}&group_by_agency=false"
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                print(f"   ✅ Non-grouped report PDF generated successfully")
+                results['non_grouped_report_printing'] = True
+            else:
+                print(f"   ❌ Non-grouped report printing failed - Status: {response.status_code}")
+                results['non_grouped_report_printing'] = False
+                
+        except Exception as e:
+            print(f"   ❌ Non-grouped report printing error: {str(e)}")
+            results['non_grouped_report_printing'] = False
+        
+        # Step 5: Test Authentication and Permissions
+        print(f"\n   5. Testing Authentication and Permissions...")
+        
+        # Test 5a: General Accountant access
+        print(f"\n   5a. Testing General Accountant access...")
+        general_auth_success = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        
+        if general_auth_success:
+            print(f"   ✅ General Accountant authenticated")
+            
+            # Test report printing access
+            url = f"{self.api_url}/reports/daily-operations/print?start_date={start_date}&end_date={end_date}"
+            headers = {'Authorization': f'Bearer {self.token}'}
+            
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+                
+                if response.status_code == 200:
+                    print(f"   ✅ General Accountant can access report printing")
+                    results['general_accountant_report_access'] = True
+                else:
+                    print(f"   ❌ General Accountant cannot access report printing - Status: {response.status_code}")
+                    results['general_accountant_report_access'] = False
+                    
+            except Exception as e:
+                print(f"   ❌ General Accountant report access error: {str(e)}")
+                results['general_accountant_report_access'] = False
+        
+        # Test 5b: Agency Staff access (should be limited to their agency)
+        print(f"\n   5b. Testing Agency Staff access...")
+        staff_auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        
+        if staff_auth_success:
+            print(f"   ✅ Agency Staff authenticated")
+            staff_agency_id = self.current_user.get('agency_id')
+            
+            # Test report printing access (should only see their agency)
+            url = f"{self.api_url}/reports/daily-operations/print?start_date={start_date}&end_date={end_date}"
+            headers = {'Authorization': f'Bearer {self.token}'}
+            
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+                
+                if response.status_code == 200:
+                    print(f"   ✅ Agency Staff can access report printing (filtered to their agency)")
+                    results['agency_staff_report_access'] = True
+                else:
+                    print(f"   ❌ Agency Staff cannot access report printing - Status: {response.status_code}")
+                    results['agency_staff_report_access'] = False
+                    
+            except Exception as e:
+                print(f"   ❌ Agency Staff report access error: {str(e)}")
+                results['agency_staff_report_access'] = False
+            
+            # Test receipt printing access (if operation exists in their agency)
+            if 'operation_id' in locals():
+                url = f"{self.api_url}/daily-operations/{operation_id}/print"
+                
+                try:
+                    response = requests.get(url, headers=headers, timeout=30)
+                    
+                    if response.status_code in [200, 403]:  # 403 if not their agency's operation
+                        print(f"   ✅ Agency Staff receipt access properly controlled - Status: {response.status_code}")
+                        results['agency_staff_receipt_access'] = True
+                    else:
+                        print(f"   ❌ Unexpected agency staff receipt access - Status: {response.status_code}")
+                        results['agency_staff_receipt_access'] = False
+                        
+                except Exception as e:
+                    print(f"   ❌ Agency Staff receipt access error: {str(e)}")
+                    results['agency_staff_receipt_access'] = False
+        
+        # Test 5c: Unauthenticated access (should fail)
+        print(f"\n   5c. Testing unauthenticated access...")
+        
+        # Remove token
+        old_token = self.token
+        self.token = None
+        
+        success, response = self.run_test(
+            "Unauthenticated Report Access",
+            "GET",
+            f"reports/daily-operations/print?start_date={start_date}&end_date={end_date}",
+            401
+        )
+        results['unauthenticated_access_denied'] = success
+        
+        if success:
+            print(f"   ✅ Unauthenticated access properly denied")
+        
+        # Restore token
+        self.token = old_token
+        
+        return results
+
 if __name__ == "__main__":
     sys.exit(main())
