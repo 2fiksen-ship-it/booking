@@ -404,6 +404,53 @@ class DailyReportCreate(BaseModel):
     cashbox_balance: float
     notes: Optional[str] = None
 
+# Service Management Create Models
+class ServiceCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    service_type: ServiceType
+    category: ServiceCategory
+    base_price: float
+    min_price: Optional[float] = None
+    is_fixed_price: bool = True
+    is_active: bool = True
+    agency_id: Optional[str] = None
+
+class ServiceUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    service_type: Optional[ServiceType] = None
+    category: Optional[ServiceCategory] = None
+    base_price: Optional[float] = None
+    min_price: Optional[float] = None
+    is_fixed_price: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+# Daily Operations Create Models
+class DailyOperationCreate(BaseModel):
+    service_id: str
+    client_id: str
+    base_price: Optional[float] = None  # إذا لم يتم توفيره، سيتم أخذه من الخدمة
+    discount_amount: float = 0.0
+    discount_reason: Optional[str] = None
+    notes: Optional[str] = None
+
+class DailyOperationUpdate(BaseModel):
+    discount_amount: Optional[float] = None
+    discount_reason: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[OperationStatus] = None
+
+# Discount Request Create Models
+class DiscountRequestCreate(BaseModel):
+    operation_id: str
+    discount_amount: float
+    reason: str
+
+class DiscountApproval(BaseModel):
+    approved: bool
+    rejection_reason: Optional[str] = None
+
 # Session Model for Google Authentication
 class SessionToken(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
