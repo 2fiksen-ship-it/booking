@@ -4984,6 +4984,18 @@ const DailyOperationsReports = () => {
           <Button onClick={generateReport} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
             {loading ? 'جاري الإنتاج...' : t('generateReport')}
           </Button>
+
+          {/* Print Report Button */}
+          {reportData && (
+            <Button 
+              onClick={handlePrintReport} 
+              disabled={loading}
+              variant="outline" 
+              className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+            >
+              🖨️ طباعة التقرير PDF
+            </Button>
+          )}
         </CardContent>
       </Card>
 
