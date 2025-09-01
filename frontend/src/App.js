@@ -4664,7 +4664,7 @@ const DailyOperationsManagement = () => {
                 <TableHead className="text-right">{t('serviceName')}</TableHead>
                 <TableHead className="text-right">{t('finalPrice')}</TableHead>
                 <TableHead className="text-right">{t('operationStatus')}</TableHead>
-                {canApproveOperations && <TableHead className="text-right">{t('actions')}</TableHead>}
+                <TableHead className="text-right">{t('actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
