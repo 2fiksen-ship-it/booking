@@ -3260,6 +3260,38 @@ def main():
         print(f"\n⚠️  القضايا الحرجة - Critical Issues:")
         critical_issues = []
         
+        # Services Management and Daily Operations Critical Issues (PRIMARY FOCUS - CURRENT REVIEW)
+        if not services_operations_results.get('super_admin_login'):
+            critical_issues.append("❌ Super Admin login failed (superadmin@sanhaja.com)")
+        if not services_operations_results.get('create_umrah_service'):
+            critical_issues.append("❌ Cannot create Umrah service")
+        if not services_operations_results.get('get_all_services'):
+            critical_issues.append("❌ Cannot retrieve services list")
+        if not services_operations_results.get('accountant_get_services'):
+            critical_issues.append("❌ General Accountant cannot access services")
+        if not services_operations_results.get('staff_get_services'):
+            critical_issues.append("❌ Agency Staff cannot view services")
+        if not services_operations_results.get('create_normal_operation'):
+            critical_issues.append("❌ Cannot create normal daily operation")
+        if not services_operations_results.get('create_discount_operation'):
+            critical_issues.append("❌ Cannot create operation with discount")
+        if not services_operations_results.get('get_all_operations'):
+            critical_issues.append("❌ Cannot retrieve operations list")
+        if not services_operations_results.get('approve_discount_operation'):
+            critical_issues.append("❌ Cannot approve operations with discount")
+        if not services_operations_results.get('basic_daily_operations_report'):
+            critical_issues.append("❌ Basic daily operations report not working")
+        if not services_operations_results.get('agency_breakdown_report'):
+            critical_issues.append("❌ Agency breakdown report not working")
+        if not services_operations_results.get('get_discount_requests'):
+            critical_issues.append("❌ Cannot retrieve discount requests")
+        if not services_operations_results.get('super_admin_auth'):
+            critical_issues.append("❌ Super Admin authentication failed")
+        if not services_operations_results.get('general_accountant_auth'):
+            critical_issues.append("❌ General Accountant authentication failed")
+        if not services_operations_results.get('agency_staff_auth'):
+            critical_issues.append("❌ Agency Staff authentication failed")
+        
         # Google Authentication Critical Issues (PRIMARY FOCUS)
         if not google_auth_results.get('google_auth_endpoint_accessible'):
             critical_issues.append("❌ Google Auth endpoint not accessible")
