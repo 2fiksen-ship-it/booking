@@ -100,6 +100,58 @@ const translations = {
     reportsList: '📋 قائمة التقارير',
     generateReport: '🔄 إنتاج التقرير',
     
+    // NEW - Services Management
+    servicesList: '📋 قائمة الخدمات',
+    addService: '➕ إضافة خدمة جديدة',
+    editService: '✏️ تعديل الخدمة',
+    deleteService: '🗑️ حذف الخدمة',
+    serviceName: 'اسم الخدمة',
+    serviceType: 'نوع الخدمة',
+    serviceCategory: 'تصنيف الخدمة',
+    basePrice: 'السعر الأساسي (دج)',
+    minPrice: 'أقل سعر مسموح (دج)',
+    isFixedPrice: 'سعر ثابت',
+    isActive: 'نشطة',
+    serviceDescription: 'وصف الخدمة',
+    
+    // NEW - Daily Operations
+    operationsList: '📋 قائمة العمليات اليومية',
+    addOperation: '➕ إضافة عملية جديدة',
+    operationNo: 'رقم الوصل',
+    operationDate: 'تاريخ العملية',
+    clientName: 'اسم العميل',
+    serviceName: 'اسم الخدمة',
+    discountAmount: 'مبلغ التخفيض (دج)',
+    discountReason: 'سبب التخفيض',
+    finalPrice: 'السعر النهائي (دج)',
+    operationStatus: 'حالة العملية',
+    approveOperation: '✅ اعتماد العملية',
+    rejectOperation: '❌ رفض العملية',
+    
+    // NEW - Operation Statuses
+    draft: '📝 مسودة',
+    pendingApproval: '⏳ في انتظار الموافقة',
+    operationApproved: '✅ معتمد',
+    operationRejected: '❌ مرفوض',
+    
+    // NEW - Service Types
+    umrah: 'عمرة',
+    hajj: 'حج',
+    flightTicket: 'تذكرة طيران',
+    hotelBooking: 'حجز فندق',
+    visaService: 'خدمة تأشيرة',
+    transport: 'نقل',
+    insurance: 'تأمين',
+    passportService: 'خدمة جواز سفر',
+    otherService: 'أخرى',
+    
+    // NEW - Service Categories
+    religiousServices: 'خدمات دينية',
+    travelServices: 'خدمات سفر',
+    documentationServices: 'خدمات وثائق',
+    accommodationServices: 'خدمات إقامة',
+    otherCategory: 'أخرى',
+    
     // User Management - إدارة المستخدمين  
     addUser: '➕ إضافة مستخدم جديد',
     editUser: '✏️ تعديل بيانات المستخدم',
