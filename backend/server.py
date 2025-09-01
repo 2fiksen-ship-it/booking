@@ -344,9 +344,18 @@ class ChartOfAccounts(BaseModel):
 # Create Models
 class AgencyCreate(BaseModel):
     name: str
-    city: str
     address: str
-    phone: str
+    city: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    # NEW: Printing and branding fields
+    logo_url: Optional[str] = None  # URL to agency logo
+    header_text: Optional[str] = None  # Custom header text for documents
+    footer_text: Optional[str] = None  # Custom footer text
+    tax_number: Optional[str] = None  # رقم التسجيل الضريبي
+    commercial_register: Optional[str] = None  # رقم السجل التجاري
+    manager_name: Optional[str] = None  # اسم المدير
+    manager_signature_url: Optional[str] = None  # توقيع المدير
 
 class UserCreate(BaseModel):
     name: str
