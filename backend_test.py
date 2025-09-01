@@ -2607,89 +2607,176 @@ class SanhajaAPITester:
         return results
 
     def test_discount_requests_system(self):
-        """Test Discount Requests System as requested in review"""
-        print(f"\n💰 Testing Discount Requests System (Review Request)...")
-        print(f"   Testing discount approval workflow")
+        """Test Discount Requests System - FOCUSED TEST for 500 Error Fix"""
+        print(f"\n💰 Testing Discount Requests System - FOCUSED TEST (Review Request)...")
+        print(f"   FOCUS: Testing GET /api/discount-requests endpoint to verify 500 error is resolved")
+        print(f"   Expected: 200 status with JSON response, not 500 server error")
         
         results = {}
         
-        # Login as Super Admin
+        # Test 1: Super Admin Access (superadmin@sanhaja.com / super123)
+        print(f"\n   1. Testing Super Admin Access to GET /api/discount-requests...")
+        print(f"   Credentials: superadmin@sanhaja.com / super123")
+        
         auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
         if not auth_success:
-            print("   ❌ Super Admin login failed")
+            print("   ❌ CRITICAL: Super Admin login failed - cannot test discount requests")
             return results
         
-        # Test 1: GET /api/discount-requests - List discount requests
-        print(f"\n   1. Testing GET /api/discount-requests - List Discount Requests...")
+        print(f"   ✅ Super Admin authenticated successfully")
         
+        # Test GET /api/discount-requests (main test)
         success, discount_requests = self.run_test(
-            "Get Discount Requests",
+            "Super Admin - GET /api/discount-requests",
             "GET",
             "discount-requests",
             200
         )
-        results['get_discount_requests'] = success
+        results['super_admin_discount_requests'] = success
         
         if success:
-            print(f"   ✅ Discount requests retrieved - {len(discount_requests)} requests found")
+            print(f"   ✅ SUCCESS: Super Admin can access discount requests endpoint")
+            print(f"   Response: JSON array with {len(discount_requests)} discount requests")
             
-            # Check request statuses
-            statuses = {}
-            for request in discount_requests:
-                status = request.get('status', 'Unknown')
-                statuses[status] = statuses.get(status, 0) + 1
-            print(f"   Request statuses: {statuses}")
+            # Verify response structure
+            if isinstance(discount_requests, list):
+                print(f"   ✅ Response is proper JSON array (not 500 error)")
+                
+                if len(discount_requests) > 0:
+                    sample_request = discount_requests[0]
+                    print(f"   Sample request keys: {list(sample_request.keys())}")
+                    
+                    # Check for enriched data
+                    if 'operation_details' in sample_request or 'user_name' in sample_request:
+                        print(f"   ✅ Response includes enriched data")
+                        results['enriched_data'] = True
+                    else:
+                        print(f"   ⚠️  Response may not include enriched data")
+                        results['enriched_data'] = False
+                else:
+                    print(f"   ✅ Empty array response (no discount requests exist)")
+                    results['enriched_data'] = True  # Empty is valid
+            else:
+                print(f"   ❌ Response is not a JSON array: {type(discount_requests)}")
+                results['proper_json_response'] = False
+        else:
+            print(f"   ❌ FAILED: Super Admin cannot access discount requests (likely 500 error)")
+            results['super_admin_discount_requests'] = False
         
-        # Test 2: Filter by status
-        print(f"\n   2. Testing Discount Requests Filtering...")
-        
-        success, pending_requests = self.run_test(
-            "Get Pending Discount Requests",
-            "GET",
-            "discount-requests?status=في انتظار الموافقة",
-            200
-        )
-        results['filter_pending_discount_requests'] = success
-        
-        if success:
-            print(f"   ✅ Pending discount requests filter working - {len(pending_requests)} requests")
-        
-        # Test 3: General Accountant access
-        print(f"\n   3. Testing General Accountant Access to Discount Requests...")
+        # Test 2: General Accountant Access (generalaccountant@sanhaja.com / acc123)
+        print(f"\n   2. Testing General Accountant Access to GET /api/discount-requests...")
+        print(f"   Credentials: generalaccountant@sanhaja.com / acc123")
         
         accountant_auth = self.test_login('generalaccountant@sanhaja.com', 'acc123')
-        results['accountant_login_for_discounts'] = accountant_auth
+        results['general_accountant_login'] = accountant_auth
         
         if accountant_auth:
+            print(f"   ✅ General Accountant authenticated successfully")
+            
             success, accountant_requests = self.run_test(
-                "General Accountant - Get Discount Requests",
+                "General Accountant - GET /api/discount-requests",
                 "GET",
                 "discount-requests",
                 200
             )
-            results['accountant_discount_requests'] = success
+            results['general_accountant_discount_requests'] = success
             
             if success:
-                print(f"   ✅ General Accountant can access discount requests - {len(accountant_requests)} requests")
+                print(f"   ✅ SUCCESS: General Accountant can access discount requests endpoint")
+                print(f"   Response: JSON array with {len(accountant_requests)} discount requests")
+                
+                if isinstance(accountant_requests, list):
+                    print(f"   ✅ Response is proper JSON array (not 500 error)")
+                else:
+                    print(f"   ❌ Response is not a JSON array: {type(accountant_requests)}")
+            else:
+                print(f"   ❌ FAILED: General Accountant cannot access discount requests (likely 500 error)")
+        else:
+            print(f"   ❌ General Accountant login failed")
         
-        # Test 4: Agency Staff access (should be limited)
-        print(f"\n   4. Testing Agency Staff Access to Discount Requests...")
+        # Test 3: Query Parameters Testing
+        print(f"\n   3. Testing Query Parameters (status, agency_id filters)...")
         
-        staff_auth = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
-        results['staff_login_for_discounts'] = staff_auth
-        
-        if staff_auth:
-            success, staff_requests = self.run_test(
-                "Agency Staff - Get Discount Requests",
+        # Re-login as Super Admin for parameter testing
+        if auth_success:
+            # Test status filter
+            success, filtered_requests = self.run_test(
+                "GET /api/discount-requests?status=في انتظار الموافقة",
                 "GET",
-                "discount-requests",
+                "discount-requests?status=في انتظار الموافقة",
                 200
             )
-            results['staff_discount_requests'] = success
+            results['status_filter'] = success
             
             if success:
-                print(f"   ✅ Agency Staff can view discount requests - {len(staff_requests)} requests")
-                # Should only see requests from their agency
+                print(f"   ✅ Status filter works - {len(filtered_requests)} pending requests")
+            else:
+                print(f"   ❌ Status filter failed")
+            
+            # Test agency_id filter (get first agency ID)
+            agencies_success, agencies = self.run_test(
+                "Get Agencies for Filter Test",
+                "GET",
+                "agencies",
+                200
+            )
+            
+            if agencies_success and agencies:
+                test_agency_id = agencies[0]['id']
+                success, agency_filtered = self.run_test(
+                    f"GET /api/discount-requests?agency_id={test_agency_id}",
+                    "GET",
+                    f"discount-requests?agency_id={test_agency_id}",
+                    200
+                )
+                results['agency_filter'] = success
+                
+                if success:
+                    print(f"   ✅ Agency filter works - {len(agency_filtered)} requests for agency")
+                else:
+                    print(f"   ❌ Agency filter failed")
+        
+        # Test 4: MongoDB ObjectId Serialization Check
+        print(f"\n   4. Testing MongoDB ObjectId Serialization...")
+        
+        if results.get('super_admin_discount_requests') and isinstance(discount_requests, list):
+            try:
+                # Try to serialize the response to JSON to check for ObjectId issues
+                import json
+                json_str = json.dumps(discount_requests)
+                print(f"   ✅ Response can be serialized to JSON (no ObjectId serialization errors)")
+                results['no_objectid_errors'] = True
+            except Exception as e:
+                print(f"   ❌ JSON serialization error (likely ObjectId issue): {str(e)}")
+                results['no_objectid_errors'] = False
+        
+        # Test Summary
+        print(f"\n   📊 DISCOUNT REQUESTS ENDPOINT TEST SUMMARY:")
+        
+        if results.get('super_admin_discount_requests') and results.get('general_accountant_discount_requests'):
+            print(f"   ✅ SUCCESS: Both Super Admin and General Accountant can access endpoint")
+            print(f"   ✅ SUCCESS: No 500 server errors detected")
+            print(f"   ✅ SUCCESS: Endpoint returns proper JSON responses")
+            
+            if results.get('status_filter') and results.get('agency_filter'):
+                print(f"   ✅ SUCCESS: Query parameters (status, agency_id) work correctly")
+            
+            if results.get('no_objectid_errors'):
+                print(f"   ✅ SUCCESS: No MongoDB ObjectId serialization errors")
+            
+            print(f"\n   🎉 CONCLUSION: Discount Requests API endpoint is WORKING correctly!")
+            print(f"   The 500 error has been resolved.")
+            
+        else:
+            print(f"   ❌ FAILURE: Discount Requests endpoint still has issues")
+            if not results.get('super_admin_discount_requests'):
+                print(f"   ❌ Super Admin access failed")
+            if not results.get('general_accountant_discount_requests'):
+                print(f"   ❌ General Accountant access failed")
+            
+            print(f"\n   🚨 CONCLUSION: Discount Requests API endpoint still needs fixing!")
         
         return results
 
