@@ -2824,15 +2824,19 @@ const PaymentsManagement = () => {
   );
 };
 
-// Enhanced Reports Management Component with Real APIs
+// Enhanced Reports Management Component with Agency Breakdown
 const ReportsManagement = () => {
   const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
   const [reportType, setReportType] = useState('daily_sales');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedAgencies, setSelectedAgencies] = useState('all');
+  const [groupByAgency, setGroupByAgency] = useState(true);
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [agencies, setAgencies] = useState([]);
 
   // Set default dates (last 30 days)
   useEffect(() => {
@@ -2841,7 +2845,21 @@ const ReportsManagement = () => {
     
     setStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
     setEndDate(today.toISOString().split('T')[0]);
-  }, []);
+
+    // Fetch agencies for filter
+    const fetchAgencies = async () => {
+      try {
+        const response = await axios.get(`${API}/agencies`);
+        setAgencies(response.data);
+      } catch (error) {
+        console.error('Error fetching agencies:', error);
+      }
+    };
+
+    if (['super_admin', 'general_accountant'].includes(user?.role)) {
+      fetchAgencies();
+    }
+  }, [user]);
 
   const generateReport = async () => {
     if (!startDate || !endDate) {
@@ -2854,10 +2872,21 @@ const ReportsManagement = () => {
     
     try {
       let endpoint = '';
-      let params = new URLSearchParams({
-        start_date: startDate,
-        end_date: endDate
-      });
+      let params = new URLSearchParams();
+
+      // Common parameters
+      if (reportType !== 'aging') {
+        params.append('start_date', startDate);
+        params.append('end_date', endDate);
+      }
+
+      // Agency filtering (only for super admin and general accountant)
+      if (['super_admin', 'general_accountant'].includes(user?.role)) {
+        if (selectedAgencies !== 'all') {
+          params.append('agency_ids', selectedAgencies);
+        }
+        params.append('group_by_agency', groupByAgency.toString());
+      }
 
       switch (reportType) {
         case 'daily_sales':
@@ -2870,11 +2899,10 @@ const ReportsManagement = () => {
           break;
         case 'aging':
           endpoint = 'reports/aging';
-          // Aging report doesn't need date params
-          params = new URLSearchParams();
+          // Agency params already set above
           break;
-        case 'profit_loss':
-          endpoint = 'reports/profit-loss';
+        case 'summary':
+          endpoint = 'reports/summary';
           break;
         default:
           throw new Error('نوع التقرير غير مدعوم');
@@ -2901,28 +2929,49 @@ const ReportsManagement = () => {
     try {
       let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM for UTF-8
       
-      if (reportType === 'daily_sales' || reportType === 'monthly_sales') {
-        csvContent += "التاريخ,المبيعات (دج),عدد الحجوزات,الربح (دج)\n";
-        reportData.data.forEach(row => {
-          const date = reportType === 'monthly_sales' ? row.month : row.date;
-          csvContent += `${date},${row.sales},${row.bookings},${row.profit}\n`;
-        });
-        csvContent += `الإجمالي,${reportData.totals.sales},${reportData.totals.bookings},${reportData.totals.profit}\n`;
-      } else if (reportType === 'aging') {
-        csvContent += "العميل,رقم الفاتورة,المبلغ (دج),عدد الأيام\n";
-        reportData.data.forEach(row => {
-          csvContent += `${row.client},${row.invoice},${row.amount},${row.days}\n`;
-        });
-        csvContent += `الإجمالي,,${reportData.totals.amount},\n`;
-      } else if (reportType === 'profit_loss') {
-        csvContent += "البيان,المبلغ (دج)\n";
-        csvContent += `المبيعات,${reportData.data.income.sales}\n`;
-        csvContent += `الخدمات,${reportData.data.income.services}\n`;
-        csvContent += `إجمالي الإيرادات,${reportData.data.income.sales + reportData.data.income.services}\n`;
-        csvContent += `تكلفة الموردين,${reportData.data.expenses.suppliers}\n`;
-        csvContent += `المصروفات التشغيلية,${reportData.data.expenses.operations}\n`;
-        csvContent += `إجمالي المصروفات,${reportData.data.expenses.suppliers + reportData.data.expenses.operations}\n`;
-        csvContent += `صافي الربح,${reportData.data.profit}\n`;
+      if (reportData.group_by_agency && reportData.agencies_data) {
+        // Agency-grouped export
+        if (reportType === 'daily_sales' || reportType === 'monthly_sales') {
+          csvContent += "الوكالة,التاريخ/الشهر,المبيعات (دج),عدد الحجوزات\n";
+          
+          reportData.agencies_data.forEach(agency => {
+            agency.periods.forEach(period => {
+              const date = reportType === 'monthly_sales' ? period.month : period.date;
+              csvContent += `${agency.agency_name},${date},${period.sales},${period.bookings}\n`;
+            });
+            csvContent += `${agency.agency_name} - المجموع,,${agency.totals.sales},${agency.totals.bookings}\n\n`;
+          });
+          
+          csvContent += `الإجمالي العام,,${reportData.grand_totals.sales},${reportData.grand_totals.bookings}\n`;
+        } else if (reportType === 'aging') {
+          csvContent += "الوكالة,العميل,رقم الفاتورة,المبلغ (دج),عدد الأيام\n";
+          
+          reportData.agencies_data.forEach(agency => {
+            agency.invoices.forEach(invoice => {
+              csvContent += `${agency.agency_name},${invoice.client},${invoice.invoice},${invoice.amount},${invoice.days}\n`;
+            });
+            csvContent += `${agency.agency_name} - المجموع,,,${agency.totals.amount},\n\n`;
+          });
+          
+          csvContent += `الإجمالي العام,,,${reportData.grand_totals.amount},\n`;
+        }
+      } else {
+        // Traditional export format
+        if (reportType === 'daily_sales' || reportType === 'monthly_sales') {
+          const dateLabel = reportType === 'monthly_sales' ? 'الشهر' : 'التاريخ';
+          csvContent += `${dateLabel},المبيعات (دج),عدد الحجوزات\n`;
+          reportData.data.forEach(row => {
+            const date = reportType === 'monthly_sales' ? row.month : row.date;
+            csvContent += `${date},${row.sales},${row.bookings}\n`;
+          });
+          csvContent += `الإجمالي,${reportData.totals.sales},${reportData.totals.bookings}\n`;
+        } else if (reportType === 'aging') {
+          csvContent += "العميل,رقم الفاتورة,المبلغ (دج),عدد الأيام\n";
+          reportData.data.forEach(row => {
+            csvContent += `${row.client},${row.invoice},${row.amount},${row.days}\n`;
+          });
+          csvContent += `الإجمالي,,${reportData.totals.amount},\n`;
+        }
       }
 
       const encodedUri = encodeURI(csvContent);
@@ -2942,8 +2991,10 @@ const ReportsManagement = () => {
     { value: 'daily_sales', label: '📈 تقرير المبيعات اليومية' },
     { value: 'monthly_sales', label: '📊 تقرير المبيعات الشهرية' },
     { value: 'aging', label: '⏰ تقرير أعمار الديون' },
-    { value: 'profit_loss', label: '💹 تقرير الأرباح والخسائر' }
+    { value: 'summary', label: '📋 تقرير ملخص المبيعات' }
   ];
+
+  const isAdminUser = ['super_admin', 'general_accountant'].includes(user?.role);
 
   return (
     <div className="space-y-6">
@@ -2952,7 +3003,7 @@ const ReportsManagement = () => {
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">📊 {t('reports')}</h2>
-            <p className="text-gray-600 mt-1">إنتاج وتصدير التقارير المالية والإحصائية</p>
+            <p className="text-gray-600 mt-1">إنتاج وتصدير التقارير المالية والإحصائية المتقدمة</p>
           </div>
           {reportData && (
             <Button onClick={exportReport} variant="outline" className="bg-green-50 hover:bg-green-100 border-green-200">
@@ -2968,11 +3019,12 @@ const ReportsManagement = () => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Settings className="h-5 w-5 ml-2" />
-            ⚙️ إعدادات التقرير
+            ⚙️ إعدادات التقرير المتقدمة
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CardContent className="space-y-6">
+          {/* Basic Settings Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="reportType">📋 نوع التقرير</Label>
               <Select value={reportType} onValueChange={setReportType}>
@@ -3014,26 +3066,67 @@ const ReportsManagement = () => {
                 </div>
               </>
             )}
+          </div>
 
-            <div className="flex items-end">
-              <Button 
-                onClick={generateReport} 
-                disabled={loading || (!startDate || !endDate) && reportType !== 'aging'}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    جاري الإنتاج...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    🔄 {t('generateReport')}
-                  </>
-                )}
-              </Button>
+          {/* Advanced Settings for Admin Users */}
+          {isAdminUser && (
+            <div className="border-t pt-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">🔧 إعدادات متقدمة (للمديرين والمحاسبين)</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="agencyFilter">🏢 فلتر الوكالات</Label>
+                  <Select value={selectedAgencies} onValueChange={setSelectedAgencies}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الوكالات" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">🌐 جميع الوكالات</SelectItem>
+                      {agencies.map((agency) => (
+                        <SelectItem key={agency.id} value={agency.id}>
+                          🏢 {agency.name} - {agency.city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="groupBy">📊 طريقة العرض</Label>
+                  <Select value={groupByAgency.toString()} onValueChange={(value) => setGroupByAgency(value === 'true')}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر طريقة العرض" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">🏢 مجمع حسب الوكالة</SelectItem>
+                      <SelectItem value="false">📋 مجمع عام</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* Generate Button */}
+          <div className="flex justify-center pt-4">
+            <Button 
+              onClick={generateReport} 
+              disabled={loading || (!startDate || !endDate) && reportType !== 'aging'}
+              className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 px-8 py-3"
+              size="lg"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  جاري الإنتاج...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  🔄 {t('generateReport')}
+                </>
+              )}
+            </Button>
           </div>
 
           {error && (
