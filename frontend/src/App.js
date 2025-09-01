@@ -540,27 +540,33 @@ const Login = () => {
 
   const handleLogin = async () => {
     console.log('=== HANDLE LOGIN CALLED ===');
+    console.log('Email:', email);
+    console.log('Password length:', password.length);
+    
     setLoading(true);
     setError('');
     
     try {
-      console.log('Attempting login with:', email);
+      console.log('About to call login function...');
       const result = await login(email, password);
-      console.log('Login result:', result);
+      console.log('Login function returned:', result);
       
       if (result.success) {
-        console.log('Login successful, navigating to dashboard...');
+        console.log('Login successful, about to navigate to dashboard...');
         // Use navigate instead of window.location.reload() to avoid losing token
         navigate('/');
+        console.log('Navigate called');
       } else {
+        console.log('Login failed with error:', result.error);
         setError(result.error || 'Login failed');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error caught:', error);
       setError('An error occurred during login');
     }
     
     setLoading(false);
+    console.log('=== HANDLE LOGIN FINISHED ===');
   };
 
   const handleGoogleLogin = () => {
