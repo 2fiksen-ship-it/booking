@@ -618,40 +618,42 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">{t('email')}</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="text-right"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">{t('password')}</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="text-right"
-              />
-            </div>
-            {error && (
-              <div className="text-red-500 text-sm text-center">{error}</div>
-            )}
-            
-            {/* Traditional Login Button */}
-            <button
-              onClick={handleLogin}
-              disabled={loading}
-              className="w-full h-9 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md font-medium disabled:opacity-50"
-            >
-              {loading ? 'جاري تسجيل الدخول...' : t('login')}
-            </button>
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-2">
+              <div className="space-y-2">
+                <Label htmlFor="email">{t('email')}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="text-right"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">{t('password')}</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="text-right"
+                />
+              </div>
+              {error && (
+                <div className="text-red-500 text-sm text-center">{error}</div>
+              )}
+              
+              {/* Traditional Login Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-9 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md font-medium disabled:opacity-50"
+              >
+                {loading ? 'جاري تسجيل الدخول...' : t('login')}
+              </button>
+            </form>
           </div>
         </CardContent>
       </Card>
