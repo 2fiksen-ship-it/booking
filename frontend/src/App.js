@@ -743,7 +743,8 @@ const Layout = ({ children }) => {
         items: [
           { id: 'clients', label: t('clients'), icon: Users },
           { id: 'suppliers', label: t('suppliers'), icon: Building2 },
-          { id: 'bookings', label: t('bookings'), icon: Package }
+          { id: 'bookings', label: t('bookings'), icon: Package },
+          { id: 'dailyOperations', label: t('dailyOperations'), icon: FileText }
         ]
       },
       // Financial Transactions Category
@@ -752,7 +753,8 @@ const Layout = ({ children }) => {
         label: t('financialManagement'),
         items: [
           { id: 'invoices', label: t('invoices'), icon: FileText },
-          { id: 'payments', label: t('payments'), icon: CreditCard }
+          { id: 'payments', label: t('payments'), icon: CreditCard },
+          { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 }
         ]
       }
     ];
