@@ -549,8 +549,9 @@ const Login = () => {
       console.log('Login result:', result);
       
       if (result.success) {
-        console.log('Login successful, navigating...');
-        navigate('/');
+        console.log('Login successful, reloading page...');
+        // Force page reload to ensure proper state update
+        window.location.reload();
       } else {
         setError(result.error || 'Login failed');
       }
