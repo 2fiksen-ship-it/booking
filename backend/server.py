@@ -244,9 +244,18 @@ class BackupRecord(BaseModel):
 class Agency(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    city: str
     address: str
-    phone: str
+    city: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    # NEW: Printing and branding fields
+    logo_url: Optional[str] = None  # URL to agency logo
+    header_text: Optional[str] = None  # Custom header text for documents
+    footer_text: Optional[str] = None  # Custom footer text
+    tax_number: Optional[str] = None  # رقم التسجيل الضريبي
+    commercial_register: Optional[str] = None  # رقم السجل التجاري
+    manager_name: Optional[str] = None  # اسم المدير
+    manager_signature_url: Optional[str] = None  # توقيع المدير
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class User(BaseModel):
