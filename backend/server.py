@@ -1198,36 +1198,35 @@ async def get_dashboard(agency_id: Optional[str] = None, current_user: User = De
         "cashbox_balance": total_cashbox_balance
     }
 
-# Reports Routes
+# Enhanced Reports Routes with Agency Breakdown
 @api_router.get("/reports/sales")
 async def generate_sales_report(
     start_date: str,
     end_date: str,
     report_type: str = "daily",  # daily, monthly
+    agency_ids: Optional[str] = None,  # Comma-separated agency IDs, or "all" for all agencies
+    group_by_agency: bool = True,  # Whether to group results by agency
     current_user: User = Depends(get_current_user)
 ):
-    """Generate sales reports (daily/monthly)"""
+    """Generate enhanced sales reports with agency breakdown"""
     try:
         from datetime import datetime
         
         # Parse dates with flexible format support
         try:
-            # Try simple date format first (YYYY-MM-DD)
             if 'T' not in start_date and 'T' not in end_date:
                 start = datetime.fromisoformat(start_date + 'T00:00:00')
                 end = datetime.fromisoformat(end_date + 'T23:59:59')
             else:
-                # Handle ISO datetime format
                 start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
                 end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
         except ValueError as e:
-            # Fallback to manual parsing
             try:
                 start = datetime.strptime(start_date[:10], '%Y-%m-%d')
                 end = datetime.strptime(end_date[:10], '%Y-%m-%d')
                 end = end.replace(hour=23, minute=59, second=59)
             except ValueError:
-                raise HTTPException(status_code=400, detail=f"Invalid date format. Use YYYY-MM-DD or ISO format. Error: {str(e)}")
+                raise HTTPException(status_code=400, detail=f"Invalid date format. Use YYYY-MM-DD or ISO format.")
         
         # Ensure timezone awareness
         if start.tzinfo is None:
@@ -1237,70 +1236,146 @@ async def generate_sales_report(
         
         print(f"Generating {report_type} sales report from {start} to {end}")
         
-        # Build query filter based on user role
-        query_filter = {} if current_user.role == UserRole.SUPER_ADMIN else {"agency_id": current_user.agency_id}
+        # Build query filter based on user role and agency selection
+        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+            if agency_ids and agency_ids != "all":
+                # Filter by specific agencies
+                selected_agency_ids = [id.strip() for id in agency_ids.split(',')]
+                query_filter = {"agency_id": {"$in": selected_agency_ids}}
+            else:
+                # All agencies
+                query_filter = {}
+        else:
+            # Agency staff only see their own data
+            query_filter = {"agency_id": current_user.agency_id}
+            
         query_filter["created_at"] = {"$gte": start, "$lte": end}
         
         # Get invoices for the period
         invoices = await db.invoices.find(query_filter).to_list(1000)
         
+        # Get agencies data for names
+        agencies = await db.agencies.find({}).to_list(100)
+        agencies_dict = {agency["id"]: agency for agency in agencies}
+        
         print(f"Found {len(invoices)} invoices for the period")
         
-        if report_type == "monthly":
-            # Group by month
-            monthly_data = {}
+        if group_by_agency:
+            # Group by agency first, then by time period
+            agency_data = {}
+            
             for invoice in invoices:
-                month_key = invoice["created_at"].strftime("%Y-%m")
-                if month_key not in monthly_data:
-                    monthly_data[month_key] = {
-                        "month": month_key,
-                        "sales": 0,
-                        "bookings": 0,
-                        "profit": 0
+                agency_id = invoice["agency_id"]
+                agency_info = agencies_dict.get(agency_id, {"name": "وكالة غير معروفة", "city": "غير محدد"})
+                agency_name = f"{agency_info['name']} - {agency_info['city']}"
+                
+                if agency_name not in agency_data:
+                    agency_data[agency_name] = {
+                        "agency_id": agency_id,
+                        "agency_name": agency_name,
+                        "periods": {},
+                        "totals": {"sales": 0, "bookings": 0}
                     }
-                monthly_data[month_key]["sales"] += invoice["amount_ttc"]
-                monthly_data[month_key]["bookings"] += 1
-                monthly_data[month_key]["profit"] += invoice["amount_ttc"] * 0.1  # 10% profit margin
-            
-            data = list(monthly_data.values())
-            totals = {
-                "sales": sum(item["sales"] for item in data),
-                "bookings": sum(item["bookings"] for item in data),
-                "profit": sum(item["profit"] for item in data)
-            }
-        else:
-            # Group by day
-            daily_data = {}
-            for invoice in invoices:
-                date_key = invoice["created_at"].strftime("%Y-%m-%d")
-                if date_key not in daily_data:
-                    daily_data[date_key] = {
-                        "date": date_key,
+                
+                # Group by time period within agency
+                if report_type == "monthly":
+                    period_key = invoice["created_at"].strftime("%Y-%m")
+                else:
+                    period_key = invoice["created_at"].strftime("%Y-%m-%d")
+                
+                if period_key not in agency_data[agency_name]["periods"]:
+                    agency_data[agency_name]["periods"][period_key] = {
+                        "period": period_key,
                         "sales": 0,
-                        "bookings": 0,
-                        "profit": 0
+                        "bookings": 0
                     }
-                daily_data[date_key]["sales"] += invoice["amount_ttc"]
-                daily_data[date_key]["bookings"] += 1
-                daily_data[date_key]["profit"] += invoice["amount_ttc"] * 0.1  # 10% profit margin
+                
+                agency_data[agency_name]["periods"][period_key]["sales"] += invoice["amount_ttc"]
+                agency_data[agency_name]["periods"][period_key]["bookings"] += 1
+                agency_data[agency_name]["totals"]["sales"] += invoice["amount_ttc"]
+                agency_data[agency_name]["totals"]["bookings"] += 1
             
-            data = list(daily_data.values())
-            # Sort by date
-            data.sort(key=lambda x: x['date'])
+            # Convert to list and sort periods within each agency
+            result_data = []
+            grand_totals = {"sales": 0, "bookings": 0}
             
-            totals = {
-                "sales": sum(item["sales"] for item in data),
-                "bookings": sum(item["bookings"] for item in data),
-                "profit": sum(item["profit"] for item in data)
+            for agency_name, agency_info in agency_data.items():
+                # Sort periods within agency
+                periods_list = list(agency_info["periods"].values())
+                periods_list.sort(key=lambda x: x['period'])
+                
+                agency_info["periods"] = periods_list
+                result_data.append(agency_info)
+                
+                # Add to grand totals
+                grand_totals["sales"] += agency_info["totals"]["sales"]
+                grand_totals["bookings"] += agency_info["totals"]["bookings"]
+            
+            # Sort agencies by name
+            result_data.sort(key=lambda x: x['agency_name'])
+            
+            return {
+                "title": f"تقرير المبيعات {('الشهري' if report_type == 'monthly' else 'اليومي')} - حسب الوكالة",
+                "period": f"من {start_date} إلى {end_date}",
+                "report_type": report_type,
+                "group_by_agency": True,
+                "agencies_data": result_data,
+                "grand_totals": grand_totals,
+                "invoice_count": len(invoices)
             }
         
-        return {
-            "title": f"تقرير المبيعات {('الشهري' if report_type == 'monthly' else 'اليومي')}",
-            "period": f"من {start_date} إلى {end_date}",
-            "data": data,
-            "totals": totals,
-            "invoice_count": len(invoices)
-        }
+        else:
+            # Traditional grouping without agency breakdown
+            if report_type == "monthly":
+                monthly_data = {}
+                for invoice in invoices:
+                    month_key = invoice["created_at"].strftime("%Y-%m")
+                    if month_key not in monthly_data:
+                        monthly_data[month_key] = {
+                            "month": month_key,
+                            "sales": 0,
+                            "bookings": 0
+                        }
+                    monthly_data[month_key]["sales"] += invoice["amount_ttc"]
+                    monthly_data[month_key]["bookings"] += 1
+                
+                data = list(monthly_data.values())
+                data.sort(key=lambda x: x['month'])
+                
+                totals = {
+                    "sales": sum(item["sales"] for item in data),
+                    "bookings": sum(item["bookings"] for item in data)
+                }
+            else:
+                daily_data = {}
+                for invoice in invoices:
+                    date_key = invoice["created_at"].strftime("%Y-%m-%d")
+                    if date_key not in daily_data:
+                        daily_data[date_key] = {
+                            "date": date_key,
+                            "sales": 0,
+                            "bookings": 0
+                        }
+                    daily_data[date_key]["sales"] += invoice["amount_ttc"]
+                    daily_data[date_key]["bookings"] += 1
+                
+                data = list(daily_data.values())
+                data.sort(key=lambda x: x['date'])
+                
+                totals = {
+                    "sales": sum(item["sales"] for item in data),
+                    "bookings": sum(item["bookings"] for item in data)
+                }
+            
+            return {
+                "title": f"تقرير المبيعات {('الشهري' if report_type == 'monthly' else 'اليومي')} - مجمع",
+                "period": f"من {start_date} إلى {end_date}",
+                "report_type": report_type,
+                "group_by_agency": False,
+                "data": data,
+                "totals": totals,
+                "invoice_count": len(invoices)
+            }
         
     except Exception as e:
         print(f"Sales report error: {str(e)}")
