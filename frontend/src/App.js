@@ -650,8 +650,9 @@ const Login = () => {
                 type="submit"
                 disabled={loading}
                 className="w-full h-9 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md font-medium disabled:opacity-50"
+                data-testid="regular-login-button"
               >
-                {loading ? 'جاري تسجيل الدخول...' : t('login')}
+                {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول العادي'}
               </button>
             </form>
           </div>
