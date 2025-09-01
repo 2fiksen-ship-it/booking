@@ -427,6 +427,18 @@ test_plan:
         agent: "testing"
         comment: "✅ ENHANCED GENERAL ACCOUNTANT FUNCTIONALITY TESTED AND VERIFIED: Comprehensive testing completed as requested in review! ✅ General Accountant Login (generalaccountant@sanhaja.com/acc123) working perfectly. ✅ Cross-Agency Access: GET /api/clients (64 clients from 6 agencies), GET /api/suppliers (32 suppliers from 6 agencies), GET /api/bookings (123 bookings from 6 agencies), GET /api/invoices (93 invoices from 6 agencies), GET /api/payments (33 payments from 6 agencies). ✅ Agency Filtering: GET /api/clients?agency_id=SPECIFIC works correctly (10 clients for تلمسان), GET /api/dashboard?agency_id=SPECIFIC works (filtered stats: 8 unpaid invoices, 103,500 DZD cashbox). ✅ Cross-Agency Statistics: Consolidated dashboard shows data from ALL agencies (48 unpaid invoices, 625,500 DZD total cashbox). ✅ Agency Staff Isolation Verified: staff1@tlemcen.sanhaja.com only sees their agency data (10 clients), agency filtering properly ignored for staff. ✅ All 6 agencies accessible: تلمسان، مغنية، ندرومة، وهران، الرمشي، سيدي بلعباس. FINAL RESULTS: 19/19 tests passed (100% success rate). General Accountant now has complete cross-agency access with filtering capabilities while maintaining agency staff isolation. ALL REVIEW REQUEST REQUIREMENTS SATISFIED!"
 
+  - task: "NEW ENHANCED Reports System with Agency Breakdown"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ COMPREHENSIVE TESTING COMPLETED: NEW ENHANCED Reports System with Agency Breakdown functionality tested and verified! Enhanced Sales Reports: ✅ Daily sales report with agency breakdown (6 agencies: وكالة صنهاجة الرمشي, تلمسان, سيدي بلعباس, مغنية, ندرومة, وهران) showing 670,800 DZD total sales with 63 bookings. ✅ Monthly sales report with agency breakdown working. ✅ Traditional format (group_by_agency=false) working correctly. ✅ Specific agency filtering working. Enhanced Aging Reports: ✅ Aging report with agency breakdown showing 48 invoices totaling 259,200 DZD across all 6 agencies. ✅ Traditional aging format working. ✅ Specific agency filtering working. New Summary Reports: ✅ Summary report with agency breakdown showing sales, bookings, invoices without profit calculations (670,800 DZD sales, 123 bookings, 63 invoices). ✅ Traditional summary format working. ✅ Specific agency filtering working. Cross-User Testing: ✅ Super Admin (superadmin@sanhaja.com) can access all enhanced reports with full agency breakdown. ✅ General Accountant (generalaccountant@sanhaja.com) can access all enhanced reports with agency breakdown. ✅ Agency Staff isolation verified - sees only their agency data. Data Verification: ✅ Arabic agency names confirmed (6 agencies with Arabic names). ✅ Totals calculation accuracy verified (manual calculation matches grand totals). ✅ Date range filtering works with agency breakdown. ALL REVIEW REQUEST REQUIREMENTS SATISFIED! Enhanced reports system shows each agency separately with totals, plus grand totals across all agencies. No more profit calculations, just sales and booking counts as requested."
+
 agent_communication:
   - agent: "main"
     message: "Starting systematic implementation of remaining modules. Need to test backend first, then address login issues, then implement missing backend endpoints for bookings, invoices, payments, and reports."
