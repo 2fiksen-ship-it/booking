@@ -262,8 +262,14 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     email: str
+    password_hash: str
     role: UserRole
     agency_id: str
+    # NEW: Digital signature for printing
+    signature_url: Optional[str] = None  # URL to user's digital signature
+    job_title: Optional[str] = None  # المسمى الوظيفي
+    is_active: bool = True
+    google_id: Optional[str] = None  # For Google OAuth integration
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Client(BaseModel):
