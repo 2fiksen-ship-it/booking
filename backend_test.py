@@ -3108,6 +3108,226 @@ class SanhajaAPITester:
         
         return results
 
+    def test_variable_pricing_services_creation(self):
+        """Test Variable Pricing Services Creation as requested in review"""
+        print(f"\n💰 Testing Variable Pricing Services Creation (Review Request)...")
+        print(f"   Creating 'الخدمات المتغيرة' (Variable Services) category with flexible pricing")
+        
+        results = {}
+        
+        # Step 1: Super Admin Login with exact credentials from review request
+        print(f"\n   1. Super Admin Login (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with variable services creation")
+            return results
+            
+        print(f"   ✅ Super Admin authenticated successfully")
+        print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+        
+        # Step 2: Create Variable Pricing Services as specified in review request
+        print(f"\n   2. Creating Variable Pricing Services...")
+        
+        variable_services = [
+            {
+                "name": "خدمات متنوعة",
+                "description": "خدمات متنوعة بأسعار متغيرة يحددها الموظف",
+                "service_type": "أخرى",
+                "category": "أخرى",
+                "base_price": 0.0,
+                "min_price": 0.0,
+                "is_fixed_price": False,
+                "is_active": True
+            },
+            {
+                "name": "خدمات إضافية",
+                "description": "خدمات إضافية بأسعار متغيرة يحددها الموظف",
+                "service_type": "أخرى",
+                "category": "أخرى",
+                "base_price": 0.0,
+                "min_price": 0.0,
+                "is_fixed_price": False,
+                "is_active": True
+            },
+            {
+                "name": "مبيعات غير محددة",
+                "description": "مبيعات غير محددة بأسعار متغيرة يحددها الموظف",
+                "service_type": "أخرى",
+                "category": "أخرى",
+                "base_price": 0.0,
+                "min_price": 0.0,
+                "is_fixed_price": False,
+                "is_active": True
+            },
+            {
+                "name": "خدمات خاصة",
+                "description": "خدمات خاصة بأسعار متغيرة يحددها الموظف",
+                "service_type": "أخرى",
+                "category": "أخرى",
+                "base_price": 0.0,
+                "min_price": 0.0,
+                "is_fixed_price": False,
+                "is_active": True
+            },
+            {
+                "name": "أعمال متفرقة",
+                "description": "أعمال متفرقة بأسعار متغيرة يحددها الموظف",
+                "service_type": "أخرى",
+                "category": "أخرى",
+                "base_price": 0.0,
+                "min_price": 0.0,
+                "is_fixed_price": False,
+                "is_active": True
+            }
+        ]
+        
+        created_services = []
+        
+        for i, service_data in enumerate(variable_services, 1):
+            print(f"\n   2.{i}. Creating Service: {service_data['name']}...")
+            
+            success, response = self.run_test(
+                f"Create Variable Service - {service_data['name']}",
+                "POST",
+                "services",
+                200,
+                data=service_data
+            )
+            
+            results[f'create_service_{i}'] = success
+            
+            if success:
+                print(f"   ✅ Service '{service_data['name']}' created successfully")
+                print(f"   Service ID: {response.get('id', 'N/A')}")
+                print(f"   Base Price: {response.get('base_price', 0)} DZD")
+                print(f"   Min Price: {response.get('min_price', 0)} DZD")
+                print(f"   Fixed Price: {response.get('is_fixed_price', True)}")
+                print(f"   Category: {response.get('category', 'N/A')}")
+                created_services.append(response)
+            else:
+                print(f"   ❌ Failed to create service '{service_data['name']}'")
+        
+        # Step 3: Verify Services Created and Available
+        print(f"\n   3. Verifying Variable Pricing Services Created...")
+        
+        success, all_services = self.run_test(
+            "Get All Services",
+            "GET",
+            "services",
+            200
+        )
+        results['get_all_services'] = success
+        
+        if success:
+            print(f"   ✅ Services endpoint accessible")
+            print(f"   Total services in system: {len(all_services)}")
+            
+            # Filter variable pricing services (is_fixed_price = false)
+            variable_services_found = [s for s in all_services if not s.get('is_fixed_price', True)]
+            print(f"   Variable pricing services found: {len(variable_services_found)}")
+            
+            # Check if our created services are present
+            created_service_names = [s['name'] for s in variable_services]
+            found_service_names = [s['name'] for s in variable_services_found]
+            
+            matching_services = [name for name in created_service_names if name in found_service_names]
+            print(f"   Created services verified: {len(matching_services)}/5")
+            
+            for service in variable_services_found:
+                print(f"   - {service['name']} (Base: {service.get('base_price', 0)} DZD, Min: {service.get('min_price', 0)} DZD, Fixed: {service.get('is_fixed_price', True)})")
+            
+            results['variable_services_verified'] = len(matching_services) == 5
+            
+            if len(matching_services) == 5:
+                print(f"   ✅ All 5 variable pricing services successfully created and verified")
+            else:
+                print(f"   ⚠️  Only {len(matching_services)}/5 variable pricing services found")
+        
+        # Step 4: Test Service Filtering by Category
+        print(f"\n   4. Testing Service Filtering by Category 'أخرى'...")
+        
+        success, filtered_services = self.run_test(
+            "Get Services - Filter by Category 'أخرى'",
+            "GET",
+            "services?category=أخرى",
+            200
+        )
+        results['filter_by_category'] = success
+        
+        if success:
+            print(f"   ✅ Category filtering works")
+            print(f"   Services in 'أخرى' category: {len(filtered_services)}")
+            
+            # Check if our variable services are in the filtered results
+            filtered_variable_services = [s for s in filtered_services if not s.get('is_fixed_price', True)]
+            print(f"   Variable pricing services in 'أخرى' category: {len(filtered_variable_services)}")
+            
+            for service in filtered_variable_services:
+                print(f"   - {service['name']} (Category: {service.get('category', 'N/A')})")
+        
+        # Step 5: Test Service Filtering by is_fixed_price
+        print(f"\n   5. Testing Service Filtering by is_fixed_price=false...")
+        
+        success, variable_only_services = self.run_test(
+            "Get Services - Filter by is_fixed_price=false",
+            "GET",
+            "services?is_fixed_price=false",
+            200
+        )
+        results['filter_by_variable_pricing'] = success
+        
+        if success:
+            print(f"   ✅ Variable pricing filtering works")
+            print(f"   Variable pricing services: {len(variable_only_services)}")
+            
+            for service in variable_only_services:
+                print(f"   - {service['name']} (Fixed Price: {service.get('is_fixed_price', True)})")
+        
+        # Step 6: Test Service Availability for Operations
+        print(f"\n   6. Testing Service Availability for Daily Operations...")
+        
+        success, daily_operations = self.run_test(
+            "Get Daily Operations",
+            "GET",
+            "daily-operations",
+            200
+        )
+        results['daily_operations_accessible'] = success
+        
+        if success:
+            print(f"   ✅ Daily operations endpoint accessible")
+            print(f"   Existing daily operations: {len(daily_operations)}")
+            print(f"   Variable pricing services are now available for operations creation")
+        
+        # Step 7: Verify Service Types and Categories Available
+        print(f"\n   7. Verifying Service Types and Categories...")
+        
+        if all_services:
+            # Get unique service types
+            service_types = set()
+            categories = set()
+            
+            for service in all_services:
+                if 'service_type' in service:
+                    service_types.add(service['service_type'])
+                if 'category' in service:
+                    categories.add(service['category'])
+            
+            print(f"   Available service types: {len(service_types)}")
+            for stype in sorted(service_types):
+                print(f"   - {stype}")
+            
+            print(f"   Available categories: {len(categories)}")
+            for category in sorted(categories):
+                print(f"   - {category}")
+            
+            results['service_types_available'] = len(service_types) >= 4
+            results['categories_available'] = len(categories) >= 4
+        
+        return results
+
 def main():
     print("🚀 Starting Sanhaja Travel Agencies Backend API Testing...")
     print("نظام محاسبة وكالات صنهاجة للسفر - اختبار واجهات برمجة التطبيقات")
