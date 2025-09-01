@@ -635,7 +635,7 @@ const Layout = ({ children }) => {
       ];
     }
 
-    // General Accountant sees financial and reporting functions
+    // General Accountant sees all operations and financial functions with full cross-agency access
     if (user?.role === 'general_accountant') {
       return [
         ...baseItems,
@@ -648,22 +648,23 @@ const Layout = ({ children }) => {
             { id: 'reports', label: t('reports'), icon: BarChart3 }
           ]
         },
-        // Operations View Category
+        // Full Operations Management (All Agencies)
         {
           category: 'operations',
-          label: t('operationsManagement'),
+          label: t('operationsManagement') + ' 🌐',
           items: [
-            { id: 'clients', label: t('clients'), icon: Users },
-            { id: 'suppliers', label: t('suppliers'), icon: Building2 }
+            { id: 'clients', label: t('clients') + ' (جميع الوكالات)', icon: Users },
+            { id: 'suppliers', label: t('suppliers') + ' (جميع الوكالات)', icon: Building2 },
+            { id: 'bookings', label: t('bookings') + ' (جميع الوكالات)', icon: Package }
           ]
         },
-        // Financial Management Category
+        // Full Financial Management (All Agencies)
         {
           category: 'financial',
-          label: t('financialManagement'),
+          label: t('financialManagement') + ' 🌐',
           items: [
-            { id: 'invoices', label: t('invoices'), icon: FileText },
-            { id: 'payments', label: t('payments'), icon: CreditCard }
+            { id: 'invoices', label: t('invoices') + ' (جميع الوكالات)', icon: FileText },
+            { id: 'payments', label: t('payments') + ' (جميع الوكالات)', icon: CreditCard }
           ]
         }
       ];
