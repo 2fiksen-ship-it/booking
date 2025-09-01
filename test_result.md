@@ -380,7 +380,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Google Authentication System"
+    - "Enhanced General Accountant Cross-Agency Access and Filtering"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
