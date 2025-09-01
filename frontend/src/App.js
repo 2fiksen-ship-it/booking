@@ -421,6 +421,7 @@ const AuthProvider = ({ children }) => {
     try {
       console.log('=== LOGIN FUNCTION START ===');
       console.log('Login attempt with email:', email);
+      console.log('Password provided:', password ? 'YES' : 'NO');
       console.log('API endpoint:', `${API}/auth/login`);
       
       const response = await axios.post(`${API}/auth/login`, { email, password });
@@ -428,11 +429,18 @@ const AuthProvider = ({ children }) => {
       
       const { access_token, user: userData } = response.data;
       
+      if (!access_token) {
+        console.error('No access token in response!');
+        return { success: false, error: 'No access token received' };
+      }
+      
+      console.log('Setting token in localStorage...');
       localStorage.setItem('token', access_token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       setUser(userData);
       
       console.log('Login successful, user set:', userData);
+      console.log('Token saved:', access_token.substring(0, 20) + '...');
       console.log('=== LOGIN FUNCTION SUCCESS ===');
       return { success: true };
     } catch (error) {
