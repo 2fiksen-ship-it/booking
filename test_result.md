@@ -432,9 +432,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Frontend Integration - Services Management Interface"
-    - "Frontend Integration - Daily Operations Interface"
-    - "Frontend Integration - Daily Operations Reports Interface"
+    - "PDF Printing Endpoints for Receipts and Reports"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
