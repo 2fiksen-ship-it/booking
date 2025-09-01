@@ -1025,17 +1025,15 @@ async def create_supplier(supplier_data: SupplierCreate, current_user: User = De
     return supplier
 
 @api_router.get("/suppliers", response_model=List[Supplier])
-async def get_suppliers(current_user: User = Depends(get_current_user)):
-    if current_user.role == UserRole.SUPER_ADMIN:
-        # Super admin sees all suppliers
-        suppliers = await db.suppliers.find().to_list(1000)
-    elif current_user.role == UserRole.GENERAL_ACCOUNTANT:
-        # General accountant sees all suppliers
-        suppliers = await db.suppliers.find().to_list(1000)
+async def get_suppliers(agency_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    # Super Admin and General Accountant see all suppliers, can filter by agency
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        query_filter = {"agency_id": agency_id} if agency_id else {}
     else:
-        # Agency staff see only their agency's suppliers
-        suppliers = await db.suppliers.find({"agency_id": current_user.agency_id}).to_list(1000)
+        # Agency staff only see their own agency suppliers
+        query_filter = {"agency_id": current_user.agency_id}
     
+    suppliers = await db.suppliers.find(query_filter).to_list(1000)
     return [Supplier(**supplier) for supplier in suppliers]
 
 @api_router.put("/suppliers/{supplier_id}", response_model=Supplier)
