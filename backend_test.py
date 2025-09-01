@@ -2854,10 +2854,18 @@ def main():
     
     tester = SanhajaAPITester()
     
-    # NEW ENHANCED REPORTS SYSTEM TESTING (PRIMARY FOCUS from Review Request)
+    # NEW SERVICES MANAGEMENT AND DAILY OPERATIONS SYSTEM TESTING (PRIMARY FOCUS from Current Review Request)
     print("\n" + "="*80)
-    print("📊 NEW ENHANCED REPORTS SYSTEM WITH AGENCY BREAKDOWN TESTING - PRIMARY FOCUS")
-    print("اختبار نظام التقارير المحسن الجديد مع تفصيل الوكالات - المحور الأساسي")
+    print("🛠️ SERVICES MANAGEMENT AND DAILY OPERATIONS SYSTEM TESTING - PRIMARY FOCUS")
+    print("اختبار نظام إدارة الخدمات والعمليات اليومية - المحور الأساسي")
+    print("="*80)
+    
+    services_operations_results = tester.test_services_and_daily_operations_comprehensive()
+    
+    # NEW ENHANCED REPORTS SYSTEM TESTING (SECONDARY FOCUS from Previous Review Request)
+    print("\n" + "="*80)
+    print("📊 NEW ENHANCED REPORTS SYSTEM WITH AGENCY BREAKDOWN TESTING - SECONDARY FOCUS")
+    print("اختبار نظام التقارير المحسن الجديد مع تفصيل الوكالات - المحور الثانوي")
     print("="*80)
     
     enhanced_reports_results = tester.test_enhanced_reports_system_with_agency_breakdown()
