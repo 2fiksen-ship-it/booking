@@ -1638,10 +1638,18 @@ def main():
     
     tester = SanhajaAPITester()
     
-    # GOOGLE AUTHENTICATION TESTING (Primary Focus from Review Request)
+    # ENHANCED GENERAL ACCOUNTANT TESTING (Primary Focus from Review Request)
     print("\n" + "="*80)
-    print("🔐 GOOGLE AUTHENTICATION SYSTEM TESTING - PRIMARY FOCUS")
-    print("اختبار نظام المصادقة عبر جوجل - المحور الأساسي")
+    print("💼 ENHANCED GENERAL ACCOUNTANT FUNCTIONALITY TESTING - PRIMARY FOCUS")
+    print("اختبار وظائف المحاسب العام المحسنة - المحور الأساسي")
+    print("="*80)
+    
+    general_accountant_results = tester.test_general_accountant_enhanced_functionality()
+    
+    # GOOGLE AUTHENTICATION TESTING (Secondary Focus from Review Request)
+    print("\n" + "="*80)
+    print("🔐 GOOGLE AUTHENTICATION SYSTEM TESTING - SECONDARY FOCUS")
+    print("اختبار نظام المصادقة عبر جوجل - المحور الثانوي")
     print("="*80)
     
     google_auth_results = tester.test_google_authentication_system()
