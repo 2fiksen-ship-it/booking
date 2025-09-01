@@ -415,6 +415,18 @@ test_plan:
         agent: "testing"
         comment: "✅ FIXED AND VERIFIED: All bug fixes working perfectly! Sales Reports: Fixed date parsing works with both simple (YYYY-MM-DD) and ISO datetime formats (570,800 DZD total sales, 62 bookings). Daily Reports Management: GET /api/daily-reports endpoint fixed (ObjectId serialization issue resolved), POST with proper date handling working, duplicate report handling works (updates instead of error). Cross-Agency Data: Super Admin sees data from all 6 agencies. Date Format Validation: Flexible parsing works with 4/4 valid formats, invalid formats properly rejected with 400 status. Final Results: 22/25 tests passed (88.0% success rate). All previously failing tests now pass with improved date parsing and daily reports fixes."
 
+  - task: "Enhanced General Accountant Cross-Agency Access and Filtering"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ ENHANCED GENERAL ACCOUNTANT FUNCTIONALITY TESTED AND VERIFIED: Comprehensive testing completed as requested in review! ✅ General Accountant Login (generalaccountant@sanhaja.com/acc123) working perfectly. ✅ Cross-Agency Access: GET /api/clients (64 clients from 6 agencies), GET /api/suppliers (32 suppliers from 6 agencies), GET /api/bookings (123 bookings from 6 agencies), GET /api/invoices (93 invoices from 6 agencies), GET /api/payments (33 payments from 6 agencies). ✅ Agency Filtering: GET /api/clients?agency_id=SPECIFIC works correctly (10 clients for تلمسان), GET /api/dashboard?agency_id=SPECIFIC works (filtered stats: 8 unpaid invoices, 103,500 DZD cashbox). ✅ Cross-Agency Statistics: Consolidated dashboard shows data from ALL agencies (48 unpaid invoices, 625,500 DZD total cashbox). ✅ Agency Staff Isolation Verified: staff1@tlemcen.sanhaja.com only sees their agency data (10 clients), agency filtering properly ignored for staff. ✅ All 6 agencies accessible: تلمسان، مغنية، ندرومة، وهران، الرمشي، سيدي بلعباس. FINAL RESULTS: 19/19 tests passed (100% success rate). General Accountant now has complete cross-agency access with filtering capabilities while maintaining agency staff isolation. ALL REVIEW REQUEST REQUIREMENTS SATISFIED!"
+
 agent_communication:
   - agent: "main"
     message: "Starting systematic implementation of remaining modules. Need to test backend first, then address login issues, then implement missing backend endpoints for bookings, invoices, payments, and reports."
