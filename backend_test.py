@@ -2934,6 +2934,180 @@ class SanhajaAPITester:
         
         return all_results
 
+    def test_create_sample_services_for_daily_operations(self):
+        """Create sample services for Daily Operations testing as requested in review"""
+        print(f"\n🏪 Creating Sample Services for Daily Operations (Review Request)...")
+        print(f"   Creating 5 different services to populate the services dropdown in Daily Operations")
+        
+        results = {}
+        
+        # Step 1: Login as Super Admin (exact credentials from review request)
+        print(f"\n   1. Super Admin Login (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot create services")
+            return results
+            
+        print(f"   ✅ Super Admin authenticated successfully")
+        print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+        
+        # Step 2: Create Sample Services as specified in review request
+        print(f"\n   2. Creating 5 Sample Services...")
+        
+        sample_services = [
+            {
+                "name": "عمرة اقتصادية",
+                "description": "عمرة اقتصادية لمدة 10 أيام",
+                "service_type": "عمرة",
+                "category": "خدمات دينية",
+                "base_price": 150000.0,
+                "min_price": 140000.0,
+                "is_fixed_price": False,
+                "is_active": True
+            },
+            {
+                "name": "تذكرة طيران داخلي",
+                "description": "تذكرة طيران داخلي ذهاب وإياب",
+                "service_type": "تذكرة طيران",
+                "category": "خدمات سفر",
+                "base_price": 25000.0,
+                "min_price": 20000.0,
+                "is_fixed_price": False,
+                "is_active": True
+            },
+            {
+                "name": "حجز فندق 4 نجوم",
+                "description": "حجز فندق 4 نجوم لليلة واحدة",
+                "service_type": "حجز فندق",
+                "category": "خدمات إقامة",
+                "base_price": 80000.0,
+                "min_price": 75000.0,
+                "is_fixed_price": False,
+                "is_active": True
+            },
+            {
+                "name": "خدمة تأشيرة",
+                "description": "خدمة استخراج تأشيرة سفر",
+                "service_type": "خدمة تأشيرة",
+                "category": "خدمات وثائق",
+                "base_price": 15000.0,
+                "min_price": 12000.0,
+                "is_fixed_price": False,
+                "is_active": True
+            },
+            {
+                "name": "خدمة نقل",
+                "description": "خدمة نقل من وإلى المطار",
+                "service_type": "نقل",
+                "category": "خدمات سفر",
+                "base_price": 5000.0,
+                "min_price": 4000.0,
+                "is_fixed_price": False,
+                "is_active": True
+            }
+        ]
+        
+        created_services = []
+        
+        for i, service_data in enumerate(sample_services, 1):
+            print(f"\n   2.{i}. Creating Service: {service_data['name']} ({service_data['base_price']} DZD)...")
+            
+            success, response = self.run_test(
+                f"Create Service - {service_data['name']}",
+                "POST",
+                "services",
+                200,
+                data=service_data
+            )
+            
+            results[f'create_service_{i}'] = success
+            
+            if success:
+                print(f"   ✅ Service created successfully")
+                print(f"   Service ID: {response.get('id', 'Unknown')}")
+                print(f"   Type: {service_data['service_type']}")
+                print(f"   Category: {service_data['category']}")
+                print(f"   Price: {service_data['base_price']} DZD")
+                created_services.append(response)
+            else:
+                print(f"   ❌ Failed to create service: {service_data['name']}")
+        
+        # Step 3: Verify Services Created - GET /api/services
+        print(f"\n   3. Verifying Services Created (GET /api/services)...")
+        
+        success, services_list = self.run_test(
+            "Get All Services",
+            "GET",
+            "services",
+            200
+        )
+        results['verify_services_created'] = success
+        
+        if success:
+            print(f"   ✅ Services endpoint accessible")
+            print(f"   Total services in system: {len(services_list)}")
+            
+            # Check if our created services are in the list
+            created_service_names = [s['name'] for s in sample_services]
+            found_services = []
+            
+            for service in services_list:
+                if service.get('name') in created_service_names:
+                    found_services.append(service)
+            
+            print(f"   Sample services found: {len(found_services)}/5")
+            
+            for service in found_services:
+                print(f"   ✅ {service.get('name')} - {service.get('base_price')} DZD - Active: {service.get('is_active')}")
+            
+            results['all_sample_services_found'] = len(found_services) == 5
+            
+            if len(found_services) == 5:
+                print(f"   ✅ All 5 sample services successfully created and verified")
+            else:
+                print(f"   ⚠️  Only {len(found_services)} out of 5 sample services found")
+        
+        # Step 4: Test Services in Daily Operations Context
+        print(f"\n   4. Testing Services in Daily Operations Context...")
+        
+        # Try to access daily operations endpoint to see if services are available
+        success, daily_operations = self.run_test(
+            "Get Daily Operations",
+            "GET",
+            "daily-operations",
+            200
+        )
+        results['daily_operations_accessible'] = success
+        
+        if success:
+            print(f"   ✅ Daily Operations endpoint accessible")
+            print(f"   Current daily operations: {len(daily_operations)}")
+            print(f"   Services are now available for Daily Operations dropdown")
+        
+        # Step 5: Test Service Categories for UI Dropdown
+        print(f"\n   5. Testing Service Categories for UI Dropdown...")
+        
+        if services_list:
+            categories = set()
+            service_types = set()
+            
+            for service in services_list:
+                if service.get('category'):
+                    categories.add(service['category'])
+                if service.get('service_type'):
+                    service_types.add(service['service_type'])
+            
+            print(f"   Available Categories: {list(categories)}")
+            print(f"   Available Service Types: {list(service_types)}")
+            print(f"   ✅ Services provide good variety for dropdown options")
+            
+            results['service_categories_available'] = len(categories) > 0
+            results['service_types_available'] = len(service_types) > 0
+        
+        return results
+
 def main():
     print("🚀 Starting Sanhaja Travel Agencies Backend API Testing...")
     print("نظام محاسبة وكالات صنهاجة للسفر - اختبار واجهات برمجة التطبيقات")
