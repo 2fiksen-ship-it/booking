@@ -419,7 +419,10 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Frontend Integration - Services Management Interface"
+    - "Frontend Integration - Daily Operations Interface"
+    - "Frontend Integration - Daily Operations Reports Interface"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
