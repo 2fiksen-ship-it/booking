@@ -2022,6 +2022,609 @@ async def reject_daily_report(
     
     return {"message": "Report rejected successfully"}
 
+# Services Management Routes
+@api_router.post("/services", response_model=Service)
+async def create_service(service_data: ServiceCreate, current_user: User = Depends(get_current_user)):
+    """Create a new service - General Manager and General Accountant only"""
+    require_general_accountant_or_above(current_user)
+    
+    service_dict = service_data.dict()
+    service_dict["created_by"] = current_user.id
+    
+    # Super admin can assign to specific agency, others to their own
+    if current_user.role == UserRole.SUPER_ADMIN:
+        # Keep agency_id as provided (can be None for global services)
+        pass
+    else:
+        # General accountant - assign to their agency
+        service_dict["agency_id"] = current_user.agency_id
+    
+    service = Service(**service_dict)
+    await db.services.insert_one(service.dict())
+    return service
+
+@api_router.get("/services", response_model=List[Service])
+async def get_services(
+    agency_id: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    service_type: Optional[ServiceType] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get services list with filters"""
+    query_filter = {}
+    
+    # Role-based access
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        if agency_id:
+            query_filter["agency_id"] = agency_id
+        else:
+            # Show global services and agency-specific services
+            query_filter["$or"] = [
+                {"agency_id": None},  # Global services
+                {"agency_id": current_user.agency_id}  # Their agency services
+            ]
+    else:
+        # Agency staff see global services and their agency services
+        query_filter["$or"] = [
+            {"agency_id": None},  # Global services
+            {"agency_id": current_user.agency_id}  # Their agency services
+        ]
+    
+    # Additional filters
+    if is_active is not None:
+        query_filter["is_active"] = is_active
+    if service_type:
+        query_filter["service_type"] = service_type
+    
+    services = await db.services.find(query_filter).to_list(1000)
+    return [Service(**service) for service in services]
+
+@api_router.put("/services/{service_id}", response_model=Service)
+async def update_service(
+    service_id: str, 
+    service_data: ServiceUpdate, 
+    change_reason: str = "تحديث السعر",
+    current_user: User = Depends(get_current_user)
+):
+    """Update service - General Manager and General Accountant only"""
+    require_general_accountant_or_above(current_user)
+    
+    existing_service = await db.services.find_one({"id": service_id})
+    if not existing_service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    # Check permissions for agency-specific services
+    if existing_service["agency_id"] and current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        if existing_service["agency_id"] != current_user.agency_id:
+            raise HTTPException(status_code=403, detail="Cannot modify services of other agencies")
+    
+    update_data = service_data.dict(exclude_unset=True)
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    
+    # If price is being updated, record in history
+    if "base_price" in update_data and update_data["base_price"] != existing_service["base_price"]:
+        price_history = ServicePriceHistory(
+            service_id=service_id,
+            old_price=existing_service["base_price"],
+            new_price=update_data["base_price"],
+            change_reason=change_reason,
+            changed_by=current_user.id
+        )
+        await db.service_price_history.insert_one(price_history.dict())
+    
+    await db.services.update_one({"id": service_id}, {"$set": update_data})
+    
+    updated_service = await db.services.find_one({"id": service_id})
+    return Service(**updated_service)
+
+@api_router.delete("/services/{service_id}")
+async def delete_service(service_id: str, current_user: User = Depends(get_current_user)):
+    """Delete service - General Manager and General Accountant only"""
+    require_general_accountant_or_above(current_user)
+    
+    existing_service = await db.services.find_one({"id": service_id})
+    if not existing_service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    # Check permissions for agency-specific services
+    if existing_service["agency_id"] and current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        if existing_service["agency_id"] != current_user.agency_id:
+            raise HTTPException(status_code=403, detail="Cannot delete services of other agencies")
+    
+    # Check if service is used in operations
+    operations_count = await db.daily_operations.count_documents({"service_id": service_id})
+    if operations_count > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete service. It is used in {operations_count} operations."
+        )
+    
+    await db.services.delete_one({"id": service_id})
+    return {"message": "Service deleted successfully"}
+
+# Daily Operations Routes
+@api_router.post("/daily-operations", response_model=DailyOperation)
+async def create_daily_operation(operation_data: DailyOperationCreate, current_user: User = Depends(get_current_user)):
+    """Create daily operation receipt"""
+    
+    # Get service details
+    service = await db.services.find_one({"id": operation_data.service_id})
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    # Check if service is active
+    if not service["is_active"]:
+        raise HTTPException(status_code=400, detail="Service is not active")
+    
+    # Get client details
+    client = await db.clients.find_one({"id": operation_data.client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Check client belongs to same agency or user has cross-agency access
+    if current_user.role == UserRole.AGENCY_STAFF:
+        if client["agency_id"] != current_user.agency_id:
+            raise HTTPException(status_code=403, detail="Client not accessible")
+    
+    # Generate operation number
+    today = datetime.now(timezone.utc).date()
+    today_operations = await db.daily_operations.count_documents({
+        "agency_id": current_user.agency_id,
+        "date": {
+            "$gte": datetime.combine(today, datetime.min.time()),
+            "$lt": datetime.combine(today + timedelta(days=1), datetime.min.time())
+        }
+    })
+    operation_no = f"OP-{today.strftime('%Y%m%d')}-{today_operations + 1:04d}"
+    
+    # Use provided price or service base price
+    base_price = operation_data.base_price if operation_data.base_price is not None else service["base_price"]
+    
+    # Validate discount
+    discount_amount = operation_data.discount_amount or 0.0
+    if discount_amount > 0:
+        if service["is_fixed_price"] and service.get("min_price"):
+            final_price = base_price - discount_amount
+            if final_price < service["min_price"]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Final price ({final_price}) cannot be less than minimum price ({service['min_price']})"
+                )
+    
+    final_price = base_price - discount_amount
+    
+    operation_dict = operation_data.dict()
+    operation_dict.update({
+        "operation_no": operation_no,
+        "date": datetime.now(timezone.utc),
+        "service_name": service["name"],
+        "base_price": base_price,
+        "final_price": final_price,
+        "agency_id": current_user.agency_id,
+        "created_by": current_user.id,
+        "status": OperationStatus.DRAFT if discount_amount > 0 else OperationStatus.PENDING_APPROVAL
+    })
+    
+    operation = DailyOperation(**operation_dict)
+    await db.daily_operations.insert_one(operation.dict())
+    
+    # If there's a discount, create discount request
+    if discount_amount > 0:
+        discount_request = DiscountRequest(
+            operation_id=operation.id,
+            original_price=base_price,
+            discount_amount=discount_amount,
+            discount_percentage=(discount_amount / base_price) * 100 if base_price > 0 else 0,
+            reason=operation_data.discount_reason or "تخفيض على السعر",
+            requested_by=current_user.id
+        )
+        await db.discount_requests.insert_one(discount_request.dict())
+    
+    return operation
+
+@api_router.get("/daily-operations", response_model=List[DailyOperation])
+async def get_daily_operations(
+    date: Optional[str] = None,
+    agency_id: Optional[str] = None,
+    status: Optional[OperationStatus] = None,
+    client_id: Optional[str] = None,
+    service_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get daily operations with filters"""
+    query_filter = {}
+    
+    # Role-based access
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        if agency_id:
+            query_filter["agency_id"] = agency_id
+        # else: show all agencies
+    else:
+        query_filter["agency_id"] = current_user.agency_id
+    
+    # Date filter
+    if date:
+        try:
+            filter_date = datetime.fromisoformat(date).date()
+            query_filter["date"] = {
+                "$gte": datetime.combine(filter_date, datetime.min.time()),
+                "$lt": datetime.combine(filter_date + timedelta(days=1), datetime.min.time())
+            }
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    
+    # Additional filters
+    if status:
+        query_filter["status"] = status
+    if client_id:
+        query_filter["client_id"] = client_id
+    if service_id:
+        query_filter["service_id"] = service_id
+    
+    operations = await db.daily_operations.find(query_filter).sort("date", -1).to_list(1000)
+    return [DailyOperation(**operation) for operation in operations]
+
+@api_router.put("/daily-operations/{operation_id}/approve")
+async def approve_operation(operation_id: str, current_user: User = Depends(get_current_user)):
+    """Approve daily operation - General Manager and General Accountant only"""
+    require_general_accountant_or_above(current_user)
+    
+    operation = await db.daily_operations.find_one({"id": operation_id})
+    if not operation:
+        raise HTTPException(status_code=404, detail="Operation not found")
+    
+    # Check agency access for General Accountant
+    if current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        if operation["agency_id"] != current_user.agency_id:
+            raise HTTPException(status_code=403, detail="Cannot approve operations of other agencies")
+    
+    # Update operation status
+    await db.daily_operations.update_one(
+        {"id": operation_id},
+        {
+            "$set": {
+                "status": OperationStatus.APPROVED,
+                "approved_by": current_user.id,
+                "approved_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Update discount request status if exists
+    await db.discount_requests.update_one(
+        {"operation_id": operation_id},
+        {
+            "$set": {
+                "status": DiscountStatus.APPROVED,
+                "approved_by": current_user.id,
+                "approved_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {"message": "Operation approved successfully"}
+
+@api_router.put("/daily-operations/{operation_id}/reject")
+async def reject_operation(
+    operation_id: str, 
+    rejection_reason: str = "",
+    current_user: User = Depends(get_current_user)
+):
+    """Reject daily operation - General Manager and General Accountant only"""
+    require_general_accountant_or_above(current_user)
+    
+    operation = await db.daily_operations.find_one({"id": operation_id})
+    if not operation:
+        raise HTTPException(status_code=404, detail="Operation not found")
+    
+    # Check agency access for General Accountant
+    if current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        if operation["agency_id"] != current_user.agency_id:
+            raise HTTPException(status_code=403, detail="Cannot reject operations of other agencies")
+    
+    # Update operation status
+    await db.daily_operations.update_one(
+        {"id": operation_id},
+        {
+            "$set": {
+                "status": OperationStatus.REJECTED,
+                "approved_by": current_user.id,
+                "approved_at": datetime.now(timezone.utc),
+                "rejected_reason": rejection_reason
+            }
+        }
+    )
+    
+    # Update discount request status if exists
+    await db.discount_requests.update_one(
+        {"operation_id": operation_id},
+        {
+            "$set": {
+                "status": DiscountStatus.REJECTED,
+                "approved_by": current_user.id,
+                "approved_at": datetime.now(timezone.utc),
+                "rejection_reason": rejection_reason
+            }
+        }
+    )
+    
+    return {"message": "Operation rejected successfully"}
+
+# Daily Operations Reports Routes
+@api_router.get("/reports/daily-operations")
+async def generate_daily_operations_report(
+    start_date: str,
+    end_date: str,
+    agency_ids: Optional[str] = None,
+    service_type: Optional[ServiceType] = None,
+    status: Optional[OperationStatus] = None,
+    group_by_agency: bool = True,
+    group_by_service: bool = False,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate comprehensive daily operations report"""
+    try:
+        # Parse dates
+        try:
+            if 'T' not in start_date and 'T' not in end_date:
+                start = datetime.fromisoformat(start_date + 'T00:00:00')
+                end = datetime.fromisoformat(end_date + 'T23:59:59')
+            else:
+                start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            try:
+                start = datetime.strptime(start_date[:10], '%Y-%m-%d')
+                end = datetime.strptime(end_date[:10], '%Y-%m-%d')
+                end = end.replace(hour=23, minute=59, second=59)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid date format")
+        
+        # Ensure timezone awareness
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        
+        # Build query filter
+        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+            if agency_ids and agency_ids != "all":
+                selected_agency_ids = [id.strip() for id in agency_ids.split(',')]
+                query_filter = {"agency_id": {"$in": selected_agency_ids}}
+            else:
+                query_filter = {}
+        else:
+            query_filter = {"agency_id": current_user.agency_id}
+            
+        query_filter["date"] = {"$gte": start, "$lte": end}
+        
+        # Additional filters
+        if status:
+            query_filter["status"] = status
+        if service_type:
+            # Get services of the specified type
+            services = await db.services.find({"service_type": service_type}).to_list(1000)
+            service_ids = [service["id"] for service in services]
+            query_filter["service_id"] = {"$in": service_ids}
+        
+        # Get operations
+        operations = await db.daily_operations.find(query_filter).to_list(1000)
+        
+        # Get related data
+        agencies = await db.agencies.find({}).to_list(100)
+        agencies_dict = {agency["id"]: agency for agency in agencies}
+        
+        clients = await db.clients.find({}).to_list(1000)
+        clients_dict = {client["id"]: client["name"] for client in clients}
+        
+        services = await db.services.find({}).to_list(1000)
+        services_dict = {service["id"]: service for service in services}
+        
+        if group_by_agency:
+            # Group by agency
+            agency_data = {}
+            grand_totals = {
+                "operations_count": 0,
+                "total_revenue": 0,
+                "total_discounts": 0,
+                "net_revenue": 0
+            }
+            
+            for operation in operations:
+                agency_id = operation["agency_id"]
+                agency_info = agencies_dict.get(agency_id, {"name": "وكالة غير معروفة", "city": "غير محدد"})
+                agency_name = f"{agency_info['name']} - {agency_info['city']}"
+                
+                if agency_name not in agency_data:
+                    agency_data[agency_name] = {
+                        "agency_id": agency_id,
+                        "agency_name": agency_name,
+                        "services": {} if group_by_service else [],
+                        "totals": {
+                            "operations_count": 0,
+                            "total_revenue": 0,
+                            "total_discounts": 0,
+                            "net_revenue": 0
+                        }
+                    }
+                
+                service_info = services_dict.get(operation["service_id"], {"name": "خدمة محذوفة", "service_type": "غير محدد"})
+                
+                operation_data = {
+                    "operation_no": operation["operation_no"],
+                    "date": operation["date"].strftime("%Y-%m-%d"),
+                    "client_name": clients_dict.get(operation["client_id"], "عميل غير معروف"),
+                    "service_name": operation["service_name"],
+                    "service_type": service_info["service_type"],
+                    "base_price": operation["base_price"],
+                    "discount_amount": operation["discount_amount"],
+                    "final_price": operation["final_price"],
+                    "status": operation["status"],
+                    "notes": operation.get("notes", "")
+                }
+                
+                if group_by_service:
+                    service_name = operation["service_name"]
+                    if service_name not in agency_data[agency_name]["services"]:
+                        agency_data[agency_name]["services"][service_name] = {
+                            "service_name": service_name,
+                            "service_type": service_info["service_type"],
+                            "operations": [],
+                            "totals": {
+                                "operations_count": 0,
+                                "total_revenue": 0,
+                                "total_discounts": 0,
+                                "net_revenue": 0
+                            }
+                        }
+                    
+                    agency_data[agency_name]["services"][service_name]["operations"].append(operation_data)
+                    agency_data[agency_name]["services"][service_name]["totals"]["operations_count"] += 1
+                    agency_data[agency_name]["services"][service_name]["totals"]["total_revenue"] += operation["base_price"]
+                    agency_data[agency_name]["services"][service_name]["totals"]["total_discounts"] += operation["discount_amount"]
+                    agency_data[agency_name]["services"][service_name]["totals"]["net_revenue"] += operation["final_price"]
+                else:
+                    agency_data[agency_name]["services"].append(operation_data)
+                
+                # Update agency totals
+                agency_data[agency_name]["totals"]["operations_count"] += 1
+                agency_data[agency_name]["totals"]["total_revenue"] += operation["base_price"]
+                agency_data[agency_name]["totals"]["total_discounts"] += operation["discount_amount"]
+                agency_data[agency_name]["totals"]["net_revenue"] += operation["final_price"]
+                
+                # Update grand totals
+                grand_totals["operations_count"] += 1
+                grand_totals["total_revenue"] += operation["base_price"]
+                grand_totals["total_discounts"] += operation["discount_amount"]
+                grand_totals["net_revenue"] += operation["final_price"]
+            
+            # Convert services dict to list if grouped by service
+            if group_by_service:
+                for agency_name in agency_data:
+                    services_list = list(agency_data[agency_name]["services"].values())
+                    services_list.sort(key=lambda x: x["service_name"])
+                    agency_data[agency_name]["services"] = services_list
+            
+            result_data = list(agency_data.values())
+            result_data.sort(key=lambda x: x["agency_name"])
+            
+            return {
+                "title": "تقرير العمليات اليومية الشامل - حسب الوكالة",
+                "period": f"من {start_date} إلى {end_date}",
+                "group_by_agency": True,
+                "group_by_service": group_by_service,
+                "agencies_data": result_data,
+                "grand_totals": grand_totals,
+                "filters": {
+                    "service_type": service_type,
+                    "status": status,
+                    "agency_ids": agency_ids
+                }
+            }
+        
+        else:
+            # Simple list without grouping
+            operations_data = []
+            totals = {
+                "operations_count": len(operations),
+                "total_revenue": 0,
+                "total_discounts": 0,
+                "net_revenue": 0
+            }
+            
+            for operation in operations:
+                service_info = services_dict.get(operation["service_id"], {"name": "خدمة محذوفة", "service_type": "غير محدد"})
+                agency_info = agencies_dict.get(operation["agency_id"], {"name": "وكالة غير معروفة", "city": "غير محدد"})
+                
+                operations_data.append({
+                    "operation_no": operation["operation_no"],
+                    "date": operation["date"].strftime("%Y-%m-%d"),
+                    "agency_name": f"{agency_info['name']} - {agency_info['city']}",
+                    "client_name": clients_dict.get(operation["client_id"], "عميل غير معروف"),
+                    "service_name": operation["service_name"],
+                    "service_type": service_info["service_type"],
+                    "base_price": operation["base_price"],
+                    "discount_amount": operation["discount_amount"],
+                    "final_price": operation["final_price"],
+                    "status": operation["status"],
+                    "notes": operation.get("notes", "")
+                })
+                
+                totals["total_revenue"] += operation["base_price"]
+                totals["total_discounts"] += operation["discount_amount"]
+                totals["net_revenue"] += operation["final_price"]
+            
+            # Sort by date descending
+            operations_data.sort(key=lambda x: x["date"], reverse=True)
+            
+            return {
+                "title": "تقرير العمليات اليومية الشامل - قائمة مفصلة",
+                "period": f"من {start_date} إلى {end_date}",
+                "group_by_agency": False,
+                "data": operations_data,
+                "totals": totals,
+                "filters": {
+                    "service_type": service_type,
+                    "status": status,
+                    "agency_ids": agency_ids
+                }
+            }
+            
+    except Exception as e:
+        print(f"Daily operations report error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error generating report: {str(e)}")
+
+# Discount Requests Routes
+@api_router.get("/discount-requests")
+async def get_discount_requests(
+    status: Optional[DiscountStatus] = None,
+    agency_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get discount requests - for approval by General Manager/General Accountant"""
+    require_general_accountant_or_above(current_user)
+    
+    query_filter = {}
+    
+    # Role-based access
+    if current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        # Get operations from their agency only
+        operations = await db.daily_operations.find({"agency_id": current_user.agency_id}).to_list(1000)
+        operation_ids = [op["id"] for op in operations]
+        query_filter["operation_id"] = {"$in": operation_ids}
+    elif agency_id:
+        # Super admin can filter by agency
+        operations = await db.daily_operations.find({"agency_id": agency_id}).to_list(1000)
+        operation_ids = [op["id"] for op in operations]
+        query_filter["operation_id"] = {"$in": operation_ids}
+    
+    if status:
+        query_filter["status"] = status
+    
+    discount_requests = await db.discount_requests.find(query_filter).sort("created_at", -1).to_list(1000)
+    
+    # Enrich with operation and user details
+    operations = await db.daily_operations.find({}).to_list(1000)
+    operations_dict = {op["id"]: op for op in operations}
+    
+    users = await db.users.find({}).to_list(1000)
+    users_dict = {user["id"]: user["name"] for user in users}
+    
+    result = []
+    for req in discount_requests:
+        operation = operations_dict.get(req["operation_id"])
+        if operation:
+            result.append({
+                **req,
+                "operation_no": operation["operation_no"],
+                "service_name": operation["service_name"],
+                "client_id": operation["client_id"],
+                "requested_by_name": users_dict.get(req["requested_by"], "غير معروف"),
+                "approved_by_name": users_dict.get(req.get("approved_by"), "") if req.get("approved_by") else ""
+            })
+    
+    return result
+
 # Include the router in the main app
 app.include_router(api_router)
 
