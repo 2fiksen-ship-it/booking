@@ -4682,42 +4682,41 @@ const DailyOperationsManagement = () => {
                   <TableCell className="text-right">
                     {getStatusBadge(operation.status)}
                   </TableCell>
-                  {canApproveOperations && (
-                    <TableCell>
-                      <div className="flex justify-end space-x-2">
-                        {/* Print Receipt Button - Always visible */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePrintReceipt(operation.id, operation.operation_no)}
-                          className="text-blue-600 hover:text-blue-700 border-blue-600"
-                        >
-                          🖨️ طباعة الوصل
-                        </Button>
-                        
-                        {operation.status === 'في انتظار الموافقة' && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleApprove(operation.id)}
-                              className="text-green-600 hover:text-green-700 border-green-600"
-                            >
-                              ✅ {t('approveOperation')}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleReject(operation.id)}
-                              className="text-red-600 hover:text-red-700 border-red-600"
-                            >
-                              ❌ {t('rejectOperation')}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  )}
+                  <TableCell>
+                    <div className="flex justify-end space-x-2">
+                      {/* Print Receipt Button - Available for everyone */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePrintReceipt(operation.id, operation.operation_no)}
+                        className="text-blue-600 hover:text-blue-700 border-blue-600"
+                      >
+                        🖨️ طباعة
+                      </Button>
+                      
+                      {/* Approval buttons - Only for managers */}
+                      {canApproveOperations && operation.status === 'في انتظار الموافقة' && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleApprove(operation.id)}
+                            className="text-green-600 hover:text-green-700 border-green-600"
+                          >
+                            ✅ {t('approveOperation')}
+                          </Button>
+                          <Button
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleReject(operation.id)}
+                            className="text-red-600 hover:text-red-700 border-red-600"
+                          >
+                            ❌ {t('rejectOperation')}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
