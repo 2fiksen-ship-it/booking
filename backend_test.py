@@ -2987,7 +2987,65 @@ def main():
         print(f"🎯 معدل النجاح: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         print(f"🎯 Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         
-        # Enhanced Reports System Results (PRIMARY FOCUS)
+        # Services Management and Daily Operations Results (PRIMARY FOCUS - CURRENT REVIEW)
+        print(f"\n🛠️ نتائج نظام إدارة الخدمات والعمليات اليومية - SERVICES & DAILY OPERATIONS RESULTS (PRIMARY FOCUS):")
+        services_operations_keys = [
+            ('super_admin_login', 'Super Admin Login (superadmin@sanhaja.com)'),
+            ('create_umrah_service', 'Create Umrah Service'),
+            ('create_flight_service', 'Create Flight Service'),
+            ('get_all_services', 'Get All Services'),
+            ('filter_umrah_services', 'Filter Umrah Services'),
+            ('filter_active_services', 'Filter Active Services'),
+            ('update_service', 'Update Service'),
+            ('accountant_login', 'General Accountant Login'),
+            ('accountant_get_services', 'General Accountant - Get Services'),
+            ('accountant_create_service', 'General Accountant - Create Service'),
+            ('staff_login', 'Agency Staff Login'),
+            ('staff_get_services', 'Agency Staff - Get Services'),
+            ('staff_cannot_create_service', 'Agency Staff Cannot Create Service'),
+            ('delete_service', 'Delete Service'),
+            ('create_normal_operation', 'Create Normal Operation'),
+            ('create_discount_operation', 'Create Operation with Discount'),
+            ('get_all_operations', 'Get All Operations'),
+            ('filter_pending_operations', 'Filter Pending Operations'),
+            ('filter_client_operations', 'Filter Client Operations'),
+            ('accountant_login_for_approval', 'General Accountant Login for Approval'),
+            ('approve_discount_operation', 'Approve Operation with Discount'),
+            ('reject_operation', 'Reject Operation'),
+            ('staff_login_for_operations', 'Agency Staff Login for Operations'),
+            ('staff_create_operation', 'Agency Staff - Create Operation'),
+            ('staff_cannot_approve', 'Agency Staff Cannot Approve'),
+            ('basic_daily_operations_report', 'Basic Daily Operations Report'),
+            ('agency_breakdown_report', 'Agency Breakdown Report'),
+            ('service_breakdown_report', 'Service Breakdown Report'),
+            ('date_filtered_report', 'Date Filtered Report'),
+            ('status_filtered_report', 'Status Filtered Report'),
+            ('service_type_filtered_report', 'Service Type Filtered Report'),
+            ('combined_filters_report', 'Combined Filters Report'),
+            ('accountant_login_for_reports', 'General Accountant Login for Reports'),
+            ('accountant_daily_operations_report', 'General Accountant - Daily Operations Report'),
+            ('get_discount_requests', 'Get Discount Requests'),
+            ('filter_pending_discount_requests', 'Filter Pending Discount Requests'),
+            ('accountant_login_for_discounts', 'General Accountant Login for Discounts'),
+            ('accountant_discount_requests', 'General Accountant - Discount Requests'),
+            ('staff_login_for_discounts', 'Agency Staff Login for Discounts'),
+            ('staff_discount_requests', 'Agency Staff - Discount Requests'),
+            ('super_admin_auth', 'Super Admin Authentication'),
+            ('general_accountant_auth', 'General Accountant Authentication'),
+            ('agency_staff_auth', 'Agency Staff Authentication')
+        ]
+        
+        for key, description in services_operations_keys:
+            if key in services_operations_results:
+                status = "✅" if services_operations_results[key] else "❌"
+                print(f"   {status} {description}")
+        
+        # Services & Operations Functionality Score
+        so_working = sum(1 for key, _ in services_operations_keys if services_operations_results.get(key, False))
+        so_total = len(services_operations_keys)
+        print(f"\n   📊 Services & Daily Operations System Score: {so_working}/{so_total} ({(so_working/so_total)*100:.1f}%)")
+        
+        # Enhanced Reports System Results (SECONDARY FOCUS)
         print(f"\n📊 نتائج نظام التقارير المحسن - ENHANCED REPORTS SYSTEM RESULTS (PRIMARY FOCUS):")
         enhanced_reports_keys = [
             ('super_admin_login', 'Super Admin Login (superadmin@sanhaja.com)'),
