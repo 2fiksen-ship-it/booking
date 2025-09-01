@@ -1996,10 +1996,18 @@ def main():
     
     tester = SanhajaAPITester()
     
-    # ENHANCED GENERAL ACCOUNTANT TESTING (Primary Focus from Review Request)
+    # NEW ENHANCED REPORTS SYSTEM TESTING (PRIMARY FOCUS from Review Request)
     print("\n" + "="*80)
-    print("💼 ENHANCED GENERAL ACCOUNTANT FUNCTIONALITY TESTING - PRIMARY FOCUS")
-    print("اختبار وظائف المحاسب العام المحسنة - المحور الأساسي")
+    print("📊 NEW ENHANCED REPORTS SYSTEM WITH AGENCY BREAKDOWN TESTING - PRIMARY FOCUS")
+    print("اختبار نظام التقارير المحسن الجديد مع تفصيل الوكالات - المحور الأساسي")
+    print("="*80)
+    
+    enhanced_reports_results = tester.test_enhanced_reports_system_with_agency_breakdown()
+    
+    # ENHANCED GENERAL ACCOUNTANT TESTING (Secondary Focus from Review Request)
+    print("\n" + "="*80)
+    print("💼 ENHANCED GENERAL ACCOUNTANT FUNCTIONALITY TESTING - SECONDARY FOCUS")
+    print("اختبار وظائف المحاسب العام المحسنة - المحور الثانوي")
     print("="*80)
     
     general_accountant_results = tester.test_general_accountant_enhanced_functionality()
