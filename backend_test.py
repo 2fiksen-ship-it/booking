@@ -1989,6 +1989,864 @@ class SanhajaAPITester:
         
         return results
 
+    def test_services_management_api(self):
+        """Test Services Management API as requested in review"""
+        print(f"\n🛠️ Testing Services Management API (Review Request)...")
+        print(f"   Testing CRUD operations for services with role-based access control")
+        
+        results = {}
+        
+        # Test with Super Admin first
+        print(f"\n   Testing as Super Admin (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ Super Admin login failed - cannot proceed with services tests")
+            return results
+        
+        # Test 1: POST /api/services - Create new services
+        print(f"\n   1. Testing POST /api/services - Create Services...")
+        
+        # Create Umrah service
+        umrah_service_data = {
+            "name": "عمرة اقتصادية",
+            "description": "عمرة اقتصادية لمدة 10 أيام",
+            "service_type": "عمرة",
+            "category": "خدمات دينية",
+            "base_price": 150000.0,
+            "min_price": 140000.0,
+            "is_fixed_price": False,
+            "is_active": True,
+            "agency_id": None  # Global service
+        }
+        
+        success, umrah_response = self.run_test(
+            "Create Umrah Service",
+            "POST",
+            "services",
+            200,
+            data=umrah_service_data
+        )
+        results['create_umrah_service'] = success
+        
+        if success:
+            print(f"   ✅ Umrah service created successfully")
+            umrah_service_id = umrah_response.get('id')
+            results['umrah_service_id'] = umrah_service_id
+        
+        # Create Flight Ticket service
+        flight_service_data = {
+            "name": "تذكرة طيران داخلي",
+            "description": "تذكرة طيران داخل الجزائر",
+            "service_type": "تذكرة طيران",
+            "category": "خدمات سفر",
+            "base_price": 25000.0,
+            "is_fixed_price": True,
+            "is_active": True
+        }
+        
+        success, flight_response = self.run_test(
+            "Create Flight Service",
+            "POST",
+            "services",
+            200,
+            data=flight_service_data
+        )
+        results['create_flight_service'] = success
+        
+        if success:
+            print(f"   ✅ Flight service created successfully")
+            flight_service_id = flight_response.get('id')
+            results['flight_service_id'] = flight_service_id
+        
+        # Test 2: GET /api/services - List services with filters
+        print(f"\n   2. Testing GET /api/services - List Services...")
+        
+        # Get all services
+        success, all_services = self.run_test(
+            "Get All Services",
+            "GET",
+            "services",
+            200
+        )
+        results['get_all_services'] = success
+        
+        if success:
+            print(f"   ✅ Services list retrieved - {len(all_services)} services found")
+            
+            # Check service types
+            service_types = set()
+            for service in all_services:
+                service_types.add(service.get('service_type', 'Unknown'))
+            print(f"   Service types: {', '.join(service_types)}")
+        
+        # Test filtering by service type
+        success, umrah_services = self.run_test(
+            "Get Umrah Services",
+            "GET",
+            "services?service_type=عمرة",
+            200
+        )
+        results['filter_umrah_services'] = success
+        
+        if success:
+            print(f"   ✅ Umrah services filter working - {len(umrah_services)} services found")
+        
+        # Test filtering by active status
+        success, active_services = self.run_test(
+            "Get Active Services",
+            "GET",
+            "services?is_active=true",
+            200
+        )
+        results['filter_active_services'] = success
+        
+        if success:
+            print(f"   ✅ Active services filter working - {len(active_services)} services found")
+        
+        # Test 3: PUT /api/services/{service_id} - Update service
+        print(f"\n   3. Testing PUT /api/services/{umrah_service_id} - Update Service...")
+        
+        if results.get('umrah_service_id'):
+            update_data = {
+                "base_price": 155000.0,
+                "min_price": 145000.0,
+                "description": "عمرة اقتصادية محدثة لمدة 10 أيام مع خدمات إضافية"
+            }
+            
+            success, updated_service = self.run_test(
+                "Update Umrah Service",
+                "PUT",
+                f"services/{umrah_service_id}",
+                200,
+                data=update_data
+            )
+            results['update_service'] = success
+            
+            if success:
+                print(f"   ✅ Service updated successfully")
+                print(f"   New price: {updated_service.get('base_price')} DZD")
+        
+        # Test 4: Test role-based access - General Accountant
+        print(f"\n   4. Testing General Accountant Access...")
+        
+        accountant_auth = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['accountant_login'] = accountant_auth
+        
+        if accountant_auth:
+            # General Accountant should be able to manage services
+            success, accountant_services = self.run_test(
+                "General Accountant - Get Services",
+                "GET",
+                "services",
+                200
+            )
+            results['accountant_get_services'] = success
+            
+            if success:
+                print(f"   ✅ General Accountant can view services - {len(accountant_services)} services")
+            
+            # Try to create service as General Accountant
+            hotel_service_data = {
+                "name": "حجز فندق 4 نجوم",
+                "description": "حجز فندق 4 نجوم في مكة المكرمة",
+                "service_type": "حجز فندق",
+                "category": "خدمات إقامة",
+                "base_price": 80000.0,
+                "is_fixed_price": True,
+                "is_active": True
+            }
+            
+            success, hotel_response = self.run_test(
+                "General Accountant - Create Service",
+                "POST",
+                "services",
+                200,
+                data=hotel_service_data
+            )
+            results['accountant_create_service'] = success
+            
+            if success:
+                print(f"   ✅ General Accountant can create services")
+                hotel_service_id = hotel_response.get('id')
+                results['hotel_service_id'] = hotel_service_id
+        
+        # Test 5: Test role-based access - Agency Staff (should only view)
+        print(f"\n   5. Testing Agency Staff Access...")
+        
+        staff_auth = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['staff_login'] = staff_auth
+        
+        if staff_auth:
+            # Agency Staff should be able to view services
+            success, staff_services = self.run_test(
+                "Agency Staff - Get Services",
+                "GET",
+                "services",
+                200
+            )
+            results['staff_get_services'] = success
+            
+            if success:
+                print(f"   ✅ Agency Staff can view services - {len(staff_services)} services")
+            
+            # Agency Staff should NOT be able to create services
+            visa_service_data = {
+                "name": "خدمة تأشيرة",
+                "service_type": "خدمة تأشيرة",
+                "category": "خدمات وثائق",
+                "base_price": 15000.0,
+                "is_fixed_price": True
+            }
+            
+            success, response = self.run_test(
+                "Agency Staff - Create Service (Should Fail)",
+                "POST",
+                "services",
+                403,
+                data=visa_service_data
+            )
+            results['staff_cannot_create_service'] = success
+            
+            if success:
+                print(f"   ✅ Agency Staff correctly denied service creation")
+        
+        # Test 6: DELETE /api/services/{service_id} - Delete service (Super Admin only)
+        print(f"\n   6. Testing DELETE /api/services - Delete Service...")
+        
+        # Login back as Super Admin
+        self.test_login('superadmin@sanhaja.com', 'super123')
+        
+        if results.get('flight_service_id'):
+            success, response = self.run_test(
+                "Delete Flight Service",
+                "DELETE",
+                f"services/{flight_service_id}",
+                200
+            )
+            results['delete_service'] = success
+            
+            if success:
+                print(f"   ✅ Service deleted successfully")
+        
+        return results
+
+    def test_daily_operations_api(self):
+        """Test Daily Operations API as requested in review"""
+        print(f"\n📋 Testing Daily Operations API (Review Request)...")
+        print(f"   Testing daily operations with approval workflow and discount management")
+        
+        results = {}
+        
+        # First, get some services and clients to use in operations
+        print(f"\n   Setting up test data...")
+        
+        # Login as Super Admin
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        if not auth_success:
+            print("   ❌ Super Admin login failed")
+            return results
+        
+        # Get services
+        success, services = self.run_test("Get Services for Operations", "GET", "services", 200)
+        if not success or not services:
+            print("   ❌ No services available for testing")
+            return results
+        
+        service_id = services[0]['id']
+        service_name = services[0]['name']
+        base_price = services[0]['base_price']
+        
+        # Get clients
+        success, clients = self.run_test("Get Clients for Operations", "GET", "clients", 200)
+        if not success or not clients:
+            print("   ❌ No clients available for testing")
+            return results
+        
+        client_id = clients[0]['id']
+        client_name = clients[0]['name']
+        
+        print(f"   Using service: {service_name} ({base_price} DZD)")
+        print(f"   Using client: {client_name}")
+        
+        # Test 1: POST /api/daily-operations - Create operations
+        print(f"\n   1. Testing POST /api/daily-operations - Create Operations...")
+        
+        # Create normal operation without discount
+        normal_operation_data = {
+            "service_id": service_id,
+            "client_id": client_id,
+            "notes": "عملية عادية بدون تخفيض"
+        }
+        
+        success, normal_operation = self.run_test(
+            "Create Normal Operation",
+            "POST",
+            "daily-operations",
+            200,
+            data=normal_operation_data
+        )
+        results['create_normal_operation'] = success
+        
+        if success:
+            print(f"   ✅ Normal operation created successfully")
+            normal_operation_id = normal_operation.get('id')
+            results['normal_operation_id'] = normal_operation_id
+            print(f"   Operation No: {normal_operation.get('operation_no')}")
+            print(f"   Final Price: {normal_operation.get('final_price')} DZD")
+        
+        # Create operation with discount (requires approval)
+        discount_operation_data = {
+            "service_id": service_id,
+            "client_id": client_id,
+            "discount_amount": 10000.0,
+            "discount_reason": "عميل مميز - تخفيض خاص",
+            "notes": "عملية مع تخفيض تحتاج موافقة"
+        }
+        
+        success, discount_operation = self.run_test(
+            "Create Operation with Discount",
+            "POST",
+            "daily-operations",
+            200,
+            data=discount_operation_data
+        )
+        results['create_discount_operation'] = success
+        
+        if success:
+            print(f"   ✅ Operation with discount created successfully")
+            discount_operation_id = discount_operation.get('id')
+            results['discount_operation_id'] = discount_operation_id
+            print(f"   Operation No: {discount_operation.get('operation_no')}")
+            print(f"   Base Price: {discount_operation.get('base_price')} DZD")
+            print(f"   Discount: {discount_operation.get('discount_amount')} DZD")
+            print(f"   Final Price: {discount_operation.get('final_price')} DZD")
+            print(f"   Status: {discount_operation.get('status')}")
+        
+        # Test 2: GET /api/daily-operations - List operations with filters
+        print(f"\n   2. Testing GET /api/daily-operations - List Operations...")
+        
+        # Get all operations
+        success, all_operations = self.run_test(
+            "Get All Operations",
+            "GET",
+            "daily-operations",
+            200
+        )
+        results['get_all_operations'] = success
+        
+        if success:
+            print(f"   ✅ Operations list retrieved - {len(all_operations)} operations found")
+            
+            # Check operation statuses
+            statuses = {}
+            for operation in all_operations:
+                status = operation.get('status', 'Unknown')
+                statuses[status] = statuses.get(status, 0) + 1
+            print(f"   Operation statuses: {statuses}")
+        
+        # Test filtering by status
+        success, pending_operations = self.run_test(
+            "Get Pending Operations",
+            "GET",
+            "daily-operations?status=في انتظار الموافقة",
+            200
+        )
+        results['filter_pending_operations'] = success
+        
+        if success:
+            print(f"   ✅ Pending operations filter working - {len(pending_operations)} operations")
+        
+        # Test filtering by client
+        success, client_operations = self.run_test(
+            "Get Client Operations",
+            "GET",
+            f"daily-operations?client_id={client_id}",
+            200
+        )
+        results['filter_client_operations'] = success
+        
+        if success:
+            print(f"   ✅ Client operations filter working - {len(client_operations)} operations")
+        
+        # Test 3: Approval workflow - General Accountant approves
+        print(f"\n   3. Testing Approval Workflow...")
+        
+        # Login as General Accountant
+        accountant_auth = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['accountant_login_for_approval'] = accountant_auth
+        
+        if accountant_auth and results.get('discount_operation_id'):
+            # Approve operation with discount
+            success, approval_response = self.run_test(
+                "Approve Operation with Discount",
+                "PUT",
+                f"daily-operations/{discount_operation_id}/approve",
+                200,
+                data={"notes": "تمت الموافقة على التخفيض من المحاسب العام"}
+            )
+            results['approve_discount_operation'] = success
+            
+            if success:
+                print(f"   ✅ Operation approved successfully")
+                print(f"   Approved by: {approval_response.get('approved_by')}")
+        
+        # Test rejection workflow
+        if results.get('normal_operation_id'):
+            success, rejection_response = self.run_test(
+                "Reject Operation",
+                "PUT",
+                f"daily-operations/{normal_operation_id}/reject",
+                200,
+                data={
+                    "rejection_reason": "بيانات غير مكتملة - يرجى المراجعة",
+                    "notes": "العملية مرفوضة لعدم اكتمال البيانات"
+                }
+            )
+            results['reject_operation'] = success
+            
+            if success:
+                print(f"   ✅ Operation rejected successfully")
+                print(f"   Rejection reason: {rejection_response.get('rejected_reason')}")
+        
+        # Test 4: Agency Staff permissions
+        print(f"\n   4. Testing Agency Staff Permissions...")
+        
+        staff_auth = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['staff_login_for_operations'] = staff_auth
+        
+        if staff_auth:
+            # Agency Staff can create operations
+            staff_operation_data = {
+                "service_id": service_id,
+                "client_id": client_id,
+                "notes": "عملية من موظف الوكالة"
+            }
+            
+            success, staff_operation = self.run_test(
+                "Agency Staff - Create Operation",
+                "POST",
+                "daily-operations",
+                200,
+                data=staff_operation_data
+            )
+            results['staff_create_operation'] = success
+            
+            if success:
+                print(f"   ✅ Agency Staff can create operations")
+            
+            # Agency Staff should NOT be able to approve operations
+            if results.get('discount_operation_id'):
+                success, response = self.run_test(
+                    "Agency Staff - Try Approve (Should Fail)",
+                    "PUT",
+                    f"daily-operations/{discount_operation_id}/approve",
+                    403,
+                    data={"notes": "محاولة موافقة من موظف"}
+                )
+                results['staff_cannot_approve'] = success
+                
+                if success:
+                    print(f"   ✅ Agency Staff correctly denied approval permission")
+        
+        return results
+
+    def test_daily_operations_reports_api(self):
+        """Test Daily Operations Reports API as requested in review"""
+        print(f"\n📊 Testing Daily Operations Reports API (Review Request)...")
+        print(f"   Testing comprehensive reports with filtering and grouping")
+        
+        results = {}
+        
+        # Login as Super Admin
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        if not auth_success:
+            print("   ❌ Super Admin login failed")
+            return results
+        
+        # Test 1: GET /api/reports/daily-operations - Basic report
+        print(f"\n   1. Testing GET /api/reports/daily-operations - Basic Report...")
+        
+        # Get basic daily operations report
+        success, basic_report = self.run_test(
+            "Basic Daily Operations Report",
+            "GET",
+            "reports/daily-operations",
+            200
+        )
+        results['basic_daily_operations_report'] = success
+        
+        if success:
+            print(f"   ✅ Basic report generated successfully")
+            if 'operations' in basic_report:
+                print(f"   Total operations: {len(basic_report['operations'])}")
+            if 'summary' in basic_report:
+                summary = basic_report['summary']
+                print(f"   Total amount: {summary.get('total_amount', 0)} DZD")
+                print(f"   Total discount: {summary.get('total_discount', 0)} DZD")
+        
+        # Test 2: Report with agency breakdown
+        print(f"\n   2. Testing Report with Agency Breakdown...")
+        
+        success, agency_report = self.run_test(
+            "Daily Operations Report - Agency Breakdown",
+            "GET",
+            "reports/daily-operations?group_by_agency=true",
+            200
+        )
+        results['agency_breakdown_report'] = success
+        
+        if success:
+            print(f"   ✅ Agency breakdown report generated")
+            if 'agencies_data' in agency_report:
+                agencies_data = agency_report['agencies_data']
+                print(f"   Agencies in report: {len(agencies_data)}")
+                for agency_data in agencies_data[:3]:  # Show first 3
+                    agency_name = agency_data.get('agency_name', 'Unknown')
+                    totals = agency_data.get('totals', {})
+                    print(f"   - {agency_name}: {totals.get('total_amount', 0)} DZD")
+        
+        # Test 3: Report with service breakdown
+        print(f"\n   3. Testing Report with Service Breakdown...")
+        
+        success, service_report = self.run_test(
+            "Daily Operations Report - Service Breakdown",
+            "GET",
+            "reports/daily-operations?group_by_service=true",
+            200
+        )
+        results['service_breakdown_report'] = success
+        
+        if success:
+            print(f"   ✅ Service breakdown report generated")
+            if 'services_data' in service_report:
+                services_data = service_report['services_data']
+                print(f"   Services in report: {len(services_data)}")
+        
+        # Test 4: Report with date filtering
+        print(f"\n   4. Testing Report with Date Filtering...")
+        
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        start_date = (today - timedelta(days=7)).strftime('%Y-%m-%d')
+        end_date = today.strftime('%Y-%m-%d')
+        
+        success, date_filtered_report = self.run_test(
+            "Daily Operations Report - Date Filter",
+            "GET",
+            f"reports/daily-operations?start_date={start_date}&end_date={end_date}",
+            200
+        )
+        results['date_filtered_report'] = success
+        
+        if success:
+            print(f"   ✅ Date filtered report generated")
+            print(f"   Date range: {start_date} to {end_date}")
+        
+        # Test 5: Report with status filtering
+        print(f"\n   5. Testing Report with Status Filtering...")
+        
+        success, status_report = self.run_test(
+            "Daily Operations Report - Status Filter",
+            "GET",
+            "reports/daily-operations?status=معتمد",
+            200
+        )
+        results['status_filtered_report'] = success
+        
+        if success:
+            print(f"   ✅ Status filtered report generated")
+        
+        # Test 6: Report with service type filtering
+        print(f"\n   6. Testing Report with Service Type Filtering...")
+        
+        success, service_type_report = self.run_test(
+            "Daily Operations Report - Service Type Filter",
+            "GET",
+            "reports/daily-operations?service_type=عمرة",
+            200
+        )
+        results['service_type_filtered_report'] = success
+        
+        if success:
+            print(f"   ✅ Service type filtered report generated")
+        
+        # Test 7: Combined filters and grouping
+        print(f"\n   7. Testing Combined Filters and Grouping...")
+        
+        success, combined_report = self.run_test(
+            "Daily Operations Report - Combined Filters",
+            "GET",
+            f"reports/daily-operations?group_by_agency=true&group_by_service=true&start_date={start_date}&end_date={end_date}",
+            200
+        )
+        results['combined_filters_report'] = success
+        
+        if success:
+            print(f"   ✅ Combined filters report generated")
+        
+        # Test 8: General Accountant access (specific agency)
+        print(f"\n   8. Testing General Accountant Access...")
+        
+        accountant_auth = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['accountant_login_for_reports'] = accountant_auth
+        
+        if accountant_auth:
+            success, accountant_report = self.run_test(
+                "General Accountant - Daily Operations Report",
+                "GET",
+                "reports/daily-operations?group_by_agency=true",
+                200
+            )
+            results['accountant_daily_operations_report'] = success
+            
+            if success:
+                print(f"   ✅ General Accountant can access daily operations reports")
+        
+        return results
+
+    def test_discount_requests_system(self):
+        """Test Discount Requests System as requested in review"""
+        print(f"\n💰 Testing Discount Requests System (Review Request)...")
+        print(f"   Testing discount approval workflow")
+        
+        results = {}
+        
+        # Login as Super Admin
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        if not auth_success:
+            print("   ❌ Super Admin login failed")
+            return results
+        
+        # Test 1: GET /api/discount-requests - List discount requests
+        print(f"\n   1. Testing GET /api/discount-requests - List Discount Requests...")
+        
+        success, discount_requests = self.run_test(
+            "Get Discount Requests",
+            "GET",
+            "discount-requests",
+            200
+        )
+        results['get_discount_requests'] = success
+        
+        if success:
+            print(f"   ✅ Discount requests retrieved - {len(discount_requests)} requests found")
+            
+            # Check request statuses
+            statuses = {}
+            for request in discount_requests:
+                status = request.get('status', 'Unknown')
+                statuses[status] = statuses.get(status, 0) + 1
+            print(f"   Request statuses: {statuses}")
+        
+        # Test 2: Filter by status
+        print(f"\n   2. Testing Discount Requests Filtering...")
+        
+        success, pending_requests = self.run_test(
+            "Get Pending Discount Requests",
+            "GET",
+            "discount-requests?status=في انتظار الموافقة",
+            200
+        )
+        results['filter_pending_discount_requests'] = success
+        
+        if success:
+            print(f"   ✅ Pending discount requests filter working - {len(pending_requests)} requests")
+        
+        # Test 3: General Accountant access
+        print(f"\n   3. Testing General Accountant Access to Discount Requests...")
+        
+        accountant_auth = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['accountant_login_for_discounts'] = accountant_auth
+        
+        if accountant_auth:
+            success, accountant_requests = self.run_test(
+                "General Accountant - Get Discount Requests",
+                "GET",
+                "discount-requests",
+                200
+            )
+            results['accountant_discount_requests'] = success
+            
+            if success:
+                print(f"   ✅ General Accountant can access discount requests - {len(accountant_requests)} requests")
+        
+        # Test 4: Agency Staff access (should be limited)
+        print(f"\n   4. Testing Agency Staff Access to Discount Requests...")
+        
+        staff_auth = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['staff_login_for_discounts'] = staff_auth
+        
+        if staff_auth:
+            success, staff_requests = self.run_test(
+                "Agency Staff - Get Discount Requests",
+                "GET",
+                "discount-requests",
+                200
+            )
+            results['staff_discount_requests'] = success
+            
+            if success:
+                print(f"   ✅ Agency Staff can view discount requests - {len(staff_requests)} requests")
+                # Should only see requests from their agency
+        
+        return results
+
+    def test_cross_agency_access_permissions(self):
+        """Test Cross-Agency Access Testing as requested in review"""
+        print(f"\n🔐 Testing Cross-Agency Access Permissions (Review Request)...")
+        print(f"   Testing role-based permissions across different user types")
+        
+        results = {}
+        
+        # Test 1: Super Admin - should see all agencies' data
+        print(f"\n   1. Testing Super Admin Cross-Agency Access...")
+        
+        super_admin_auth = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = super_admin_auth
+        
+        if super_admin_auth:
+            # Test services access
+            success, services = self.run_test("Super Admin - Get All Services", "GET", "services", 200)
+            if success:
+                agency_ids = set()
+                for service in services:
+                    if service.get('agency_id'):
+                        agency_ids.add(service['agency_id'])
+                print(f"   ✅ Super Admin sees services from {len(agency_ids)} agencies")
+                results['super_admin_services_agencies'] = len(agency_ids)
+            
+            # Test operations access
+            success, operations = self.run_test("Super Admin - Get All Operations", "GET", "daily-operations", 200)
+            if success:
+                agency_ids = set()
+                for operation in operations:
+                    if operation.get('agency_id'):
+                        agency_ids.add(operation['agency_id'])
+                print(f"   ✅ Super Admin sees operations from {len(agency_ids)} agencies")
+                results['super_admin_operations_agencies'] = len(agency_ids)
+        
+        # Test 2: General Accountant - should manage their agency data
+        print(f"\n   2. Testing General Accountant Agency Management...")
+        
+        accountant_auth = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['accountant_login'] = accountant_auth
+        
+        if accountant_auth:
+            accountant_agency_id = self.current_user.get('agency_id')
+            print(f"   General Accountant Agency ID: {accountant_agency_id}")
+            
+            # Test services management
+            success, services = self.run_test("General Accountant - Get Services", "GET", "services", 200)
+            if success:
+                print(f"   ✅ General Accountant can access services - {len(services)} services")
+                results['accountant_services_count'] = len(services)
+            
+            # Test operations management
+            success, operations = self.run_test("General Accountant - Get Operations", "GET", "daily-operations", 200)
+            if success:
+                print(f"   ✅ General Accountant can access operations - {len(operations)} operations")
+                results['accountant_operations_count'] = len(operations)
+        
+        # Test 3: Agency Staff - should only view and create operations
+        print(f"\n   3. Testing Agency Staff Limited Access...")
+        
+        staff_auth = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['staff_login'] = staff_auth
+        
+        if staff_auth:
+            staff_agency_id = self.current_user.get('agency_id')
+            print(f"   Agency Staff Agency ID: {staff_agency_id}")
+            
+            # Test services view access
+            success, services = self.run_test("Agency Staff - Get Services", "GET", "services", 200)
+            if success:
+                print(f"   ✅ Agency Staff can view services - {len(services)} services")
+                results['staff_services_count'] = len(services)
+            
+            # Test operations view access
+            success, operations = self.run_test("Agency Staff - Get Operations", "GET", "daily-operations", 200)
+            if success:
+                # Should only see operations from their agency
+                staff_agency_operations = [op for op in operations if op.get('agency_id') == staff_agency_id]
+                print(f"   ✅ Agency Staff sees {len(staff_agency_operations)} operations from their agency")
+                results['staff_agency_operations_count'] = len(staff_agency_operations)
+        
+        return results
+
+    def test_services_and_daily_operations_comprehensive(self):
+        """Comprehensive test of Services Management and Daily Operations as requested in review"""
+        print(f"\n🎯 COMPREHENSIVE SERVICES & DAILY OPERATIONS TESTING (REVIEW REQUEST)")
+        print(f"   Testing all aspects of the newly implemented Services Management and Daily Operations system")
+        
+        all_results = {}
+        
+        # Test 1: Services Management API
+        print(f"\n" + "="*80)
+        print(f"SERVICES MANAGEMENT API TESTING")
+        print(f"="*80)
+        
+        services_results = self.test_services_management_api()
+        all_results.update(services_results)
+        
+        # Test 2: Daily Operations API
+        print(f"\n" + "="*80)
+        print(f"DAILY OPERATIONS API TESTING")
+        print(f"="*80)
+        
+        operations_results = self.test_daily_operations_api()
+        all_results.update(operations_results)
+        
+        # Test 3: Daily Operations Reports API
+        print(f"\n" + "="*80)
+        print(f"DAILY OPERATIONS REPORTS API TESTING")
+        print(f"="*80)
+        
+        reports_results = self.test_daily_operations_reports_api()
+        all_results.update(reports_results)
+        
+        # Test 4: Discount Requests System
+        print(f"\n" + "="*80)
+        print(f"DISCOUNT REQUESTS SYSTEM TESTING")
+        print(f"="*80)
+        
+        discount_results = self.test_discount_requests_system()
+        all_results.update(discount_results)
+        
+        # Test 5: Cross-Agency Access Testing
+        print(f"\n" + "="*80)
+        print(f"CROSS-AGENCY ACCESS PERMISSIONS TESTING")
+        print(f"="*80)
+        
+        access_results = self.test_cross_agency_access_permissions()
+        all_results.update(access_results)
+        
+        # Test 6: Authentication and Authorization Testing
+        print(f"\n" + "="*80)
+        print(f"AUTHENTICATION AND AUTHORIZATION TESTING")
+        print(f"="*80)
+        
+        # Test all user credentials from review request
+        test_credentials = [
+            ('superadmin@sanhaja.com', 'super123', 'Super Admin'),
+            ('generalaccountant@sanhaja.com', 'acc123', 'General Accountant'),
+            ('staff1@tlemcen.sanhaja.com', 'staff123', 'Agency Staff')
+        ]
+        
+        for email, password, role_name in test_credentials:
+            print(f"\n   Testing {role_name} credentials ({email})...")
+            auth_success = self.test_login(email, password)
+            all_results[f'{role_name.lower().replace(" ", "_")}_auth'] = auth_success
+            
+            if auth_success:
+                print(f"   ✅ {role_name} authentication successful")
+                print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+            else:
+                print(f"   ❌ {role_name} authentication failed")
+        
+        return all_results
+
 def main():
     print("🚀 Starting Sanhaja Travel Agencies Backend API Testing...")
     print("نظام محاسبة وكالات صنهاجة للسفر - اختبار واجهات برمجة التطبيقات")
