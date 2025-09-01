@@ -439,6 +439,41 @@ test_plan:
     working: true
     file: "backend/server.py"
     stuck_count: 0
+  - task: "Services Management System"
+    implemented: false
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Need to implement services catalog with fixed pricing and discount management system"
+
+  - task: "Daily Operations Management API"
+    implemented: false
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Need to implement daily operations receipts with approval workflow system"
+
+  - task: "Daily Operations Reports API"
+    implemented: false
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Need to implement comprehensive daily operations reports with filtering"
     priority: "high"
     needs_retesting: false
     status_history:
