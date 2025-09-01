@@ -380,7 +380,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Enhanced General Accountant Cross-Agency Access and Filtering"
+    - "NEW ENHANCED Reports System with Agency Breakdown"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
