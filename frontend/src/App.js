@@ -1112,26 +1112,35 @@ const AgencyFilter = ({ selectedAgency, onAgencyChange, showAllOption = true }) 
 const Dashboard = () => {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
+  const [selectedAgency, setSelectedAgency] = useState(null);
   const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const params = selectedAgency ? `?agency_id=${selectedAgency}` : '';
+      const response = await axios.get(`${API}/dashboard${params}`);
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(`${API}/dashboard`);
-        setStats(response.data);
-      } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchStats();
     // Refresh every 5 minutes
     const interval = setInterval(fetchStats, 300000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedAgency]);
+
+  const getAgencyFilterText = () => {
+    if (!selectedAgency) return 'جميع الوكالات';
+    // This would need to be improved with actual agency name lookup
+    return 'الوكالة المحددة';
+  };
 
   const mainStatCards = [
     {
@@ -1140,7 +1149,7 @@ const Dashboard = () => {
       icon: Wallet,
       color: 'from-green-500 to-emerald-600',
       trend: '+12%',
-      description: 'مقارنة بالأمس'
+      description: selectedAgency ? 'للوكالة المحددة' : 'جميع الوكالات'
     },
     {
       title: t('unpaidInvoices'),
@@ -1148,7 +1157,7 @@ const Dashboard = () => {
       icon: FileText,
       color: 'from-orange-500 to-amber-600',
       trend: '-3%',
-      description: 'فواتير تحتاج متابعة'
+      description: selectedAgency ? 'في الوكالة المحددة' : 'في جميع الوكالات'
     },
     {
       title: t('weekBookings'),
@@ -1156,7 +1165,7 @@ const Dashboard = () => {
       icon: Package,
       color: 'from-blue-500 to-indigo-600',
       trend: '+8%',
-      description: 'حجوزات هذا الأسبوع'
+      description: selectedAgency ? 'للوكالة المحددة' : 'لجميع الوكالات'
     },
     {
       title: t('cashboxBalance'),
@@ -1164,7 +1173,7 @@ const Dashboard = () => {
       icon: CreditCard,
       color: 'from-purple-500 to-violet-600',
       trend: '+5%',
-      description: 'إجمالي السيولة'
+      description: selectedAgency ? 'رصيد الوكالة' : 'إجمالي جميع الوكالات'
     }
   ];
 
@@ -1178,12 +1187,30 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8">
+      {/* Agency Filter for Super Admin and General Accountant */}
+      {['super_admin', 'general_accountant'].includes(user?.role) && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <AgencyFilter 
+              selectedAgency={selectedAgency}
+              onAgencyChange={setSelectedAgency}
+              showAllOption={true}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-6 text-white">
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold mb-2">🏠 {t('quickStats')}</h2>
             <p className="text-blue-100">مرحباً بك في نظام إدارة وكالات صنهاجة للسفر</p>
+            {['super_admin', 'general_accountant'].includes(user?.role) && (
+              <p className="text-blue-200 text-sm mt-1">
+                📊 عرض بيانات: {getAgencyFilterText()}
+              </p>
+            )}
           </div>
           <div className="text-right">
             <p className="text-lg font-semibold">
