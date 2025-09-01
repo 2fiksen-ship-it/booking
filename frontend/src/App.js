@@ -4142,6 +4142,762 @@ const DailyReportsManagement = () => {
   );
 };
 
+// Services Management Component (General Manager and General Accountant Only)
+const ServicesManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    service_type: 'عمرة',
+    category: 'خدمات دينية',
+    base_price: '',
+    min_price: '',
+    is_fixed_price: true,
+    is_active: true
+  });
+
+  // Check if user can manage services
+  const canManageServices = user?.role === 'super_admin' || user?.role === 'general_accountant';
+
+  useEffect(() => {
+    if (canManageServices) {
+      fetchServices();
+    }
+  }, [canManageServices]);
+
+  const fetchServices = async () => {
+    try {
+      const response = await axios.get(`${API}/services`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setServices(response.data);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingService) {
+        await axios.put(`${API}/services/${editingService.id}`, formData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+      } else {
+        await axios.post(`${API}/services`, formData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+      }
+      
+      setShowAddDialog(false);
+      setEditingService(null);
+      setFormData({
+        name: '',
+        description: '',
+        service_type: 'عمرة',
+        category: 'خدمات دينية',
+        base_price: '',
+        min_price: '',
+        is_fixed_price: true,
+        is_active: true
+      });
+      fetchServices();
+    } catch (error) {
+      console.error('Error saving service:', error);
+      alert('خطأ في حفظ الخدمة');
+    }
+  };
+
+  const handleEdit = (service) => {
+    setEditingService(service);
+    setFormData({
+      name: service.name,
+      description: service.description || '',
+      service_type: service.service_type,
+      category: service.category,
+      base_price: service.base_price.toString(),
+      min_price: service.min_price?.toString() || '',
+      is_fixed_price: service.is_fixed_price,
+      is_active: service.is_active
+    });
+    setShowAddDialog(true);
+  };
+
+  const handleDelete = async (serviceId) => {
+    if (window.confirm('هل أنت متأكد من حذف هذه الخدمة؟')) {
+      try {
+        await axios.delete(`${API}/services/${serviceId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        fetchServices();
+      } catch (error) {
+        console.error('Error deleting service:', error);
+        alert('خطأ في حذف الخدمة');
+      }
+    }
+  };
+
+  if (!canManageServices) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-red-600">⚠️ ليس لديك صلاحية لإدارة الخدمات</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6" dir="rtl">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">{t('servicesManagement')}</h1>
+        <Button onClick={() => setShowAddDialog(true)} className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="h-4 w-4 ml-2" />
+          {t('addService')}
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right">{t('serviceName')}</TableHead>
+                <TableHead className="text-right">{t('serviceType')}</TableHead>
+                <TableHead className="text-right">{t('serviceCategory')}</TableHead>
+                <TableHead className="text-right">{t('basePrice')}</TableHead>
+                <TableHead className="text-right">{t('status')}</TableHead>
+                <TableHead className="text-right">{t('actions')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {services.map((service) => (
+                <TableRow key={service.id}>
+                  <TableCell className="text-right font-medium">{service.name}</TableCell>
+                  <TableCell className="text-right">{service.service_type}</TableCell>
+                  <TableCell className="text-right">{service.category}</TableCell>
+                  <TableCell className="text-right">{service.base_price.toLocaleString()} دج</TableCell>
+                  <TableCell className="text-right">
+                    <Badge variant={service.is_active ? "default" : "secondary"}>
+                      {service.is_active ? t('isActive') : 'غير نشطة'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(service)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(service.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Service Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingService ? t('editService') : t('addService')}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="name">{t('serviceName')}</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="service_type">{t('serviceType')}</Label>
+              <Select value={formData.service_type} onValueChange={(value) => setFormData({...formData, service_type: value})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="عمرة">{t('umrah')}</SelectItem>
+                  <SelectItem value="حج">{t('hajj')}</SelectItem>
+                  <SelectItem value="تذكرة طيران">{t('flightTicket')}</SelectItem>
+                  <SelectItem value="حجز فندق">{t('hotelBooking')}</SelectItem>
+                  <SelectItem value="خدمة تأشيرة">{t('visaService')}</SelectItem>
+                  <SelectItem value="نقل">{t('transport')}</SelectItem>
+                  <SelectItem value="تأمين">{t('insurance')}</SelectItem>
+                  <SelectItem value="خدمة جواز سفر">{t('passportService')}</SelectItem>
+                  <SelectItem value="أخرى">{t('otherService')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="category">{t('serviceCategory')}</Label>
+              <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="خدمات دينية">{t('religiousServices')}</SelectItem>
+                  <SelectItem value="خدمات سفر">{t('travelServices')}</SelectItem>
+                  <SelectItem value="خدمات وثائق">{t('documentationServices')}</SelectItem>
+                  <SelectItem value="خدمات إقامة">{t('accommodationServices')}</SelectItem>
+                  <SelectItem value="أخرى">{t('otherCategory')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="base_price">{t('basePrice')}</Label>
+              <Input
+                id="base_price"
+                type="number"
+                value={formData.base_price}
+                onChange={(e) => setFormData({...formData, base_price: e.target.value})}
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="min_price">{t('minPrice')}</Label>
+              <Input
+                id="min_price"
+                type="number"
+                value={formData.min_price}
+                onChange={(e) => setFormData({...formData, min_price: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="description">{t('serviceDescription')}</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="is_active"
+                checked={formData.is_active}
+                onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
+              />
+              <Label htmlFor="is_active">{t('isActive')}</Label>
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
+                {t('cancel')}
+              </Button>
+              <Button type="submit">
+                {t('save')}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// Daily Operations Management Component
+const DailyOperationsManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
+  const [operations, setOperations] = useState([]);
+  const [services, setServices] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [formData, setFormData] = useState({
+    service_id: '',
+    client_id: '',
+    discount_amount: 0,
+    discount_reason: '',
+    notes: ''
+  });
+
+  // Check if user can approve operations
+  const canApproveOperations = user?.role === 'super_admin' || user?.role === 'general_accountant';
+
+  useEffect(() => {
+    fetchOperations();
+    fetchServices();
+    fetchClients();
+  }, []);
+
+  const fetchOperations = async () => {
+    try {
+      const response = await axios.get(`${API}/daily-operations`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setOperations(response.data);
+    } catch (error) {
+      console.error('Error fetching operations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchServices = async () => {
+    try {
+      const response = await axios.get(`${API}/services?is_active=true`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setServices(response.data);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const response = await axios.get(`${API}/clients`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setClients(response.data);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/daily-operations`, formData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      setShowAddDialog(false);
+      setFormData({
+        service_id: '',
+        client_id: '',
+        discount_amount: 0,
+        discount_reason: '',
+        notes: ''
+      });
+      fetchOperations();
+    } catch (error) {
+      console.error('Error creating operation:', error);
+      alert('خطأ في إنشاء العملية');
+    }
+  };
+
+  const handleApprove = async (operationId) => {
+    try {
+      await axios.put(`${API}/daily-operations/${operationId}/approve`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      fetchOperations();
+    } catch (error) {
+      console.error('Error approving operation:', error);
+      alert('خطأ في اعتماد العملية');
+    }
+  };
+
+  const handleReject = async (operationId) => {
+    const reason = prompt('سبب الرفض:');
+    if (reason) {
+      try {
+        await axios.put(`${API}/daily-operations/${operationId}/reject`, 
+          { rejection_reason: reason }, 
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        );
+        fetchOperations();
+      } catch (error) {
+        console.error('Error rejecting operation:', error);
+        alert('خطأ في رفض العملية');
+      }
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'مسودة': { color: 'bg-gray-100 text-gray-800', text: t('draft') },
+      'في انتظار الموافقة': { color: 'bg-yellow-100 text-yellow-800', text: t('pendingApproval') },
+      'معتمد': { color: 'bg-green-100 text-green-800', text: t('operationApproved') },
+      'مرفوض': { color: 'bg-red-100 text-red-800', text: t('operationRejected') }
+    };
+    
+    const statusInfo = statusMap[status] || { color: 'bg-gray-100 text-gray-800', text: status };
+    return (
+      <Badge className={statusInfo.color}>
+        {statusInfo.text}
+      </Badge>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6" dir="rtl">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">{t('dailyOperations')}</h1>
+        <Button onClick={() => setShowAddDialog(true)} className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="h-4 w-4 ml-2" />
+          {t('addOperation')}
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right">{t('operationNo')}</TableHead>
+                <TableHead className="text-right">{t('operationDate')}</TableHead>
+                <TableHead className="text-right">{t('clientName')}</TableHead>
+                <TableHead className="text-right">{t('serviceName')}</TableHead>
+                <TableHead className="text-right">{t('finalPrice')}</TableHead>
+                <TableHead className="text-right">{t('operationStatus')}</TableHead>
+                {canApproveOperations && <TableHead className="text-right">{t('actions')}</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {operations.map((operation) => (
+                <TableRow key={operation.id}>
+                  <TableCell className="text-right font-medium">{operation.operation_no}</TableCell>
+                  <TableCell className="text-right">
+                    {new Date(operation.date).toLocaleDateString('ar-SA')}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {clients.find(c => c.id === operation.client_id)?.name || 'غير محدد'}
+                  </TableCell>
+                  <TableCell className="text-right">{operation.service_name}</TableCell>
+                  <TableCell className="text-right">{operation.final_price.toLocaleString()} دج</TableCell>
+                  <TableCell className="text-right">
+                    {getStatusBadge(operation.status)}
+                  </TableCell>
+                  {canApproveOperations && (
+                    <TableCell>
+                      <div className="flex justify-end space-x-2">
+                        {operation.status === 'في انتظار الموافقة' && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleApprove(operation.id)}
+                              className="text-green-600 hover:text-green-700 border-green-600"
+                            >
+                              ✅ {t('approveOperation')}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleReject(operation.id)}
+                              className="text-red-600 hover:text-red-700 border-red-600"
+                            >
+                              ❌ {t('rejectOperation')}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Add Operation Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>{t('addOperation')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="client_id">{t('clientName')}</Label>
+              <Select value={formData.client_id} onValueChange={(value) => setFormData({...formData, client_id: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر العميل" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="service_id">{t('serviceName')}</Label>
+              <Select value={formData.service_id} onValueChange={(value) => setFormData({...formData, service_id: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الخدمة" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name} - {service.base_price.toLocaleString()} دج
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="discount_amount">{t('discountAmount')}</Label>
+              <Input
+                id="discount_amount"
+                type="number"
+                value={formData.discount_amount}
+                onChange={(e) => setFormData({...formData, discount_amount: parseFloat(e.target.value) || 0})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="discount_reason">{t('discountReason')}</Label>
+              <Input
+                id="discount_reason"
+                value={formData.discount_reason}
+                onChange={(e) => setFormData({...formData, discount_reason: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="notes">ملاحظات</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
+                {t('cancel')}
+              </Button>
+              <Button type="submit">
+                {t('save')}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// Daily Operations Reports Component
+const DailyOperationsReports = () => {
+  const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [groupByAgency, setGroupByAgency] = useState(true);
+  const [groupByService, setGroupByService] = useState(false);
+
+  const generateReport = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        group_by_agency: groupByAgency.toString(),
+        group_by_service: groupByService.toString()
+      });
+
+      const response = await axios.get(`${API}/reports/daily-operations?${params}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      setReportData(response.data);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert('خطأ في إنتاج التقرير');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-6" dir="rtl">
+      <h1 className="text-2xl font-bold text-gray-900">{t('dailyOperationsReports')}</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>إعدادات التقرير</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>من تاريخ</Label>
+              <Input
+                type="date"
+                value={startDate.toISOString().split('T')[0]}
+                onChange={(e) => setStartDate(new Date(e.target.value))}
+              />
+            </div>
+            <div>
+              <Label>إلى تاريخ</Label>
+              <Input
+                type="date"
+                value={endDate.toISOString().split('T')[0]}
+                onChange={(e) => setEndDate(new Date(e.target.value))}
+              />
+            </div>
+          </div>
+
+          <div className="flex space-x-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="groupByAgency"
+                checked={groupByAgency}
+                onChange={(e) => setGroupByAgency(e.target.checked)}
+              />
+              <Label htmlFor="groupByAgency">تجميع حسب الوكالة</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="groupByService"
+                checked={groupByService}
+                onChange={(e) => setGroupByService(e.target.checked)}
+              />
+              <Label htmlFor="groupByService">تجميع حسب الخدمة</Label>
+            </div>
+          </div>
+
+          <Button onClick={generateReport} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+            {loading ? 'جاري الإنتاج...' : t('generateReport')}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {reportData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{reportData.title}</CardTitle>
+            <CardDescription>{reportData.period}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {reportData.group_by_agency && reportData.agencies_data ? (
+              <div className="space-y-6">
+                {reportData.agencies_data.map((agency, index) => (
+                  <div key={index} className="border rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-4">{agency.agency_name}</h3>
+                    <div className="grid grid-cols-4 gap-4 mb-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {agency.totals.operations_count}
+                        </div>
+                        <div className="text-sm text-gray-600">العمليات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {agency.totals.total_revenue.toLocaleString()} دج
+                        </div>
+                        <div className="text-sm text-gray-600">إجمالي الإيرادات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-600">
+                          {agency.totals.total_discounts.toLocaleString()} دج
+                        </div>
+                        <div className="text-sm text-gray-600">إجمالي التخفيضات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {agency.totals.net_revenue.toLocaleString()} دج
+                        </div>
+                        <div className="text-sm text-gray-600">صافي الإيرادات</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {reportData.grand_totals && (
+                  <div className="border-t pt-4">
+                    <h3 className="text-lg font-semibold mb-4">المجموع العام</h3>
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {reportData.grand_totals.operations_count}
+                        </div>
+                        <div className="text-sm text-gray-600">إجمالي العمليات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {reportData.grand_totals.total_revenue.toLocaleString()} دج
+                        </div>
+                        <div className="text-sm text-gray-600">إجمالي الإيرادات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-600">
+                          {reportData.grand_totals.total_discounts.toLocaleString()} دج
+                        </div>
+                        <div className="text-sm text-gray-600">إجمالي التخفيضات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {reportData.grand_totals.net_revenue.toLocaleString()} دج
+                        </div>
+                        <div className="text-sm text-gray-600">صافي الإيرادات</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center text-gray-600">
+                لا توجد بيانات لعرضها
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
 // Main App Component
 const MainApp = ({ activeTab }) => {
   const components = {
