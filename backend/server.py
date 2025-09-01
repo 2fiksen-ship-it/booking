@@ -1382,50 +1382,131 @@ async def generate_sales_report(
         raise HTTPException(status_code=400, detail=f"Error generating sales report: {str(e)}")
 
 @api_router.get("/reports/aging")
-async def generate_aging_report(current_user: User = Depends(get_current_user)):
-    """Generate accounts receivable aging report"""
-    # Get unpaid invoices
-    unpaid_invoices = await db.invoices.find({
-        "agency_id": current_user.agency_id,
-        "status": InvoiceStatus.PENDING
-    }).to_list(1000)
-    
-    # Get clients data
-    clients = await db.clients.find({"agency_id": current_user.agency_id}).to_list(1000)
-    clients_dict = {client["id"]: client["name"] for client in clients}
-    
-    aging_data = []
-    total_amount = 0
-    
-    for invoice in unpaid_invoices:
-        # Calculate days overdue
-        invoice_date = invoice["created_at"]
-        if isinstance(invoice_date, str):
-            invoice_date = datetime.fromisoformat(invoice_date.replace('Z', '+00:00'))
-        elif invoice_date.tzinfo is None:
-            invoice_date = invoice_date.replace(tzinfo=timezone.utc)
+async def generate_aging_report(
+    agency_ids: Optional[str] = None,  # Comma-separated agency IDs, or "all" for all agencies
+    group_by_agency: bool = True,  # Whether to group results by agency
+    current_user: User = Depends(get_current_user)
+):
+    """Generate accounts receivable aging report with agency breakdown"""
+    try:
+        # Build query filter based on user role and agency selection
+        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+            if agency_ids and agency_ids != "all":
+                selected_agency_ids = [id.strip() for id in agency_ids.split(',')]
+                query_filter = {"agency_id": {"$in": selected_agency_ids}}
+            else:
+                query_filter = {}
+        else:
+            query_filter = {"agency_id": current_user.agency_id}
         
-        days_overdue = (datetime.now(timezone.utc) - invoice_date).days
+        query_filter["status"] = InvoiceStatus.PENDING
         
-        aging_data.append({
-            "client": clients_dict.get(invoice["client_id"], "Unknown"),
-            "invoice": invoice["invoice_no"],
-            "amount": invoice["amount_ttc"],
-            "days": days_overdue
-        })
-        total_amount += invoice["amount_ttc"]
-    
-    # Sort by days overdue (highest first)
-    aging_data.sort(key=lambda x: x["days"], reverse=True)
-    
-    return {
-        "title": "تقرير أعمار الديون",
-        "data": aging_data,
-        "totals": {
-            "count": len(aging_data),
-            "amount": total_amount
-        }
-    }
+        # Get unpaid invoices
+        unpaid_invoices = await db.invoices.find(query_filter).to_list(1000)
+        
+        # Get clients and agencies data
+        clients = await db.clients.find({}).to_list(1000)
+        clients_dict = {client["id"]: client["name"] for client in clients}
+        
+        agencies = await db.agencies.find({}).to_list(100)
+        agencies_dict = {agency["id"]: agency for agency in agencies}
+        
+        if group_by_agency:
+            # Group by agency
+            agency_data = {}
+            grand_totals = {"count": 0, "amount": 0}
+            
+            for invoice in unpaid_invoices:
+                agency_id = invoice["agency_id"]
+                agency_info = agencies_dict.get(agency_id, {"name": "وكالة غير معروفة", "city": "غير محدد"})
+                agency_name = f"{agency_info['name']} - {agency_info['city']}"
+                
+                if agency_name not in agency_data:
+                    agency_data[agency_name] = {
+                        "agency_id": agency_id,
+                        "agency_name": agency_name,
+                        "invoices": [],
+                        "totals": {"count": 0, "amount": 0}
+                    }
+                
+                # Calculate days overdue
+                invoice_date = invoice["created_at"]
+                if isinstance(invoice_date, str):
+                    invoice_date = datetime.fromisoformat(invoice_date.replace('Z', '+00:00'))
+                elif invoice_date.tzinfo is None:
+                    invoice_date = invoice_date.replace(tzinfo=timezone.utc)
+                
+                days_overdue = (datetime.now(timezone.utc) - invoice_date).days
+                
+                invoice_data = {
+                    "client": clients_dict.get(invoice["client_id"], "Unknown"),
+                    "invoice": invoice["invoice_no"],
+                    "amount": invoice["amount_ttc"],
+                    "days": days_overdue
+                }
+                
+                agency_data[agency_name]["invoices"].append(invoice_data)
+                agency_data[agency_name]["totals"]["count"] += 1
+                agency_data[agency_name]["totals"]["amount"] += invoice["amount_ttc"]
+                
+                grand_totals["count"] += 1
+                grand_totals["amount"] += invoice["amount_ttc"]
+            
+            # Sort invoices within each agency by days overdue
+            result_data = []
+            for agency_name, agency_info in agency_data.items():
+                agency_info["invoices"].sort(key=lambda x: x["days"], reverse=True)
+                result_data.append(agency_info)
+            
+            # Sort agencies by name
+            result_data.sort(key=lambda x: x['agency_name'])
+            
+            return {
+                "title": "تقرير أعمار الديون - حسب الوكالة",
+                "group_by_agency": True,
+                "agencies_data": result_data,
+                "grand_totals": grand_totals
+            }
+        
+        else:
+            # Traditional format without agency grouping
+            aging_data = []
+            total_amount = 0
+            
+            for invoice in unpaid_invoices:
+                # Calculate days overdue
+                invoice_date = invoice["created_at"]
+                if isinstance(invoice_date, str):
+                    invoice_date = datetime.fromisoformat(invoice_date.replace('Z', '+00:00'))
+                elif invoice_date.tzinfo is None:
+                    invoice_date = invoice_date.replace(tzinfo=timezone.utc)
+                
+                days_overdue = (datetime.now(timezone.utc) - invoice_date).days
+                
+                aging_data.append({
+                    "client": clients_dict.get(invoice["client_id"], "Unknown"),
+                    "invoice": invoice["invoice_no"],
+                    "amount": invoice["amount_ttc"],
+                    "days": days_overdue
+                })
+                total_amount += invoice["amount_ttc"]
+            
+            # Sort by days overdue (highest first)
+            aging_data.sort(key=lambda x: x["days"], reverse=True)
+            
+            return {
+                "title": "تقرير أعمار الديون - مجمع",
+                "group_by_agency": False,
+                "data": aging_data,
+                "totals": {
+                    "count": len(aging_data),
+                    "amount": total_amount
+                }
+            }
+            
+    except Exception as e:
+        print(f"Aging report error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error generating aging report: {str(e)}")
 
 @api_router.get("/reports/profit-loss")
 async def generate_profit_loss_report(
