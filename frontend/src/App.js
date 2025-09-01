@@ -4994,6 +4994,7 @@ const DailyOperationsReports = () => {
 
   const handlePrintReport = async () => {
     try {
+      console.log('=== PRINTING REPORT ===');
       const params = new URLSearchParams({
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
@@ -5005,26 +5006,66 @@ const DailyOperationsReports = () => {
         params.append('agency_ids', selectedAgency);
       }
 
-      const response = await axios.get(`${API}/reports/daily-operations/print?${params}`, {
+      const apiUrl = `${API}/reports/daily-operations/print?${params}`;
+      console.log('Print API URL:', apiUrl);
+      console.log('Token:', localStorage.getItem('token') ? 'Present' : 'Missing');
+
+      const response = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         responseType: 'blob'
       });
       
+      console.log('Print response received');
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      console.log('Response data size:', response.data.size);
+      
+      // Check if response is actually a PDF
+      if (response.data.size === 0) {
+        throw new Error('PDF report is empty');
+      }
+      
       // Create blob URL and download
       const blob = new Blob([response.data], { type: 'application/pdf' });
+      console.log('Report blob created, size:', blob.size);
+      
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `daily_operations_report_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      link.style.display = 'none';
       
-      console.log('Report printed successfully');
+      document.body.appendChild(link);
+      console.log('Report link added, triggering download...');
+      link.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        console.log('Report cleanup completed');
+      }, 100);
+      
+      console.log('=== REPORT PRINT SUCCESS ===');
+      alert('✅ تم تحميل التقرير بنجاح!');
+      
     } catch (error) {
+      console.error('=== REPORT PRINT ERROR ===');
       console.error('Error printing report:', error);
-      alert('خطأ في طباعة التقرير');
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      // Check if it's a blob error response
+      if (error.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          console.log('Error blob content:', text);
+        } catch (blobError) {
+          console.log('Could not read error blob');
+        }
+      }
+      
+      alert('خطأ في طباعة التقرير: ' + (error.response?.data?.detail || error.message));
     }
   };
 
