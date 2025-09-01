@@ -666,7 +666,8 @@ const Layout = ({ children }) => {
           label: t('systemAdministration'),
           items: [
             { id: 'userManagement', label: t('userManagement'), icon: Settings },
-            { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 }
+            { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 },
+            { id: 'servicesManagement', label: t('servicesManagement'), icon: Package }
           ]
         },
         // Operations Management Category  
@@ -676,7 +677,8 @@ const Layout = ({ children }) => {
           items: [
             { id: 'clients', label: t('clients'), icon: Users },
             { id: 'suppliers', label: t('suppliers'), icon: Building2 },
-            { id: 'bookings', label: t('bookings'), icon: Package }
+            { id: 'bookings', label: t('bookings'), icon: Package },
+            { id: 'dailyOperations', label: t('dailyOperations'), icon: FileText }
           ]
         },
         // Financial Management Category
@@ -686,7 +688,8 @@ const Layout = ({ children }) => {
           items: [
             { id: 'invoices', label: t('invoices'), icon: FileText },
             { id: 'payments', label: t('payments'), icon: CreditCard },  
-            { id: 'reports', label: t('reports'), icon: BarChart3 }
+            { id: 'reports', label: t('reports'), icon: BarChart3 },
+            { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 }
           ]
         }
       ];
