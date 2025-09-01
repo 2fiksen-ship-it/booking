@@ -518,6 +518,18 @@ test_plan:
       - working: true
         agent: "testing"
         comment: "✅ TESTED: Daily Operations Reports API working well with minor API design note! ✅ GET /api/reports/daily-operations working when start_date and end_date provided, ✅ Agency breakdown (group_by_agency=true) working perfectly, ✅ Service breakdown (group_by_service=true) working, ✅ Date filtering working, ✅ Combined filters working, ✅ General Accountant access working. Minor: API requires start_date and end_date parameters (returns 422 without them) - this is proper API design, not an error. ✅ Cross-agency access working - Super Admin sees all agencies, General Accountant has full access. Reports system functional and ready!"
+
+  - task: "Discount Requests System API"
+    implemented: true
+    working: false
+    file: "backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ISSUE: GET /api/discount-requests endpoint returns 500 Internal Server Error for Super Admin and General Accountant. ✅ Agency Staff correctly denied access (403). ✅ Filtering by status works when no 500 error occurs. ✅ Role-based permissions working correctly where accessible. NEEDS FIX: Server error in discount requests endpoint - likely database query or model serialization issue."
     priority: "high"
     needs_retesting: false
     status_history:
