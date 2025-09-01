@@ -1755,8 +1755,42 @@ def main():
         print(f"🎯 معدل النجاح: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         print(f"🎯 Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         
-        # Google Authentication Results (PRIMARY FOCUS)
-        print(f"\n🔐 نتائج نظام المصادقة عبر جوجل - GOOGLE AUTHENTICATION RESULTS (PRIMARY FOCUS):")
+        # General Accountant Results (PRIMARY FOCUS)
+        print(f"\n💼 نتائج المحاسب العام المحسن - ENHANCED GENERAL ACCOUNTANT RESULTS (PRIMARY FOCUS):")
+        general_accountant_keys = [
+            ('general_accountant_login', 'General Accountant Login (generalaccountant@sanhaja.com)'),
+            ('clients_cross_agency', 'GET /api/clients - Cross-agency access'),
+            ('clients_all_agencies', 'Clients from ALL 6 agencies visible'),
+            ('suppliers_cross_agency', 'GET /api/suppliers - Cross-agency access'),
+            ('suppliers_all_agencies', 'Suppliers from ALL 6 agencies visible'),
+            ('bookings_cross_agency', 'GET /api/bookings - Cross-agency access'),
+            ('bookings_all_agencies', 'Bookings from ALL 6 agencies visible'),
+            ('invoices_cross_agency', 'GET /api/invoices - Cross-agency access'),
+            ('invoices_all_agencies', 'Invoices from ALL 6 agencies visible'),
+            ('payments_cross_agency', 'GET /api/payments - Cross-agency access'),
+            ('payments_all_agencies', 'Payments from ALL 6 agencies visible'),
+            ('clients_agency_filter', 'Agency filtering for clients works'),
+            ('clients_filter_accuracy', 'Agency filter returns correct data'),
+            ('dashboard_agency_filter', 'Dashboard agency filtering works'),
+            ('dashboard_consolidated', 'Consolidated dashboard (no filter) works'),
+            ('agency_staff_login', 'Agency staff login (isolation test)'),
+            ('staff_clients_isolated', 'Agency staff sees only their data'),
+            ('staff_isolation_verified', 'Agency staff isolation verified'),
+            ('staff_filter_ignored', 'Agency filtering ignored for staff')
+        ]
+        
+        for key, description in general_accountant_keys:
+            if key in general_accountant_results:
+                status = "✅" if general_accountant_results[key] else "❌"
+                print(f"   {status} {description}")
+        
+        # General Accountant Functionality Score
+        ga_working = sum(1 for key, _ in general_accountant_keys if general_accountant_results.get(key, False))
+        ga_total = len(general_accountant_keys)
+        print(f"\n   📊 General Accountant Functionality Score: {ga_working}/{ga_total} ({(ga_working/ga_total)*100:.1f}%)")
+        
+        # Google Authentication Results (SECONDARY FOCUS)
+        print(f"\n🔐 نتائج نظام المصادقة عبر جوجل - GOOGLE AUTHENTICATION RESULTS (SECONDARY FOCUS):")
         google_auth_keys = [
             ('google_auth_endpoint_accessible', 'POST /api/auth/google endpoint structure'),
             ('google_auth_no_session', 'Rejects requests without session ID'),
