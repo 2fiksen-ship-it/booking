@@ -4729,11 +4729,28 @@ const DailyOperationsReports = () => {
   const { t } = useContext(LanguageContext);
   const { user } = useContext(AuthContext);
   const [reportData, setReportData] = useState(null);
+  const [agencies, setAgencies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [groupByAgency, setGroupByAgency] = useState(true);
   const [groupByService, setGroupByService] = useState(false);
+  const [selectedAgency, setSelectedAgency] = useState('all');
+
+  useEffect(() => {
+    fetchAgencies();
+  }, []);
+
+  const fetchAgencies = async () => {
+    try {
+      const response = await axios.get(`${API}/agencies`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setAgencies(response.data);
+    } catch (error) {
+      console.error('Error fetching agencies:', error);
+    }
+  };
 
   const generateReport = async () => {
     setLoading(true);
@@ -4744,6 +4761,11 @@ const DailyOperationsReports = () => {
         group_by_agency: groupByAgency.toString(),
         group_by_service: groupByService.toString()
       });
+
+      // Add agency filter if specific agency is selected
+      if (selectedAgency !== 'all') {
+        params.append('agency_ids', selectedAgency);
+      }
 
       const response = await axios.get(`${API}/reports/daily-operations?${params}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -4786,6 +4808,24 @@ const DailyOperationsReports = () => {
             </div>
           </div>
 
+          {/* NEW: Agency Filter */}
+          <div>
+            <Label>فلتر الوكالة</Label>
+            <Select value={selectedAgency} onValueChange={setSelectedAgency}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر الوكالة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">🌐 جميع الوكالات</SelectItem>
+                {agencies.map((agency) => (
+                  <SelectItem key={agency.id} value={agency.id}>
+                    {agency.name} - {agency.city}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex space-x-4">
             <div className="flex items-center space-x-2">
               <input
@@ -4817,7 +4857,14 @@ const DailyOperationsReports = () => {
         <Card>
           <CardHeader>
             <CardTitle>{reportData.title}</CardTitle>
-            <CardDescription>{reportData.period}</CardDescription>
+            <CardDescription>
+              {reportData.period}
+              {selectedAgency !== 'all' && (
+                <span className="mr-2 text-blue-600">
+                  • الوكالة: {agencies.find(a => a.id === selectedAgency)?.name}
+                </span>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {reportData.group_by_agency && reportData.agencies_data ? (
@@ -4851,12 +4898,59 @@ const DailyOperationsReports = () => {
                         <div className="text-sm text-gray-600">صافي الإيرادات</div>
                       </div>
                     </div>
+
+                    {/* Display detailed operations if available */}
+                    {agency.services && Array.isArray(agency.services) && agency.services.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="font-semibold mb-2">تفاصيل العمليات:</h4>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-right">رقم الوصل</TableHead>
+                                <TableHead className="text-right">التاريخ</TableHead>
+                                <TableHead className="text-right">العميل</TableHead>
+                                <TableHead className="text-right">الخدمة</TableHead>
+                                <TableHead className="text-right">السعر الأساسي</TableHead>
+                                <TableHead className="text-right">التخفيض</TableHead>
+                                <TableHead className="text-right">السعر النهائي</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {agency.services.slice(0, 10).map((operation, opIndex) => (
+                                <TableRow key={opIndex}>
+                                  <TableCell className="text-right text-sm">{operation.operation_no}</TableCell>
+                                  <TableCell className="text-right text-sm">{operation.date}</TableCell>
+                                  <TableCell className="text-right text-sm">{operation.client_name}</TableCell>
+                                  <TableCell className="text-right text-sm">{operation.service_name}</TableCell>
+                                  <TableCell className="text-right text-sm">{operation.base_price.toLocaleString()} دج</TableCell>
+                                  <TableCell className="text-right text-sm">{operation.discount_amount.toLocaleString()} دج</TableCell>
+                                  <TableCell className="text-right text-sm font-semibold">{operation.final_price.toLocaleString()} دج</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                          {agency.services.length > 10 && (
+                            <p className="text-sm text-gray-600 mt-2">
+                              عرض أول 10 عمليات من إجمالي {agency.services.length} عملية
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
                 
                 {reportData.grand_totals && (
                   <div className="border-t pt-4">
-                    <h3 className="text-lg font-semibold mb-4">المجموع العام</h3>
+                    <h3 className="text-lg font-semibold mb-4">
+                      المجموع العام
+                      {selectedAgency !== 'all' && (
+                        <span className="text-sm text-gray-600 font-normal mr-2">
+                          (الوكالة المحددة فقط)
+                        </span>
+                      )}
+                    </h3>
                     <div className="grid grid-cols-4 gap-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-blue-600">
@@ -4879,6 +4973,72 @@ const DailyOperationsReports = () => {
                       <div className="text-center">
                         <div className="text-2xl font-bold text-purple-600">
                           {reportData.grand_totals.net_revenue.toLocaleString()} دج
+                        </div>
+                        <div className="text-sm text-gray-600">صافي الإيرادات</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : reportData.data ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">تفاصيل العمليات</h3>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right">رقم الوصل</TableHead>
+                        <TableHead className="text-right">التاريخ</TableHead>
+                        <TableHead className="text-right">الوكالة</TableHead>
+                        <TableHead className="text-right">العميل</TableHead>
+                        <TableHead className="text-right">الخدمة</TableHead>
+                        <TableHead className="text-right">السعر الأساسي</TableHead>
+                        <TableHead className="text-right">التخفيض</TableHead>
+                        <TableHead className="text-right">السعر النهائي</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reportData.data.map((operation, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="text-right text-sm">{operation.operation_no}</TableCell>
+                          <TableCell className="text-right text-sm">{operation.date}</TableCell>
+                          <TableCell className="text-right text-sm">{operation.agency_name}</TableCell>
+                          <TableCell className="text-right text-sm">{operation.client_name}</TableCell>
+                          <TableCell className="text-right text-sm">{operation.service_name}</TableCell>
+                          <TableCell className="text-right text-sm">{operation.base_price.toLocaleString()} دج</TableCell>
+                          <TableCell className="text-right text-sm">{operation.discount_amount.toLocaleString()} دج</TableCell>
+                          <TableCell className="text-right text-sm font-semibold">{operation.final_price.toLocaleString()} دج</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {reportData.totals && (
+                  <div className="border-t pt-4">
+                    <h3 className="text-lg font-semibold mb-4">المجموع العام</h3>
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {reportData.totals.operations_count}
+                        </div>
+                        <div className="text-sm text-gray-600">إجمالي العمليات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {reportData.totals.total_revenue.toLocaleString()} دج
+                        </div>
+                        <div className="text-sm text-gray-600">إجمالي الإيرادات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-600">
+                          {reportData.totals.total_discounts.toLocaleString()} دج
+                        </div>
+                        <div className="text-sm text-gray-600">إجمالي التخفيضات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {reportData.totals.net_revenue.toLocaleString()} دج
                         </div>
                         <div className="text-sm text-gray-600">صافي الإيرادات</div>
                       </div>
