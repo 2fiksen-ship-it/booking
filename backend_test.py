@@ -3335,10 +3335,18 @@ def main():
     
     tester = SanhajaAPITester()
     
-    # NEW SERVICES MANAGEMENT AND DAILY OPERATIONS SYSTEM TESTING (PRIMARY FOCUS from Current Review Request)
+    # VARIABLE PRICING SERVICES CREATION TESTING (PRIMARY FOCUS from Current Review Request)
     print("\n" + "="*80)
-    print("🛠️ SERVICES MANAGEMENT AND DAILY OPERATIONS SYSTEM TESTING - PRIMARY FOCUS")
-    print("اختبار نظام إدارة الخدمات والعمليات اليومية - المحور الأساسي")
+    print("💰 VARIABLE PRICING SERVICES CREATION TESTING - PRIMARY FOCUS")
+    print("اختبار إنشاء الخدمات المتغيرة السعر - المحور الأساسي")
+    print("="*80)
+    
+    variable_services_results = tester.test_variable_pricing_services_creation()
+    
+    # SERVICES MANAGEMENT AND DAILY OPERATIONS SYSTEM TESTING (SECONDARY FOCUS)
+    print("\n" + "="*80)
+    print("🛠️ SERVICES MANAGEMENT AND DAILY OPERATIONS SYSTEM TESTING - SECONDARY FOCUS")
+    print("اختبار نظام إدارة الخدمات والعمليات اليومية - المحور الثانوي")
     print("="*80)
     
     services_operations_results = tester.test_services_and_daily_operations_comprehensive()
