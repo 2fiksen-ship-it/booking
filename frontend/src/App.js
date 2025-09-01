@@ -4462,9 +4462,11 @@ const DailyOperationsManagement = () => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
   const [formData, setFormData] = useState({
     service_id: '',
     client_id: '',
+    base_price: '', // Allow custom price for variable services
     discount_amount: 0,
     discount_reason: '',
     notes: ''
@@ -4514,17 +4516,45 @@ const DailyOperationsManagement = () => {
     }
   };
 
+  const handleServiceChange = (serviceId) => {
+    const service = services.find(s => s.id === serviceId);
+    setSelectedService(service);
+    
+    // Set default price for fixed-price services, clear for variable services
+    const basePrice = service && service.is_fixed_price ? service.base_price.toString() : '';
+    
+    setFormData({
+      ...formData,
+      service_id: serviceId,
+      base_price: basePrice
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate custom price for variable services
+    if (selectedService && !selectedService.is_fixed_price && (!formData.base_price || parseFloat(formData.base_price) <= 0)) {
+      alert('يرجى إدخال سعر صحيح للخدمة المتغيرة');
+      return;
+    }
+    
     try {
-      await axios.post(`${API}/daily-operations`, formData, {
+      const submitData = {
+        ...formData,
+        base_price: formData.base_price ? parseFloat(formData.base_price) : null
+      };
+      
+      await axios.post(`${API}/daily-operations`, submitData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       
       setShowAddDialog(false);
+      setSelectedService(null);
       setFormData({
         service_id: '',
         client_id: '',
+        base_price: '',
         discount_amount: 0,
         discount_reason: '',
         notes: ''
@@ -4662,7 +4692,7 @@ const DailyOperationsManagement = () => {
 
       {/* Add Operation Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+        <DialogContent className="sm:max-w-[500px]" dir="rtl">
           <DialogHeader>
             <DialogTitle>{t('addOperation')}</DialogTitle>
           </DialogHeader>
@@ -4685,19 +4715,57 @@ const DailyOperationsManagement = () => {
 
             <div>
               <Label htmlFor="service_id">{t('serviceName')}</Label>
-              <Select value={formData.service_id} onValueChange={(value) => setFormData({...formData, service_id: value})}>
+              <Select value={formData.service_id} onValueChange={handleServiceChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر الخدمة" />
                 </SelectTrigger>
                 <SelectContent>
                   {services.map((service) => (
                     <SelectItem key={service.id} value={service.id}>
-                      {service.name} - {service.base_price.toLocaleString()} دج
+                      {service.name} - {service.is_fixed_price ? `${service.base_price.toLocaleString()} دج` : 'سعر متغير'}
+                      {!service.is_fixed_price && <span className="text-green-600 mr-2">📝 متغير</span>}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Show price input for variable services */}
+            {selectedService && !selectedService.is_fixed_price && (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex items-center mb-2">
+                  <Info className="h-4 w-4 text-blue-600 ml-2" />
+                  <span className="text-blue-800 font-medium">خدمة بسعر متغير</span>
+                </div>
+                <div>
+                  <Label htmlFor="base_price">السعر النهائي (دج) *</Label>
+                  <Input
+                    id="base_price"
+                    type="number"
+                    value={formData.base_price}
+                    onChange={(e) => setFormData({...formData, base_price: e.target.value})}
+                    placeholder="أدخل السعر للخدمة"
+                    required
+                    className="mt-1"
+                  />
+                  <p className="text-sm text-blue-600 mt-1">
+                    💡 يمكنك تحديد السعر المناسب لهذه الخدمة
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Show price info for fixed services */}
+            {selectedService && selectedService.is_fixed_price && (
+              <div className="bg-gray-50 p-3 rounded-lg border">
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-600 ml-2" />
+                  <span className="text-gray-700">
+                    السعر الثابت: <strong>{selectedService.base_price.toLocaleString()} دج</strong>
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="discount_amount">{t('discountAmount')}</Label>
@@ -4709,14 +4777,17 @@ const DailyOperationsManagement = () => {
               />
             </div>
 
-            <div>
-              <Label htmlFor="discount_reason">{t('discountReason')}</Label>
-              <Input
-                id="discount_reason"
-                value={formData.discount_reason}
-                onChange={(e) => setFormData({...formData, discount_reason: e.target.value})}
-              />
-            </div>
+            {formData.discount_amount > 0 && (
+              <div>
+                <Label htmlFor="discount_reason">{t('discountReason')}</Label>
+                <Input
+                  id="discount_reason"
+                  value={formData.discount_reason}
+                  onChange={(e) => setFormData({...formData, discount_reason: e.target.value})}
+                  placeholder="سبب التخفيض (مطلوب للتخفيضات)"
+                />
+              </div>
+            )}
 
             <div>
               <Label htmlFor="notes">ملاحظات</Label>
@@ -4728,7 +4799,18 @@ const DailyOperationsManagement = () => {
             </div>
 
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
+              <Button type="button" variant="outline" onClick={() => {
+                setShowAddDialog(false);
+                setSelectedService(null);
+                setFormData({
+                  service_id: '',
+                  client_id: '',
+                  base_price: '',
+                  discount_amount: 0,
+                  discount_reason: '',
+                  notes: ''
+                });
+              }}>
                 {t('cancel')}
               </Button>
               <Button type="submit">
