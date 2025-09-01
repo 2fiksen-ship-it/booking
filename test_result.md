@@ -420,10 +420,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Daily Operations Management System - Services & Pricing"
-    - "Daily Operations Receipts with Approval System"
-    - "Comprehensive Daily Operations Reports"
-  stuck_tasks: []
+    - "Discount Requests System API"
+  stuck_tasks:
+    - "Discount Requests System API"
   test_all: false
   test_priority: "high_first"
 
