@@ -1508,54 +1508,134 @@ async def generate_aging_report(
         print(f"Aging report error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Error generating aging report: {str(e)}")
 
-@api_router.get("/reports/profit-loss")
-async def generate_profit_loss_report(
+@api_router.get("/reports/summary")
+async def generate_summary_report(
     start_date: str,
     end_date: str,
+    agency_ids: Optional[str] = None,  # Comma-separated agency IDs, or "all" for all agencies
+    group_by_agency: bool = True,  # Whether to group results by agency
     current_user: User = Depends(get_current_user)
 ):
-    """Generate profit and loss report"""
+    """Generate summary sales report (without profit calculations)"""
     try:
         from datetime import datetime
-        start = datetime.fromisoformat(start_date)
-        end = datetime.fromisoformat(end_date)
         
-        # Get invoices (income)
-        invoices = await db.invoices.find({
-            "agency_id": current_user.agency_id,
-            "created_at": {"$gte": start, "$lte": end}
-        }).to_list(1000)
+        # Parse dates
+        try:
+            if 'T' not in start_date and 'T' not in end_date:
+                start = datetime.fromisoformat(start_date + 'T00:00:00')
+                end = datetime.fromisoformat(end_date + 'T23:59:59')
+            else:
+                start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            try:
+                start = datetime.strptime(start_date[:10], '%Y-%m-%d')
+                end = datetime.strptime(end_date[:10], '%Y-%m-%d')
+                end = end.replace(hour=23, minute=59, second=59)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid date format")
         
-        # Calculate income
-        total_sales = sum(inv["amount_ttc"] for inv in invoices)
-        total_services = total_sales * 0.2  # Assume 20% from services
+        # Ensure timezone awareness
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
         
-        # Calculate expenses (rough estimates)
-        total_supplier_costs = total_sales * 0.6  # 60% of sales as supplier costs
-        total_operations = total_sales * 0.2  # 20% operational costs
+        # Build query filter based on user role and agency selection
+        if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+            if agency_ids and agency_ids != "all":
+                selected_agency_ids = [id.strip() for id in agency_ids.split(',')]
+                query_filter = {"agency_id": {"$in": selected_agency_ids}}
+            else:
+                query_filter = {}
+        else:
+            query_filter = {"agency_id": current_user.agency_id}
+            
+        query_filter["created_at"] = {"$gte": start, "$lte": end}
         
-        # Calculate profit
-        total_income = total_sales + total_services
-        total_expenses = total_supplier_costs + total_operations
-        net_profit = total_income - total_expenses
+        # Get invoices and bookings for the period
+        invoices = await db.invoices.find(query_filter).to_list(1000)
+        bookings = await db.bookings.find(query_filter).to_list(1000)
         
-        return {
-            "title": "تقرير الأرباح والخسائر",
-            "data": {
-                "income": {
-                    "sales": total_sales,
-                    "services": total_services
-                },
-                "expenses": {
-                    "suppliers": total_supplier_costs,
-                    "operations": total_operations
-                },
-                "profit": net_profit
+        # Get agencies data
+        agencies = await db.agencies.find({}).to_list(100)
+        agencies_dict = {agency["id"]: agency for agency in agencies}
+        
+        if group_by_agency:
+            # Group by agency
+            agency_data = {}
+            grand_totals = {"sales": 0, "bookings": 0, "invoices": 0}
+            
+            for invoice in invoices:
+                agency_id = invoice["agency_id"]
+                agency_info = agencies_dict.get(agency_id, {"name": "وكالة غير معروفة", "city": "غير محدد"})
+                agency_name = f"{agency_info['name']} - {agency_info['city']}"
+                
+                if agency_name not in agency_data:
+                    agency_data[agency_name] = {
+                        "agency_id": agency_id,
+                        "agency_name": agency_name,
+                        "sales": 0,
+                        "bookings": 0,
+                        "invoices": 0
+                    }
+                
+                agency_data[agency_name]["sales"] += invoice["amount_ttc"]
+                agency_data[agency_name]["invoices"] += 1
+                grand_totals["sales"] += invoice["amount_ttc"]
+                grand_totals["invoices"] += 1
+            
+            # Count bookings by agency
+            for booking in bookings:
+                agency_id = booking["agency_id"]
+                agency_info = agencies_dict.get(agency_id, {"name": "وكالة غير معروفة", "city": "غير محدد"})
+                agency_name = f"{agency_info['name']} - {agency_info['city']}"
+                
+                if agency_name not in agency_data:
+                    agency_data[agency_name] = {
+                        "agency_id": agency_id,
+                        "agency_name": agency_name,
+                        "sales": 0,
+                        "bookings": 0,
+                        "invoices": 0
+                    }
+                
+                agency_data[agency_name]["bookings"] += 1
+                grand_totals["bookings"] += 1
+            
+            # Convert to list and sort
+            result_data = list(agency_data.values())
+            result_data.sort(key=lambda x: x['agency_name'])
+            
+            return {
+                "title": "تقرير ملخص المبيعات - حسب الوكالة",
+                "period": f"من {start_date} إلى {end_date}",
+                "group_by_agency": True,
+                "agencies_data": result_data,
+                "grand_totals": grand_totals
             }
-        }
+        
+        else:
+            # Calculate totals without agency breakdown
+            total_sales = sum(inv["amount_ttc"] for inv in invoices)
+            total_bookings = len(bookings)
+            total_invoices = len(invoices)
+            
+            return {
+                "title": "تقرير ملخص المبيعات - مجمع",
+                "period": f"من {start_date} إلى {end_date}",
+                "group_by_agency": False,
+                "data": {
+                    "sales": total_sales,
+                    "bookings": total_bookings,
+                    "invoices": total_invoices
+                }
+            }
         
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        print(f"Summary report error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error generating summary report: {str(e)}")
 
 # User Management Routes (Super Admin Only)
 @api_router.get("/users", response_model=List[User])
