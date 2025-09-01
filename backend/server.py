@@ -1100,12 +1100,15 @@ async def create_invoice(invoice_data: InvoiceCreate, current_user: User = Depen
     return invoice
 
 @api_router.get("/invoices", response_model=List[Invoice])
-async def get_invoices(current_user: User = Depends(get_current_user)):
-    # Super Admin sees all invoices from all agencies
-    if current_user.role == UserRole.SUPER_ADMIN:
-        invoices = await db.invoices.find({}).to_list(1000)
+async def get_invoices(agency_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    # Super Admin and General Accountant see all invoices, can filter by agency
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        query_filter = {"agency_id": agency_id} if agency_id else {}
     else:
-        invoices = await db.invoices.find({"agency_id": current_user.agency_id}).to_list(1000)
+        # Agency staff only see their own agency invoices
+        query_filter = {"agency_id": current_user.agency_id}
+    
+    invoices = await db.invoices.find(query_filter).to_list(1000)
     return [Invoice(**invoice) for invoice in invoices]
 
 # Payment Routes
