@@ -531,6 +531,18 @@ test_plan:
         agent: "testing"
         comment: "✅ TESTED: Daily Operations Reports API working well with minor API design note! ✅ GET /api/reports/daily-operations working when start_date and end_date provided, ✅ Agency breakdown (group_by_agency=true) working perfectly, ✅ Service breakdown (group_by_service=true) working, ✅ Date filtering working, ✅ Combined filters working, ✅ General Accountant access working. Minor: API requires start_date and end_date parameters (returns 422 without them) - this is proper API design, not an error. ✅ Cross-agency access working - Super Admin sees all agencies, General Accountant has full access. Reports system functional and ready!"
 
+  - task: "Variable Pricing Services Creation"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Variable Pricing Services Creation working perfectly! Super Admin login (superadmin@sanhaja.com/super123) successful. All 5 variable pricing services created successfully: 'خدمات متنوعة', 'خدمات إضافية', 'مبيعات غير محددة', 'خدمات خاصة', 'أعمال متفرقة' - all with base_price: 0.0 DZD, min_price: 0.0 DZD, is_fixed_price: false, category: 'أخرى'. Services endpoint accessible with 13 total services, 11 variable pricing services found. Category filtering works (services in 'أخرى' category), variable pricing filtering works (is_fixed_price=false). Daily operations endpoint accessible with services available for operations creation. Service types (6 types) and categories (5 categories) available for UI dropdowns. All review request requirements satisfied - flexible pricing services ready for agency staff to set custom prices."
+
   - task: "Discount Requests System API"
     implemented: true
     working: true
