@@ -1962,6 +1962,57 @@ async def get_all_agencies(current_user: User = Depends(get_current_user)):
     agencies = await db.agencies.find({}).to_list(1000)
     return [Agency(**agency) for agency in agencies]
 
+@api_router.get("/agencies/{agency_id}", response_model=Agency)
+async def get_agency_details(agency_id: str, current_user: User = Depends(get_current_user)):
+    """Get agency details for settings"""
+    # Role-based access control
+    if current_user.role == UserRole.AGENCY_STAFF:
+        # Agency staff can only view their own agency
+        if agency_id != current_user.agency_id:
+            raise HTTPException(status_code=403, detail="Access denied. You can only view your own agency settings.")
+    elif current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    agency = await db.agencies.find_one({"id": agency_id})
+    if not agency:
+        raise HTTPException(status_code=404, detail="Agency not found")
+    
+    return Agency(**agency)
+
+@api_router.put("/agencies/{agency_id}", response_model=Agency)
+async def update_agency_settings(
+    agency_id: str, 
+    agency_data: AgencyUpdate, 
+    current_user: User = Depends(get_current_user)
+):
+    """Update agency settings"""
+    # Role-based access control for updates
+    if current_user.role == UserRole.AGENCY_STAFF:
+        raise HTTPException(status_code=403, detail="Access denied. Only General Manager and General Accountant can modify agency settings.")
+    elif current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Verify agency exists
+    agency = await db.agencies.find_one({"id": agency_id})
+    if not agency:
+        raise HTTPException(status_code=404, detail="Agency not found")
+    
+    # Build update data
+    update_data = {}
+    for field, value in agency_data.dict(exclude_unset=True).items():
+        if value is not None:
+            update_data[field] = value
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid update data provided")
+    
+    # Update agency
+    await db.agencies.update_one({"id": agency_id}, {"$set": update_data})
+    
+    # Return updated agency
+    updated_agency = await db.agencies.find_one({"id": agency_id})
+    return Agency(**updated_agency)
+
 # Daily Reports Management Routes
 @api_router.get("/daily-reports")
 async def get_daily_reports(current_user: User = Depends(get_current_user)):
