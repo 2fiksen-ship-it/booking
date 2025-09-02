@@ -835,6 +835,7 @@ const Layout = ({ children }) => {
         label: t('financialManagement'),
         items: [
           { id: 'payments', label: '💰 المدفوعات (العمليات)', icon: CreditCard },
+          { id: 'installments', label: '📅 إدارة التقسيط', icon: Calendar },
           { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 }
           // REMOVED: invoices (restricted to managers/accountants)
         ]
