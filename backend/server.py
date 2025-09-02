@@ -165,7 +165,7 @@ class DailyOperation(BaseModel):
     final_price: float  # السعر النهائي بعد التخفيض
     discount_reason: Optional[str] = None  # سبب التخفيض
     discount_approved_by: Optional[str] = None  # من وافق على التخفيض
-    status: OperationStatus = OperationStatus.DRAFT
+    operation_status: OperationStatus = OperationStatus.DRAFT
     agency_id: str
     created_by: str  # الموظف الذي أنشأ العملية
     approved_by: Optional[str] = None  # المحاسب/المدير الذي اعتمد
