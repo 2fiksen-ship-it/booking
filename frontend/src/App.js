@@ -5370,6 +5370,7 @@ const DailyOperationsManagement = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [selectedOperationForPrint, setSelectedOperationForPrint] = useState(null);
+  const [editingOperation, setEditingOperation] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [printDetails, setPrintDetails] = useState({
     paymentType: 'نقدي', // نقدي، بنكي، قسط
