@@ -4638,11 +4638,82 @@ const InstallmentsManagement = () => {
             <CardTitle>خطط التقسيط النشطة</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p>لا توجد خطط تقسيط حالياً</p>
-              <p className="text-sm">انتقل إلى "إنشاء خطة جديدة" لإضافة خطة تقسيط</p>
-            </div>
+            {installmentPlans.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <p>لا توجد خطط تقسيط حالياً</p>
+                <p className="text-sm">انتقل إلى "إنشاء خطة جديدة" لإضافة خطة تقسيط</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right">الخدمة</TableHead>
+                        <TableHead className="text-right">العميل</TableHead>
+                        <TableHead className="text-right">المبلغ الإجمالي</TableHead>
+                        <TableHead className="text-right">عدد الأقساط</TableHead>
+                        <TableHead className="text-right">تاريخ البداية</TableHead>
+                        <TableHead className="text-right">الحالة</TableHead>
+                        <TableHead className="text-right">الإجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {installmentPlans.map((plan) => (
+                        <TableRow key={plan.id}>
+                          <TableCell className="font-medium">
+                            {plan.sale_info?.service_name || 'غير محدد'}
+                          </TableCell>
+                          <TableCell>{plan.sale_info?.client_name || 'غير محدد'}</TableCell>
+                          <TableCell>{plan.total_amount?.toLocaleString()} دج</TableCell>
+                          <TableCell>{plan.number_of_installments}</TableCell>
+                          <TableCell>
+                            {formatDateWithEnglishNumerals(plan.start_date)}
+                          </TableCell>
+                          <TableCell>
+                            {plan.status === 'active' && (
+                              <Badge className="bg-green-100 text-green-800">✅ نشط</Badge>
+                            )}
+                            {plan.status === 'completed' && (
+                              <Badge className="bg-blue-100 text-blue-800">🎉 مكتمل</Badge>
+                            )}
+                            {plan.status === 'cancelled' && (
+                              <Badge className="bg-red-100 text-red-800">❌ ملغي</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2 rtl:space-x-reverse">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => viewPlanPayments(plan)}
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                👁️ عرض التفاصيل
+                              </Button>
+                              {plan.status === 'active' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedPlan(plan);
+                                    setShowCancelDialog(true);
+                                  }}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  ❌ إلغاء
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
