@@ -6169,6 +6169,9 @@ const DailyOperationsManagement = () => {
       console.log('Remaining:', paymentStatus?.remaining_amount || operation.final_price);
       console.log('Status:', arabicPaymentStatus);
       
+      // Show preview modal ONLY after payment data is fetched and set
+      setShowPrintPreview(true);
+      
     } catch (error) {
       console.error('Error fetching payment status for receipt:', error);
       
@@ -6181,10 +6184,10 @@ const DailyOperationsManagement = () => {
       });
       
       alert('⚠️ تعذر جلب بيانات المدفوعات، سيتم استخدام القيم الافتراضية');
+      
+      // Show preview modal even with fallback data
+      setShowPrintPreview(true);
     }
-    
-    // Show preview modal
-    setShowPrintPreview(true);
   };
 
   const handleConfirmPrint = async () => {
