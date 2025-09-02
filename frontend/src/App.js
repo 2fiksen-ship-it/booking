@@ -7061,18 +7061,108 @@ const DailyOperationsManagement = () => {
                   </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="payment-amount">المبلغ المدفوع (دج) *</Label>
-                  <Input
-                    id="payment-amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={paymentFormData.amount}
-                    onChange={(e) => setPaymentFormData({...paymentFormData, amount: e.target.value})}
-                    placeholder="أدخل المبلغ المدفوع"
-                    required
-                  />
+                {/* Enhanced Payment Calculation Section */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h5 className="font-bold text-blue-800 mb-3 text-center">💰 حاسبة السداد</h5>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Total Amount */}
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">المبلغ الإجمالي (دج)</Label>
+                      <Input
+                        type="number"
+                        value={selectedOperationForPayment?.final_price || 0}
+                        readOnly
+                        className="bg-gray-100 font-bold text-blue-900"
+                      />
+                    </div>
+
+                    {/* Already Paid */}
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">المدفوع سابقاً (دج)</Label>
+                      <Input
+                        type="number"
+                        value={(() => {
+                          const paymentStatus = operationPaymentStatuses[selectedOperationForPayment?.id];
+                          return paymentStatus?.total_paid || 0;
+                        })()}
+                        readOnly
+                        className="bg-gray-100 font-bold text-green-700"
+                      />
+                    </div>
+
+                    {/* Current Payment Amount */}
+                    <div>
+                      <Label htmlFor="payment-amount" className="text-sm font-medium text-red-700">
+                        المبلغ المراد دفعه الآن (دج) *
+                      </Label>
+                      <Input
+                        id="payment-amount"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max={(() => {
+                          const paymentStatus = operationPaymentStatuses[selectedOperationForPayment?.id];
+                          return paymentStatus?.remaining_amount || selectedOperationForPayment?.final_price || 0;
+                        })()}
+                        value={paymentFormData.amount}
+                        onChange={(e) => {
+                          const currentPayment = parseFloat(e.target.value) || 0;
+                          const paymentStatus = operationPaymentStatuses[selectedOperationForPayment?.id];
+                          const maxAllowed = paymentStatus?.remaining_amount || selectedOperationForPayment?.final_price || 0;
+                          
+                          // Prevent payment exceeding remaining amount
+                          if (currentPayment > maxAllowed) {
+                            alert(`💡 لا يمكن دفع أكثر من المبلغ المتبقي: ${maxAllowed.toLocaleString()} دج`);
+                            return;
+                          }
+                          
+                          setPaymentFormData({...paymentFormData, amount: e.target.value});
+                        }}
+                        placeholder="أدخل المبلغ المراد دفعه"
+                        className="border-red-300 focus:border-red-500"
+                        required
+                      />
+                    </div>
+
+                    {/* Remaining After This Payment */}
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700">الباقي بعد هذه الدفعة (دج)</Label>
+                      <Input
+                        type="number"
+                        value={(() => {
+                          const currentPayment = parseFloat(paymentFormData.amount) || 0;
+                          const paymentStatus = operationPaymentStatuses[selectedOperationForPayment?.id];
+                          const remaining = (paymentStatus?.remaining_amount || selectedOperationForPayment?.final_price || 0) - currentPayment;
+                          return Math.max(0, remaining);
+                        })()}
+                        readOnly
+                        className={(() => {
+                          const currentPayment = parseFloat(paymentFormData.amount) || 0;
+                          const paymentStatus = operationPaymentStatuses[selectedOperationForPayment?.id];
+                          const remaining = (paymentStatus?.remaining_amount || selectedOperationForPayment?.final_price || 0) - currentPayment;
+                          return remaining <= 0 ? "bg-green-100 font-bold text-green-800" : "bg-yellow-100 font-bold text-orange-700";
+                        })()}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Payment Status Indicator */}
+                  <div className="mt-3 p-2 rounded text-center text-sm font-medium">
+                    {(() => {
+                      const currentPayment = parseFloat(paymentFormData.amount) || 0;
+                      const paymentStatus = operationPaymentStatuses[selectedOperationForPayment?.id];
+                      const remaining = (paymentStatus?.remaining_amount || selectedOperationForPayment?.final_price || 0) - currentPayment;
+                      
+                      if (remaining <= 0) {
+                        return <span className="bg-green-200 text-green-800 px-3 py-1 rounded-full">🟢 ✅ سيكون مسدد بالكامل</span>;
+                      } else if (currentPayment > 0) {
+                        return <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full">🟡 ⏳ سداد جزئي - يتبقى {remaining.toLocaleString()} دج</span>;
+                      } else {
+                        return <span className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full">⚪ أدخل مبلغ السداد</span>;
+                      }
+                    })()}
+                  </div>
                 </div>
 
                 <div>
