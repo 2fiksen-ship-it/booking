@@ -2880,6 +2880,110 @@ async def reject_operation(
     
     return {"message": "Operation rejected successfully"}
 
+# ================================
+# DAILY OPERATIONS PAYMENTS ENDPOINTS
+# ================================
+
+@api_router.post("/daily-operations/{operation_id}/payments", response_model=Payment)
+async def add_payment_to_operation(
+    operation_id: str,
+    payment_data: PaymentCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Add payment to a daily operation - Staff can add payments to their operations"""
+    # Get the operation
+    operation = await db.daily_operations.find_one({"id": operation_id})
+    if not operation:
+        raise HTTPException(status_code=404, detail="Daily operation not found")
+    
+    # Check agency access
+    if operation["agency_id"] != current_user.agency_id and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Agency staff can only add payments to their own operations
+    if current_user.role == UserRole.AGENCY_STAFF:
+        if operation["created_by"] != current_user.id:
+            raise HTTPException(status_code=403, detail="Can only add payments to your own operations")
+    
+    # Validate that payment doesn't exceed remaining amount
+    existing_payments = await db.payments.find({"daily_operation_id": operation_id}).to_list(1000)
+    total_paid = sum([p["amount"] for p in existing_payments])
+    remaining_amount = operation["final_price"] - total_paid
+    
+    if payment_data.amount > remaining_amount:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Payment amount ({payment_data.amount}) exceeds remaining amount ({remaining_amount})"
+        )
+    
+    # Generate payment number
+    payments_count = await db.payments.count_documents({"agency_id": current_user.agency_id})
+    payment_no = f"PAY-{current_user.agency_id[-4:]}-{payments_count + 1:04d}"
+    
+    # Create payment
+    payment_dict = payment_data.dict()
+    payment_dict["payment_no"] = payment_no
+    payment_dict["daily_operation_id"] = operation_id
+    payment_dict["invoice_id"] = None  # Clear invoice_id for operation payments
+    payment_dict["agency_id"] = current_user.agency_id
+    
+    payment = Payment(**payment_dict)
+    await db.payments.insert_one(payment.dict())
+    
+    return payment
+
+@api_router.get("/daily-operations/{operation_id}/payments", response_model=List[Payment])
+async def get_operation_payments(
+    operation_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all payments for a daily operation"""
+    # Get the operation
+    operation = await db.daily_operations.find_one({"id": operation_id})
+    if not operation:
+        raise HTTPException(status_code=404, detail="Daily operation not found")
+    
+    # Check agency access
+    if operation["agency_id"] != current_user.agency_id and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get payments for this operation
+    payments = await db.payments.find({"daily_operation_id": operation_id}).sort("payment_date", -1).to_list(1000)
+    return [Payment(**payment) for payment in payments]
+
+@api_router.get"/daily-operations/{operation_id}/payment-status")
+async def get_operation_payment_status(
+    operation_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get payment status for a daily operation"""
+    # Get the operation
+    operation = await db.daily_operations.find_one({"id": operation_id})
+    if not operation:
+        raise HTTPException(status_code=404, detail="Daily operation not found")
+    
+    # Check agency access
+    if operation["agency_id"] != current_user.agency_id and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get payments for this operation
+    payments = await db.payments.find({"daily_operation_id": operation_id}).to_list(1000)
+    
+    total_paid = sum([p["amount"] for p in payments])
+    total_amount = operation["final_price"]
+    remaining_amount = total_amount - total_paid
+    
+    payment_status = "fully_paid" if remaining_amount <= 0 else "partially_paid" if total_paid > 0 else "unpaid"
+    
+    return {
+        "operation_id": operation_id,
+        "total_amount": total_amount,
+        "total_paid": total_paid,
+        "remaining_amount": remaining_amount,
+        "payment_status": payment_status,
+        "payments_count": len(payments)
+    }
+
 # Daily Operations Reports Routes
 @api_router.get("/reports/daily-operations")
 async def generate_daily_operations_report(
