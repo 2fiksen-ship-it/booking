@@ -6102,13 +6102,86 @@ const DailyOperationsManagement = () => {
     // Set the operation for print preview
     setSelectedOperationForPrint(operation);
     
-    // Initialize print details with operation data
-    setPrintDetails({
-      paymentType: 'نقدي',
-      amountPaid: operation.final_price,
-      remainingAmount: 0,
-      paymentStatus: 'مدفوع كاملاً'
-    });
+    try {
+      // Get REAL payment status for this operation
+      console.log('=== FETCHING REAL PAYMENT STATUS FOR RECEIPT ===');
+      console.log('Operation ID:', operationId);
+      
+      const paymentStatus = await fetchOperationPaymentStatus(operationId);
+      console.log('Payment status:', paymentStatus);
+      
+      // Get actual payments for payment method detection
+      const paymentsResponse = await axios.get(`${API}/daily-operations/${operationId}/payments`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const payments = paymentsResponse.data;
+      console.log('Payments:', payments);
+      
+      // Determine payment method from actual payments
+      let paymentMethod = 'نقدي'; // default
+      if (payments.length > 0) {
+        const lastPayment = payments[0]; // Most recent payment
+        switch (lastPayment.method) {
+          case 'cash':
+            paymentMethod = 'نقدي';
+            break;
+          case 'check':
+            paymentMethod = 'شيك';
+            break;
+          case 'bank_transfer':
+            paymentMethod = 'تحويل بنكي';
+            break;
+          case 'credit_card':
+            paymentMethod = 'بطاقة ائتمان';
+            break;
+          default:
+            paymentMethod = 'نقدي';
+        }
+      }
+      
+      // Determine payment status in Arabic
+      let arabicPaymentStatus;
+      switch (paymentStatus?.payment_status) {
+        case 'fully_paid':
+          arabicPaymentStatus = 'مدفوع كاملاً';
+          break;
+        case 'partially_paid':
+          arabicPaymentStatus = 'دفعة جزئية';
+          break;
+        case 'unpaid':
+          arabicPaymentStatus = 'غير مدفوع';
+          break;
+        default:
+          arabicPaymentStatus = 'غير محدد';
+      }
+      
+      // Initialize print details with REAL payment data
+      setPrintDetails({
+        paymentType: paymentMethod,
+        amountPaid: paymentStatus?.total_paid || 0,
+        remainingAmount: paymentStatus?.remaining_amount || operation.final_price,
+        paymentStatus: arabicPaymentStatus
+      });
+      
+      console.log('=== PRINT DETAILS SET ===');
+      console.log('Payment Type:', paymentMethod);
+      console.log('Amount Paid:', paymentStatus?.total_paid || 0);
+      console.log('Remaining:', paymentStatus?.remaining_amount || operation.final_price);
+      console.log('Status:', arabicPaymentStatus);
+      
+    } catch (error) {
+      console.error('Error fetching payment status for receipt:', error);
+      
+      // Fallback to default values if payment fetch fails
+      setPrintDetails({
+        paymentType: 'نقدي',
+        amountPaid: 0,
+        remainingAmount: operation.final_price,
+        paymentStatus: 'غير مدفوع'
+      });
+      
+      alert('⚠️ تعذر جلب بيانات المدفوعات، سيتم استخدام القيم الافتراضية');
+    }
     
     // Show preview modal
     setShowPrintPreview(true);
