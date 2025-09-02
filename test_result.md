@@ -733,7 +733,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "PaymentsManagement Component Error Resolution - isDialogOpen Fix"
+    - "Service Installments Module - Complete Implementation Testing"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
