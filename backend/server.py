@@ -485,10 +485,13 @@ class InvoiceCreate(BaseModel):
     due_date: datetime
 
 class PaymentCreate(BaseModel):
-    invoice_id: str
+    # Support both invoice and daily operation payments
+    invoice_id: Optional[str] = None
+    daily_operation_id: Optional[str] = None
     method: PaymentMethod
     amount: float
     payment_date: datetime
+    notes: Optional[str] = None
 
 class CashboxCreate(BaseModel):
     name: str
