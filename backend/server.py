@@ -333,7 +333,7 @@ class Invoice(BaseModel):
     amount_ht: float
     tva_rate: float = 20.0
     amount_ttc: float
-    status: InvoiceStatus = InvoiceStatus.PENDING
+    invoice_status: InvoiceStatus = InvoiceStatus.PENDING
     due_date: datetime
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
