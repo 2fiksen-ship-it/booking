@@ -50,6 +50,7 @@ const translations = {
     userManagement: '👤 إدارة المستخدمين',
     dailyReports: '📈 التقارير اليومية',
     settings: '⚙️ إعدادات النظام',
+    agencySettings: '🏢 إعدادات الوكالات',
     logout: '🚪 تسجيل الخروج',
     
     // NEW - Services and Operations Management
