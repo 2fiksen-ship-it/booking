@@ -2637,7 +2637,7 @@ const BookingsManagement = () => {
                 <DialogTitle>{editingBooking ? t('edit') : t('addBooking')}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="ref">{t('reference')}</Label>
                   <Input
