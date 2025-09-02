@@ -3376,7 +3376,7 @@ const PaymentsManagement = () => {
                   <TableRow key={payment.id}>
                     <TableCell className="font-medium">{payment.payment_no}</TableCell>
                     <TableCell>{getInvoiceNo(payment.invoice_id)}</TableCell>
-                    <TableCell>{getMethodBadge(payment.method)}</TableCell>
+                    <TableCell>{getMethodBadge(payment.payment_method)}</TableCell>
                     <TableCell className="font-medium">{payment.amount} دج</TableCell>
                     <TableCell>{formatDateWithEnglishNumerals(payment.payment_date)}</TableCell>
                     <TableCell>
