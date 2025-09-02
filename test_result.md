@@ -538,9 +538,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Report Creation Fix - Database Migration"
-  stuck_tasks:
-    - "Report Creation Fix - Database Migration"
+    - "English Date Display Fix in Payments Page"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
