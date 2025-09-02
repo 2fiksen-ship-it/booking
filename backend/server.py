@@ -374,6 +374,33 @@ class AgencyCreate(BaseModel):
     manager_name: Optional[str] = None  # اسم المدير
     manager_signature_url: Optional[str] = None  # توقيع المدير
 
+class AgencyUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None  # رمز بريدي
+    phone: Optional[str] = None  # الهاتف الأساسي
+    phone_2: Optional[str] = None  # هاتف ثانوي
+    phone_3: Optional[str] = None  # هاتف إضافي
+    fax: Optional[str] = None  # فاكس
+    email: Optional[str] = None
+    website: Optional[str] = None  # موقع الوكالة
+    # Branding fields
+    logo_url: Optional[str] = None  # URL to agency logo
+    header_text: Optional[str] = None  # Custom header text for documents
+    footer_text: Optional[str] = None  # Custom footer text
+    # Registration details
+    tax_number: Optional[str] = None  # رقم التسجيل الضريبي
+    commercial_register: Optional[str] = None  # رقم السجل التجاري
+    national_register: Optional[str] = None  # رقم السجل الوطني
+    # Management details
+    manager_name: Optional[str] = None  # اسم المدير
+    manager_signature_url: Optional[str] = None  # توقيع المدير
+    # Additional business info
+    business_license: Optional[str] = None  # رخصة النشاط التجاري
+    established_date: Optional[str] = None  # تاريخ التأسيس
+    description: Optional[str] = None  # وصف الوكالة
+
 class UserCreate(BaseModel):
     name: str
     email: str
