@@ -3262,7 +3262,15 @@ const PaymentsManagement = () => {
       </div>
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent>
+          <div className="mb-4">
+            <Input
+              placeholder={t('search') + '...'}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
           <Table>
             <TableHeader>
               <TableRow>
