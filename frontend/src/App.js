@@ -5278,7 +5278,7 @@ const DailyOperationsManagement = () => {
                 <TableRow key={operation.id}>
                   <TableCell className="text-right font-medium">{operation.operation_no}</TableCell>
                   <TableCell className="text-right">
-                    {new Date(operation.date).toLocaleDateString('ar-SA')}
+                    {formatDateWithEnglishNumerals(operation.date)}
                   </TableCell>
                   <TableCell className="text-right">
                     {clients.find(c => c.id === operation.client_id)?.name || 'غير محدد'}
