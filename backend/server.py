@@ -3658,6 +3658,262 @@ async def get_discount_requests(
     
     return result
 
+# ================================
+# SERVICE CASH FLOW ENDPOINTS
+# ================================
+
+@api_router.post("/service-sales", response_model=ServiceSale)
+async def record_service_sale(sale_data: ServiceSaleCreate, current_user: User = Depends(get_current_user)):
+    """الموظف يسجل عملية بيع خدمة"""
+    # Only Agency Staff and higher can record sales
+    if current_user.role not in [UserRole.AGENCY_STAFF, UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized to record service sales")
+    
+    sale_dict = sale_data.dict()
+    sale_dict["agency_id"] = current_user.agency_id
+    sale_dict["sold_by"] = current_user.id
+    sale_dict["status"] = ServiceSaleStatus.SOLD
+    
+    service_sale = ServiceSale(**sale_dict)
+    await db.service_sales.insert_one(service_sale.dict())
+    
+    return service_sale
+
+@api_router.get("/service-sales", response_model=List[ServiceSale])
+async def get_service_sales(
+    status: Optional[ServiceSaleStatus] = None,
+    sold_by: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get service sales with filtering"""
+    query_filter = {}
+    
+    # Role-based access
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        # Super Admin and General Accountant can see all sales in their scope
+        if current_user.role == UserRole.GENERAL_ACCOUNTANT:
+            query_filter["agency_id"] = current_user.agency_id
+        # Super Admin sees all agencies
+    else:
+        # Agency Staff only see their own sales
+        query_filter["agency_id"] = current_user.agency_id
+        query_filter["sold_by"] = current_user.id
+    
+    # Apply filters
+    if status:
+        query_filter["status"] = status
+    if sold_by and current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        query_filter["sold_by"] = sold_by
+    
+    # Date range filtering
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            query_filter["created_at"] = {"$gte": start_dt}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format")
+    
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date)
+            if "created_at" in query_filter:
+                query_filter["created_at"]["$lte"] = end_dt
+            else:
+                query_filter["created_at"] = {"$lte": end_dt}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format")
+    
+    sales = await db.service_sales.find(query_filter).sort("created_at", -1).to_list(1000)
+    return [ServiceSale(**sale) for sale in sales]
+
+@api_router.put("/service-sales/{sale_id}/deliver-cash")
+async def deliver_cash_to_accountant(sale_id: str, current_user: User = Depends(get_current_user)):
+    """الموظف يعلّم أنه سلّم الكاش للمحاسب"""
+    sale = await db.service_sales.find_one({"id": sale_id})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Service sale not found")
+    
+    # Check if user is the one who sold or has higher privileges
+    if sale["sold_by"] != current_user.id and current_user.role not in [UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Can only mark your own sales as delivered")
+    
+    # Check agency access
+    if sale["agency_id"] != current_user.agency_id and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Can only deliver cash if status is 'sold'
+    if sale["status"] != ServiceSaleStatus.SOLD:
+        raise HTTPException(status_code=400, detail="Can only deliver cash for sold items")
+    
+    # Update status to pending_cash
+    await db.service_sales.update_one(
+        {"id": sale_id},
+        {
+            "$set": {
+                "status": ServiceSaleStatus.PENDING_CASH,
+                "cash_delivered_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {"message": "Cash delivery marked successfully"}
+
+@api_router.put("/service-sales/{sale_id}/confirm-cash")
+async def confirm_cash_received(sale_id: str, current_user: User = Depends(get_current_user)):
+    """المحاسب يؤكد استلام الكاش"""
+    # Only General Accountant and Super Admin can confirm cash receipt
+    if current_user.role not in [UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only accountants can confirm cash receipt")
+    
+    sale = await db.service_sales.find_one({"id": sale_id})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Service sale not found")
+    
+    # Check agency access for General Accountant
+    if current_user.role == UserRole.GENERAL_ACCOUNTANT and sale["agency_id"] != current_user.agency_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Can only confirm cash if status is 'pending_cash'
+    if sale["status"] != ServiceSaleStatus.PENDING_CASH:
+        raise HTTPException(status_code=400, detail="Can only confirm cash for pending deliveries")
+    
+    # Update status to cash_received
+    await db.service_sales.update_one(
+        {"id": sale_id},
+        {
+            "$set": {
+                "status": ServiceSaleStatus.CASH_RECEIVED,
+                "confirmed_by": current_user.id,
+                "cash_received_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Create journal entry (simplified ledger entry)
+    journal_entry = JournalEntry(
+        date=datetime.now(timezone.utc),
+        account_code="1000",  # Cash account
+        debit=sale["amount"],
+        credit=0.0,
+        reference=f"Service sale cash receipt - {sale['service_name']}",
+        agency_id=sale["agency_id"]
+    )
+    
+    await db.journal_entries.insert_one(journal_entry.dict())
+    
+    # Create corresponding credit entry for service revenue
+    revenue_entry = JournalEntry(
+        date=datetime.now(timezone.utc),
+        account_code="4000",  # Service Revenue account
+        debit=0.0,
+        credit=sale["amount"],
+        reference=f"Service sale revenue - {sale['service_name']}",
+        agency_id=sale["agency_id"]
+    )
+    
+    await db.journal_entries.insert_one(revenue_entry.dict())
+    
+    return {"message": "Cash receipt confirmed and journal entries created"}
+
+@api_router.get("/reports/service-cash-reconciliation")
+async def service_cash_reconciliation_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    agency_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """تقرير يوضح المبيعات والكاش المسلم والمؤكد"""
+    query_filter = {}
+    
+    # Role-based access
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        if current_user.role == UserRole.GENERAL_ACCOUNTANT:
+            query_filter["agency_id"] = current_user.agency_id
+        elif agency_id:  # Super Admin can filter by agency
+            query_filter["agency_id"] = agency_id
+    else:
+        # Agency Staff only see their own sales
+        query_filter["agency_id"] = current_user.agency_id
+        query_filter["sold_by"] = current_user.id
+    
+    # Date range filtering
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            query_filter["created_at"] = {"$gte": start_dt}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format")
+    
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date)
+            if "created_at" in query_filter:
+                query_filter["created_at"]["$lte"] = end_dt
+            else:
+                query_filter["created_at"] = {"$lte": end_dt}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format")
+    
+    # Get all service sales
+    sales = await db.service_sales.find(query_filter).to_list(1000)
+    
+    # Get user information for grouping
+    user_ids = list(set([sale["sold_by"] for sale in sales]))
+    users = await db.users.find({"id": {"$in": user_ids}}).to_list(1000)
+    user_map = {user["id"]: user for user in users}
+    
+    # Group by sold_by
+    report_data = {}
+    
+    for sale in sales:
+        sold_by = sale["sold_by"]
+        user_name = user_map.get(sold_by, {}).get("name", "Unknown User")
+        
+        if sold_by not in report_data:
+            report_data[sold_by] = {
+                "user_name": user_name,
+                "total_sales": 0.0,
+                "total_pending": 0.0,
+                "total_received": 0.0,
+                "sales_count": 0,
+                "pending_count": 0,
+                "received_count": 0
+            }
+        
+        amount = sale["amount"]
+        status = sale["status"]
+        
+        if status == ServiceSaleStatus.SOLD:
+            report_data[sold_by]["total_sales"] += amount
+            report_data[sold_by]["sales_count"] += 1
+        elif status == ServiceSaleStatus.PENDING_CASH:
+            report_data[sold_by]["total_pending"] += amount
+            report_data[sold_by]["pending_count"] += 1
+        elif status == ServiceSaleStatus.CASH_RECEIVED:
+            report_data[sold_by]["total_received"] += amount
+            report_data[sold_by]["received_count"] += 1
+    
+    # Calculate totals
+    grand_totals = {
+        "total_sales": sum([data["total_sales"] for data in report_data.values()]),
+        "total_pending": sum([data["total_pending"] for data in report_data.values()]),
+        "total_received": sum([data["total_received"] for data in report_data.values()]),
+        "sales_count": sum([data["sales_count"] for data in report_data.values()]),
+        "pending_count": sum([data["pending_count"] for data in report_data.values()]),
+        "received_count": sum([data["received_count"] for data in report_data.values()])
+    }
+    
+    return {
+        "report_data": report_data,
+        "grand_totals": grand_totals,
+        "period": {
+            "start_date": start_date,
+            "end_date": end_date
+        }
+    }
+
 # Database Migration Endpoint for Booking Model Update
 @api_router.post("/admin/migrate-bookings")
 async def migrate_bookings_data(current_user: User = Depends(get_current_user)):
