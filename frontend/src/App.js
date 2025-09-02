@@ -3217,11 +3217,10 @@ const PaymentsManagement = () => {
               </div>
               
               <div>
-                <Label htmlFor="amount">{t('amount')} (دج)</Label>
+                <Label htmlFor="amount">{t('amount')}</Label>
                 <Input
                   id="amount"
                   type="number"
-                  step="0.01"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   required
