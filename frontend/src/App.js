@@ -6063,6 +6063,7 @@ const MainApp = ({ activeTab }) => {
     userManagement: UserManagement,
     dailyReports: DailyReportsManagement,
     servicesManagement: ServicesManagement,
+    agencySettings: AgencySettingsManagement,
     dailyOperations: DailyOperationsManagement,
     dailyOperationsReports: DailyOperationsReports
   };
