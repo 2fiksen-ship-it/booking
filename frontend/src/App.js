@@ -1650,6 +1650,103 @@ const ClientsManagement = () => {
     }
   };
 
+  const handlePrintClients = async () => {
+    try {
+      console.log('=== PRINTING CLIENTS LIST ===');
+      
+      // Create a simple HTML structure for printing
+      const printContent = `
+        <html dir="rtl">
+          <head>
+            <title>قائمة العملاء</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; direction: rtl; }
+              h1 { text-align: center; color: #1f2937; margin-bottom: 30px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
+              th { background-color: #f3f4f6; font-weight: bold; }
+              .header { text-align: center; margin-bottom: 20px; }
+              .date { text-align: left; margin-bottom: 20px; color: #6b7280; }
+              @media print { body { margin: 0; } }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>🏢 نظام إدارة الوكالات السياحية</h1>
+              <h2>📋 قائمة العملاء</h2>
+            </div>
+            <div class="date">تاريخ الطباعة: ${formatDateWithEnglishNumerals(new Date())}</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>اسم العميل</th>
+                  <th>الهاتف</th>
+                  <th>البريد الإلكتروني</th>
+                  <th>بطاقة الهوية/جواز السفر</th>
+                  <th>تاريخ التسجيل</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filteredClients.map(client => `
+                  <tr>
+                    <td>${client.name}</td>
+                    <td>${client.phone || '-'}</td>
+                    <td>${client.email || '-'}</td>
+                    <td>${client.cin_passport || '-'}</td>
+                    <td>${formatDateWithEnglishNumerals(client.created_at)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div style="margin-top: 30px; text-align: center; color: #6b7280;">
+              <p>إجمالي العملاء: ${filteredClients.length}</p>
+              <p>تم إنشاء هذا التقرير من نظام إدارة الوكالات السياحية</p>
+            </div>
+          </body>
+        </html>
+      `;
+
+      // Create blob and trigger download/print
+      const blob = new Blob([printContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Ask user for preference
+      const userChoice = confirm('اختر طريقة الطباعة:\nموافق = فتح في نافذة جديدة للطباعة\nإلغاء = تحميل ملف HTML');
+      
+      if (userChoice) {
+        // Open in new window for printing
+        const newWindow = window.open(url, '_blank');
+        if (newWindow) {
+          newWindow.onload = function() {
+            setTimeout(() => {
+              newWindow.print();
+            }, 500);
+          };
+          console.log('Clients list opened for printing');
+        }
+      } else {
+        // Download HTML file
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `clients_list_${formatDateWithEnglishNumerals(new Date()).replace(/\//g, '-')}.html`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        alert('✅ تم تحميل قائمة العملاء بنجاح!');
+      }
+      
+      // Clean up
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error printing clients list:', error);
+      alert('خطأ في طباعة قائمة العملاء: ' + error.message);
+    }
+  };
+
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.phone.includes(searchTerm) ||
