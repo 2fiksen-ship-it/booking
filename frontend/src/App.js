@@ -759,7 +759,8 @@ const Layout = ({ children }) => {
             { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 },
             { id: 'reports', label: t('reports'), icon: BarChart3 },
             { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 },
-            { id: 'servicesManagement', label: t('servicesManagement'), icon: Package }
+            { id: 'servicesManagement', label: t('servicesManagement'), icon: Package },
+            { id: 'agencySettings', label: t('agencySettings'), icon: Building2 }
           ]
         },
         // Full Operations Management (All Agencies)
