@@ -4449,6 +4449,232 @@ class SanhajaAPITester:
         
         return results
 
+    def test_report_creation_fix_complete(self):
+        """Test COMPLETE REPORT CREATION FIX after resolving JWT error - FINAL TESTING for user issue 'مشكل في انشاءاختبارتقرير'"""
+        print(f"\n🎯 FINAL TESTING: Complete Report Creation Fix (User Issue: مشكل في انشاءاختبارتقرير)")
+        print(f"   Testing JWT authentication, migration endpoint, report creation, and booking validation")
+        
+        results = {}
+        
+        # PRIORITY TEST 1: Authentication Fix - Verify JWT authentication works correctly
+        print(f"\n   1. AUTHENTICATION FIX: Testing JWT authentication (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['jwt_authentication_fix'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: JWT authentication failed - cannot proceed with report creation tests")
+            return results
+            
+        print(f"   ✅ JWT authentication working correctly")
+        print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+        
+        # PRIORITY TEST 2: Migration Endpoint - Test POST /api/admin/migrate-bookings
+        print(f"\n   2. MIGRATION ENDPOINT: Testing POST /api/admin/migrate-bookings...")
+        success, response = self.run_test(
+            "Migration Endpoint - Migrate Bookings",
+            "POST",
+            "admin/migrate-bookings",
+            200,
+            data={}
+        )
+        results['migration_endpoint'] = success
+        
+        if success:
+            print(f"   ✅ Migration endpoint working correctly")
+            if 'updated_count' in response:
+                print(f"   Updated bookings: {response.get('updated_count', 0)}")
+            if 'message' in response:
+                print(f"   Message: {response['message']}")
+        else:
+            print(f"   ❌ Migration endpoint failed - this may cause Pydantic validation errors")
+        
+        # PRIORITY TEST 3: Booking Data Validation - Confirm Pydantic validation errors are resolved
+        print(f"\n   3. BOOKING DATA VALIDATION: Testing GET /api/bookings for Pydantic errors...")
+        success, bookings_data = self.run_test(
+            "Booking Data Validation",
+            "GET",
+            "bookings",
+            200
+        )
+        results['booking_data_validation'] = success
+        
+        if success:
+            print(f"   ✅ Bookings endpoint accessible without Pydantic errors")
+            print(f"   Total bookings loaded: {len(bookings_data)}")
+            
+            # Check for created_by field in bookings
+            bookings_with_created_by = 0
+            bookings_without_created_by = 0
+            
+            for booking in bookings_data:
+                if booking.get('created_by'):
+                    bookings_with_created_by += 1
+                else:
+                    bookings_without_created_by += 1
+            
+            print(f"   Bookings with created_by field: {bookings_with_created_by}")
+            print(f"   Bookings without created_by field: {bookings_without_created_by}")
+            
+            if bookings_without_created_by == 0:
+                print(f"   ✅ All bookings have required created_by field - Pydantic validation should work")
+                results['all_bookings_have_created_by'] = True
+            else:
+                print(f"   ⚠️  {bookings_without_created_by} bookings still missing created_by field")
+                results['all_bookings_have_created_by'] = False
+        
+        # PRIORITY TEST 4: Report Creation - Test complete report creation flow
+        print(f"\n   4. REPORT CREATION: Testing complete report creation flow...")
+        
+        # Test 4a: POST /api/daily-reports
+        print(f"\n   4a. Testing POST /api/daily-reports...")
+        today = datetime.now()
+        report_data = {
+            "date": today.isoformat(),
+            "income": 25000.0,
+            "expenses": 12000.0,
+            "cashbox_balance": 150000.0,
+            "notes": "تقرير تجريبي لاختبار إنشاء التقارير"
+        }
+        
+        success, response = self.run_test(
+            "Create Daily Report",
+            "POST",
+            "daily-reports",
+            200,
+            data=report_data
+        )
+        results['create_daily_report'] = success
+        
+        if success:
+            print(f"   ✅ Daily report creation working")
+            created_report_id = response.get('id')
+            if created_report_id:
+                print(f"   Created report ID: {created_report_id}")
+        
+        # Test 4b: GET /api/reports/daily-operations
+        print(f"\n   4b. Testing GET /api/reports/daily-operations...")
+        start_date = (today - timedelta(days=30)).strftime('%Y-%m-%d')
+        end_date = today.strftime('%Y-%m-%d')
+        
+        success, response = self.run_test(
+            "Daily Operations Report",
+            "GET",
+            f"reports/daily-operations?start_date={start_date}&end_date={end_date}",
+            200
+        )
+        results['daily_operations_report'] = success
+        
+        if success:
+            print(f"   ✅ Daily operations report generation working")
+            if 'data' in response:
+                print(f"   Report data points: {len(response['data'])}")
+        
+        # Test 4c: GET /api/reports/sales
+        print(f"\n   4c. Testing GET /api/reports/sales...")
+        success, response = self.run_test(
+            "Sales Report",
+            "GET",
+            f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=daily",
+            200
+        )
+        results['sales_report'] = success
+        
+        if success:
+            print(f"   ✅ Sales report generation working")
+            if 'totals' in response:
+                totals = response['totals']
+                print(f"   Total sales: {totals.get('sales', 0)} DZD")
+                print(f"   Total bookings: {totals.get('bookings', 0)}")
+        
+        # PRIORITY TEST 5: End-to-End Verification
+        print(f"\n   5. END-TO-END VERIFICATION: Complete flow test...")
+        
+        # Test 5a: Create a new booking (operation)
+        print(f"\n   5a. Creating new booking/operation...")
+        
+        # First get clients and suppliers for the booking
+        success, clients = self.run_test("Get Clients for Booking", "GET", "clients", 200)
+        success2, suppliers = self.run_test("Get Suppliers for Booking", "GET", "suppliers", 200)
+        
+        if success and success2 and clients and suppliers:
+            booking_data = {
+                "ref": f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                "client_id": clients[0]['id'],
+                "supplier_id": suppliers[0]['id'],
+                "type": "عمرة",
+                "cost": 80000.0,
+                "sell_price": 95000.0,
+                "start_date": (today + timedelta(days=30)).isoformat(),
+                "end_date": (today + timedelta(days=40)).isoformat()
+            }
+            
+            success, response = self.run_test(
+                "Create New Booking",
+                "POST",
+                "bookings",
+                200,
+                data=booking_data
+            )
+            results['create_new_booking'] = success
+            
+            if success:
+                print(f"   ✅ New booking created successfully")
+                new_booking_id = response.get('id')
+                print(f"   New booking ID: {new_booking_id}")
+                
+                # Test 5b: Generate report including the new operation
+                print(f"\n   5b. Generating report including new operation...")
+                
+                # Wait a moment and generate a new report
+                success, response = self.run_test(
+                    "Generate Report with New Operation",
+                    "GET",
+                    f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=daily",
+                    200
+                )
+                results['report_with_new_operation'] = success
+                
+                if success:
+                    print(f"   ✅ Report generation including new operation working")
+                    print(f"   Complete end-to-end flow successful")
+        
+        # AUTHENTICATION TESTING: Verify no InvalidTokenError
+        print(f"\n   6. AUTHENTICATION VERIFICATION: Testing for InvalidTokenError...")
+        
+        # Test multiple authenticated requests to ensure no JWT errors
+        test_endpoints = [
+            ("dashboard", "GET"),
+            ("users", "GET"),
+            ("agencies", "GET"),
+            ("daily-reports", "GET")
+        ]
+        
+        jwt_error_count = 0
+        successful_requests = 0
+        
+        for endpoint, method in test_endpoints:
+            success, response = self.run_test(
+                f"JWT Test - {endpoint}",
+                method,
+                endpoint,
+                200
+            )
+            if success:
+                successful_requests += 1
+            else:
+                jwt_error_count += 1
+        
+        results['jwt_no_errors'] = jwt_error_count == 0
+        results['jwt_successful_requests'] = successful_requests
+        
+        if jwt_error_count == 0:
+            print(f"   ✅ No JWT InvalidTokenError detected - authentication fix successful")
+            print(f"   All {successful_requests} authenticated requests successful")
+        else:
+            print(f"   ❌ {jwt_error_count} JWT errors detected - authentication fix incomplete")
+        
+        return results
+
 def main():
     print("🚀 Starting Sanhaja Travel Agencies Backend API Testing...")
     print("نظام محاسبة وكالات صنهاجة للسفر - اختبار واجهات برمجة التطبيقات")
