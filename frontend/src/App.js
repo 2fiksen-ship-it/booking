@@ -3202,79 +3202,11 @@ const PaymentsManagement = () => {
           <h2 className="text-2xl font-bold text-gray-900">💰 مدفوعات العمليات</h2>
           <p className="text-sm text-gray-600 mt-1">إدارة مدفوعات العملاء للعمليات اليومية - سداد مباشر بدون فواتير</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              {t('addPayment')}
-            </Button>
-          </DialogTrigger>
-            <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingPayment ? t('edit') : t('addPayment')}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="invoice_id">{t('selectInvoice')}</Label>
-                <Select value={formData.invoice_id} onValueChange={(value) => setFormData({ ...formData, invoice_id: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('selectInvoice')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {invoices.map((invoice) => (
-                      <SelectItem key={invoice.id} value={invoice.id}>
-                        {invoice.invoice_no} - {invoice.amount} دج
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="method">{t('paymentMethod')}</Label>
-                <Select value={formData.method} onValueChange={(value) => setFormData({ ...formData, method: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('paymentMethod')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">نقداً</SelectItem>
-                    <SelectItem value="bank">تحويل بنكي</SelectItem>
-                    <SelectItem value="card">بطاقة</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="amount">{t('amount')}</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="payment_date">{t('paymentDate')}</Label>
-                <Input
-                  id="payment_date"
-                  type="date"
-                  value={formData.payment_date}
-                  onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  {t('cancel')}
-                </Button>
-                <Button type="submit">{t('save')}</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg">
+          <p className="text-sm">
+            💡 <strong>لإضافة مدفوعات جديدة:</strong> انتقل إلى صفحة "العمليات اليومية" واضغط على زر "💰 إضافة دفعة" بجانب العملية المطلوبة
+          </p>
+        </div>
       </div>
 
       <div className="flex items-center space-x-4">
