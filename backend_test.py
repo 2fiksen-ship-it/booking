@@ -4456,10 +4456,18 @@ def main():
     
     tester = SanhajaAPITester()
     
-    # VARIABLE PRICING SERVICES CREATION TESTING (PRIMARY FOCUS from Current Review Request)
+    # AGENCY SETTINGS MANAGEMENT API TESTING (PRIMARY FOCUS from Current Review Request)
     print("\n" + "="*80)
-    print("💰 VARIABLE PRICING SERVICES CREATION TESTING - PRIMARY FOCUS")
-    print("اختبار إنشاء الخدمات المتغيرة السعر - المحور الأساسي")
+    print("🏢 AGENCY SETTINGS MANAGEMENT API TESTING - PRIMARY FOCUS")
+    print("اختبار واجهة برمجة إدارة إعدادات الوكالات - المحور الأساسي")
+    print("="*80)
+    
+    agency_settings_results = tester.test_agency_settings_management_api()
+    
+    # VARIABLE PRICING SERVICES CREATION TESTING (SECONDARY FOCUS from Previous Review Request)
+    print("\n" + "="*80)
+    print("💰 VARIABLE PRICING SERVICES CREATION TESTING - SECONDARY FOCUS")
+    print("اختبار إنشاء الخدمات المتغيرة السعر - المحور الثانوي")
     print("="*80)
     
     variable_services_results = tester.test_variable_pricing_services_creation()
