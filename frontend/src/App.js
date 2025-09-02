@@ -769,7 +769,7 @@ const Layout = ({ children }) => {
           items: [
             { id: 'invoices', label: t('invoices'), icon: FileText },
             { id: 'payments', label: t('payments'), icon: CreditCard },
-            { id: 'installments', label: '📅 إدارة التقسيط', icon: Calendar },
+            { id: 'installments', label: '📅 إدارة التقسيط', icon: CalendarIcon },
             { id: 'reports', label: t('reports'), icon: BarChart3 },
             { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 }
           ]
