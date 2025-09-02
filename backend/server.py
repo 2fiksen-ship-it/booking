@@ -3242,7 +3242,7 @@ async def generate_daily_operations_report(
         raise HTTPException(status_code=400, detail=f"Error generating report: {str(e)}")
 
 # PDF Generation Utilities
-def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict, client_data: dict, service_data: dict):
+def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict, client_data: dict, service_data: dict, payment_info: dict = None):
     """Generate professional PDF receipt for daily operations with Arabic support"""
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
