@@ -6939,6 +6939,100 @@ const DailyOperationsManagement = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContentClassName="sm:max-w-[500px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>💰 إضافة دفعة للعملية</DialogTitle>
+          </DialogHeader>
+          {selectedOperationForPayment && (
+            <div>
+              {/* Operation Details */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                <h4 className="font-bold mb-2">تفاصيل العملية:</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div><strong>رقم العملية:</strong> {selectedOperationForPayment.operation_no}</div>
+                  <div><strong>اسم العميل:</strong> {clients.find(c => c.id === selectedOperationForPayment.client_id)?.name || 'غير محدد'}</div>
+                  <div><strong>الخدمة:</strong> {selectedOperationForPayment.service_name}</div>
+                  <div><strong>المبلغ الإجمالي:</strong> {selectedOperationForPayment.final_price.toLocaleString()} دج</div>
+                  {(() => {
+                    const paymentStatus = operationPaymentStatuses[selectedOperationForPayment.id];
+                    return paymentStatus && (
+                      <>
+                        <div><strong>المدفوع:</strong> {paymentStatus.total_paid.toLocaleString()} دج</div>
+                        <div><strong>المتبقي:</strong> <span className="text-red-600 font-bold">{paymentStatus.remaining_amount.toLocaleString()} دج</span></div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Payment Form */}
+              <form onSubmit={handlePaymentSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="payment-method">طريقة الدفع *</Label>
+                  <Select value={paymentFormData.method} onValueChange={(value) => setPaymentFormData({...paymentFormData, method: value})}>
+                    <SelectTrigger id="payment-method">
+                      <SelectValue placeholder="اختر طريقة الدفع" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">💵 نقدي</SelectItem>
+                      <SelectItem value="check">📄 شيك</SelectItem>
+                      <SelectItem value="bank_transfer">🏦 تحويل بنكي</SelectItem>
+                      <SelectItem value="credit_card">💳 بطاقة ائتمان</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="payment-amount">المبلغ المدفوع (دج) *</Label>
+                  <Input
+                    id="payment-amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={paymentFormData.amount}
+                    onChange={(e) => setPaymentFormData({...paymentFormData, amount: e.target.value})}
+                    placeholder="أدخل المبلغ المدفوع"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="payment-date">تاريخ الدفع *</Label>
+                  <Input
+                    id="payment-date"
+                    type="date"
+                    value={paymentFormData.payment_date}
+                    onChange={(e) => setPaymentFormData({...paymentFormData, payment_date: e.target.value})}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="payment-notes">ملاحظات</Label>
+                  <Input
+                    id="payment-notes"
+                    value={paymentFormData.notes}
+                    onChange={(e) => setPaymentFormData({...paymentFormData, notes: e.target.value})}
+                    placeholder="ملاحظات إضافية (اختياري)"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setShowPaymentDialog(false)}>
+                    إلغاء
+                  </Button>
+                  <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                    💰 إضافة الدفعة
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
