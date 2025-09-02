@@ -463,7 +463,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Agency Settings Management API"
+    - "Enhanced Approval Workflow for Operations and Bookings"
+    - "Advanced Filtering System for Operations and Bookings"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
