@@ -7438,9 +7438,44 @@ if __name__ == "__main__":
             
             print(f"{'='*80}")
             sys.exit(0)
+        elif test_name == "installments":
+            print("💰 Running Service Installments Module Tests (Review Request)...")
+            tester = SanhajaAPITester()
+            results = tester.test_service_installments_module()
+            
+            # Print summary
+            print(f"\n{'='*80}")
+            print(f"🎯 SERVICE INSTALLMENTS MODULE TESTING SUMMARY")
+            print(f"{'='*80}")
+            print(f"Total Tests Run: {tester.tests_run}")
+            print(f"Tests Passed: {tester.tests_passed}")
+            print(f"Success Rate: {(tester.tests_passed/tester.tests_run*100):.1f}%" if tester.tests_run > 0 else "No tests run")
+            
+            # Print detailed results
+            if isinstance(results, dict):
+                passed = sum(1 for v in results.values() if v is True)
+                total = len(results)
+                print(f"Detailed Results: {passed}/{total} ({(passed/total*100):.1f}%)" if total > 0 else "No detailed results")
+                
+                # Show failed tests
+                failed_tests = [k for k, v in results.items() if v is False]
+                if failed_tests:
+                    print(f"\n❌ Failed Tests:")
+                    for test in failed_tests:
+                        print(f"   - {test}")
+                
+                # Show passed tests
+                passed_tests = [k for k, v in results.items() if v is True]
+                if passed_tests:
+                    print(f"\n✅ Passed Tests:")
+                    for test in passed_tests:
+                        print(f"   - {test}")
+            
+            print(f"{'='*80}")
+            sys.exit(0)
         else:
             print(f"❌ Unknown test: {test_name}")
-            print("Available tests: service_cash_flow")
+            print("Available tests: service_cash_flow, installments")
             sys.exit(1)
     else:
         # Run default main function
