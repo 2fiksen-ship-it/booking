@@ -718,7 +718,8 @@ const Layout = ({ children }) => {
           items: [
             { id: 'userManagement', label: t('userManagement'), icon: Settings },
             { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 },
-            { id: 'servicesManagement', label: t('servicesManagement'), icon: Package }
+            { id: 'servicesManagement', label: t('servicesManagement'), icon: Package },
+            { id: 'agencySettings', label: t('agencySettings'), icon: Building2 }
           ]
         },
         // Operations Management Category  
