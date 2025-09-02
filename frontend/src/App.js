@@ -8234,6 +8234,7 @@ const MainApp = ({ activeTab, setActiveTab }) => {
     bookings: BookingsManagement,
     invoices: InvoicesManagement,
     payments: PaymentsManagement,
+    installments: InstallmentsManagement,
     reports: ReportsManagement,
     userManagement: UserManagement,
     agencyManagement: AgencyManagement,
