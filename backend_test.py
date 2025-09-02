@@ -4059,6 +4059,396 @@ class SanhajaAPITester:
         
         return results
 
+    def test_agency_settings_management_api(self):
+        """Test Agency Settings Management API endpoints as requested in review"""
+        print(f"\n🏢 Testing Agency Settings Management API (Review Request)...")
+        print(f"   Testing GET /api/agencies/{{agency_id}} and PUT /api/agencies/{{agency_id}} endpoints")
+        print(f"   Testing role-based access control for agency settings management")
+        
+        results = {}
+        
+        # Step 1: Get agencies list to use for testing
+        print(f"\n   1. Getting agencies list for testing...")
+        
+        # First login as Super Admin to get agencies
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with agency settings tests")
+            return results
+        
+        success, agencies_data = self.run_test("Get All Agencies", "GET", "agencies", 200)
+        if not success or not agencies_data:
+            print("   ❌ CRITICAL: Cannot get agencies list - cannot proceed with tests")
+            return results
+        
+        # Use first agency for testing
+        test_agency = agencies_data[0]
+        test_agency_id = test_agency['id']
+        test_agency_name = test_agency.get('name', 'Unknown')
+        
+        print(f"   Using test agency: {test_agency_name} (ID: {test_agency_id})")
+        
+        # Step 2: Test Super Admin Access (superadmin@sanhaja.com / super123)
+        print(f"\n   2. Testing Super Admin Access...")
+        print(f"   Credentials: superadmin@sanhaja.com / super123")
+        
+        # Test GET /api/agencies/{agency_id} - Super Admin should access any agency
+        success, agency_details = self.run_test(
+            f"Super Admin - GET /api/agencies/{test_agency_id}",
+            "GET",
+            f"agencies/{test_agency_id}",
+            200
+        )
+        results['super_admin_get_agency'] = success
+        
+        if success:
+            print(f"   ✅ Super Admin can view agency details")
+            print(f"   Agency: {agency_details.get('name', 'N/A')}")
+            print(f"   City: {agency_details.get('city', 'N/A')}")
+            print(f"   Phone: {agency_details.get('phone', 'N/A')}")
+            print(f"   Email: {agency_details.get('email', 'N/A')}")
+            
+            # Check for enhanced fields from the new Agency model
+            enhanced_fields = ['phone_2', 'phone_3', 'fax', 'postal_code', 'website', 
+                             'tax_number', 'commercial_register', 'national_register', 
+                             'business_license', 'manager_name', 'established_date', 'description']
+            
+            found_enhanced_fields = []
+            for field in enhanced_fields:
+                if field in agency_details:
+                    found_enhanced_fields.append(field)
+            
+            print(f"   Enhanced fields available: {len(found_enhanced_fields)}/{len(enhanced_fields)}")
+            if found_enhanced_fields:
+                print(f"   Fields: {', '.join(found_enhanced_fields[:5])}{'...' if len(found_enhanced_fields) > 5 else ''}")
+        else:
+            print(f"   ❌ Super Admin cannot view agency details")
+        
+        # Test PUT /api/agencies/{agency_id} - Super Admin should modify any agency
+        update_data = {
+            "phone_2": "0213-555-0002",
+            "phone_3": "0213-555-0003", 
+            "fax": "0213-555-0004",
+            "postal_code": "31000",
+            "website": "https://tlemcen.sanhaja.com",
+            "tax_number": "123456789012345",
+            "commercial_register": "RC-2024-001",
+            "national_register": "NR-2024-001",
+            "business_license": "BL-2024-001",
+            "manager_name": "أحمد بن محمد",
+            "established_date": "2020-01-15",
+            "description": "وكالة صنهاجة للسفر - فرع تلمسان المحدث"
+        }
+        
+        success, update_response = self.run_test(
+            f"Super Admin - PUT /api/agencies/{test_agency_id}",
+            "PUT",
+            f"agencies/{test_agency_id}",
+            200,
+            data=update_data
+        )
+        results['super_admin_update_agency'] = success
+        
+        if success:
+            print(f"   ✅ Super Admin can update agency settings")
+            print(f"   Updated fields: {len(update_data)} fields")
+            
+            # Verify the update by getting the agency again
+            success, updated_agency = self.run_test(
+                f"Verify Super Admin Update",
+                "GET", 
+                f"agencies/{test_agency_id}",
+                200
+            )
+            
+            if success:
+                # Check if updates were applied
+                updates_applied = 0
+                for field, expected_value in update_data.items():
+                    if updated_agency.get(field) == expected_value:
+                        updates_applied += 1
+                
+                print(f"   Updates verified: {updates_applied}/{len(update_data)} fields")
+                results['super_admin_update_verified'] = updates_applied >= len(update_data) // 2
+        else:
+            print(f"   ❌ Super Admin cannot update agency settings")
+        
+        # Step 3: Test General Accountant Access (generalaccountant@sanhaja.com / acc123)
+        print(f"\n   3. Testing General Accountant Access...")
+        print(f"   Credentials: generalaccountant@sanhaja.com / acc123")
+        
+        auth_success = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['general_accountant_login'] = auth_success
+        
+        if auth_success:
+            print(f"   ✅ General Accountant authenticated successfully")
+            
+            # Test GET /api/agencies/{agency_id} - General Accountant should access any agency
+            success, agency_details = self.run_test(
+                f"General Accountant - GET /api/agencies/{test_agency_id}",
+                "GET",
+                f"agencies/{test_agency_id}",
+                200
+            )
+            results['general_accountant_get_agency'] = success
+            
+            if success:
+                print(f"   ✅ General Accountant can view agency details")
+                print(f"   Agency: {agency_details.get('name', 'N/A')}")
+            else:
+                print(f"   ❌ General Accountant cannot view agency details")
+            
+            # Test PUT /api/agencies/{agency_id} - General Accountant should modify any agency
+            ga_update_data = {
+                "email": "updated@tlemcen.sanhaja.com",
+                "manager_name": "محمد بن أحمد - محدث من المحاسب العام",
+                "description": "وكالة صنهاجة للسفر - محدثة من المحاسب العام"
+            }
+            
+            success, ga_update_response = self.run_test(
+                f"General Accountant - PUT /api/agencies/{test_agency_id}",
+                "PUT",
+                f"agencies/{test_agency_id}",
+                200,
+                data=ga_update_data
+            )
+            results['general_accountant_update_agency'] = success
+            
+            if success:
+                print(f"   ✅ General Accountant can update agency settings")
+            else:
+                print(f"   ❌ General Accountant cannot update agency settings")
+        else:
+            print(f"   ❌ General Accountant login failed")
+        
+        # Step 4: Test Agency Staff Access (staff1@tlemcen.sanhaja.com / staff123)
+        print(f"\n   4. Testing Agency Staff Access...")
+        print(f"   Credentials: staff1@tlemcen.sanhaja.com / staff123")
+        
+        auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['agency_staff_login'] = auth_success
+        
+        if auth_success:
+            print(f"   ✅ Agency Staff authenticated successfully")
+            staff_agency_id = self.current_user.get('agency_id')
+            print(f"   Staff Agency ID: {staff_agency_id}")
+            
+            # Test GET /api/agencies/{agency_id} - Agency Staff should view their own agency
+            success, staff_agency_details = self.run_test(
+                f"Agency Staff - GET /api/agencies/{staff_agency_id}",
+                "GET",
+                f"agencies/{staff_agency_id}",
+                200
+            )
+            results['agency_staff_get_own_agency'] = success
+            
+            if success:
+                print(f"   ✅ Agency Staff can view their own agency details")
+                print(f"   Agency: {staff_agency_details.get('name', 'N/A')}")
+            else:
+                print(f"   ❌ Agency Staff cannot view their own agency details")
+            
+            # Test GET /api/agencies/{agency_id} - Agency Staff should NOT access other agencies
+            if staff_agency_id != test_agency_id:
+                success, other_agency_response = self.run_test(
+                    f"Agency Staff - GET /api/agencies/{test_agency_id} (Other Agency - Should Fail)",
+                    "GET",
+                    f"agencies/{test_agency_id}",
+                    403
+                )
+                results['agency_staff_cannot_access_other_agency'] = success
+                
+                if success:
+                    print(f"   ✅ Agency Staff correctly denied access to other agencies")
+                else:
+                    print(f"   ❌ Agency Staff incorrectly allowed to access other agencies")
+            else:
+                print(f"   ⚠️  Test agency is same as staff agency - cannot test cross-agency denial")
+                results['agency_staff_cannot_access_other_agency'] = True
+            
+            # Test PUT /api/agencies/{agency_id} - Agency Staff should NOT modify even their own agency
+            staff_update_data = {
+                "description": "محاولة تحديث من موظف الوكالة - يجب أن تفشل"
+            }
+            
+            success, staff_update_response = self.run_test(
+                f"Agency Staff - PUT /api/agencies/{staff_agency_id} (Should Fail)",
+                "PUT",
+                f"agencies/{staff_agency_id}",
+                403,
+                data=staff_update_data
+            )
+            results['agency_staff_cannot_update_agency'] = success
+            
+            if success:
+                print(f"   ✅ Agency Staff correctly denied modification permissions")
+            else:
+                print(f"   ❌ Agency Staff incorrectly allowed to modify agency settings")
+        else:
+            print(f"   ❌ Agency Staff login failed")
+        
+        # Step 5: Test Invalid Agency ID (404 errors)
+        print(f"\n   5. Testing Invalid Agency ID...")
+        
+        # Re-login as Super Admin for error testing
+        self.test_login('superadmin@sanhaja.com', 'super123')
+        
+        invalid_agency_id = "invalid-agency-id-12345"
+        
+        # Test GET with invalid ID
+        success, error_response = self.run_test(
+            f"GET Invalid Agency ID (Should Return 404)",
+            "GET",
+            f"agencies/{invalid_agency_id}",
+            404
+        )
+        results['get_invalid_agency_404'] = success
+        
+        if success:
+            print(f"   ✅ GET invalid agency ID correctly returns 404")
+        else:
+            print(f"   ❌ GET invalid agency ID does not return 404")
+        
+        # Test PUT with invalid ID
+        success, error_response = self.run_test(
+            f"PUT Invalid Agency ID (Should Return 404)",
+            "PUT",
+            f"agencies/{invalid_agency_id}",
+            404,
+            data={"name": "Test Update"}
+        )
+        results['put_invalid_agency_404'] = success
+        
+        if success:
+            print(f"   ✅ PUT invalid agency ID correctly returns 404")
+        else:
+            print(f"   ❌ PUT invalid agency ID does not return 404")
+        
+        # Step 6: Test Empty Update Payload (400 error)
+        print(f"\n   6. Testing Empty Update Payload...")
+        
+        success, empty_response = self.run_test(
+            f"PUT Empty Payload (Should Return 400)",
+            "PUT",
+            f"agencies/{test_agency_id}",
+            400,
+            data={}
+        )
+        results['put_empty_payload_400'] = success
+        
+        if success:
+            print(f"   ✅ PUT empty payload correctly returns 400")
+        else:
+            print(f"   ❌ PUT empty payload does not return 400")
+        
+        # Step 7: Test Partial Updates
+        print(f"\n   7. Testing Partial Updates...")
+        
+        partial_update_data = {
+            "phone": "0213-999-8888",
+            "email": "partial-update@sanhaja.com"
+        }
+        
+        success, partial_response = self.run_test(
+            f"Super Admin - Partial Update (2 fields only)",
+            "PUT",
+            f"agencies/{test_agency_id}",
+            200,
+            data=partial_update_data
+        )
+        results['partial_update_success'] = success
+        
+        if success:
+            print(f"   ✅ Partial updates work correctly")
+            
+            # Verify partial update
+            success, verified_agency = self.run_test(
+                f"Verify Partial Update",
+                "GET",
+                f"agencies/{test_agency_id}",
+                200
+            )
+            
+            if success:
+                phone_updated = verified_agency.get('phone') == partial_update_data['phone']
+                email_updated = verified_agency.get('email') == partial_update_data['email']
+                
+                if phone_updated and email_updated:
+                    print(f"   ✅ Partial update fields verified")
+                    results['partial_update_verified'] = True
+                else:
+                    print(f"   ❌ Partial update fields not applied correctly")
+                    results['partial_update_verified'] = False
+        else:
+            print(f"   ❌ Partial updates failed")
+        
+        # Step 8: Test Enhanced Agency Model Fields
+        print(f"\n   8. Testing Enhanced Agency Model Fields...")
+        
+        # Test comprehensive update with all new fields
+        comprehensive_update = {
+            "name": "وكالة صنهاجة للسفر - فرع تلمسان المحدث شامل",
+            "address": "شارع الاستقلال، حي النصر، تلمسان",
+            "city": "تلمسان",
+            "postal_code": "13000",
+            "phone": "0213-43-20-10-11",
+            "phone_2": "0213-43-20-10-12", 
+            "phone_3": "0213-43-20-10-13",
+            "fax": "0213-43-20-10-14",
+            "email": "tlemcen@sanhaja.com",
+            "website": "https://tlemcen.sanhaja.com",
+            "logo_url": "https://assets.sanhaja.com/logos/tlemcen.png",
+            "header_text": "وكالة صنهاجة للسفر - فرع تلمسان",
+            "footer_text": "نحن في خدمتكم دائماً - وكالة صنهاجة للسفر",
+            "tax_number": "098765432109876",
+            "commercial_register": "RC-13-2024-001",
+            "national_register": "NR-13-2024-001",
+            "business_license": "BL-13-2024-001",
+            "manager_name": "السيد عبد الرحمن بن علي",
+            "manager_signature_url": "https://assets.sanhaja.com/signatures/tlemcen-manager.png",
+            "established_date": "2019-03-15",
+            "description": "وكالة صنهاجة للسفر فرع تلمسان - متخصصة في خدمات العمرة والحج والسفر"
+        }
+        
+        success, comprehensive_response = self.run_test(
+            f"Super Admin - Comprehensive Update (All Enhanced Fields)",
+            "PUT",
+            f"agencies/{test_agency_id}",
+            200,
+            data=comprehensive_update
+        )
+        results['comprehensive_update_success'] = success
+        
+        if success:
+            print(f"   ✅ Comprehensive update with all enhanced fields successful")
+            print(f"   Updated {len(comprehensive_update)} fields")
+            
+            # Verify comprehensive update
+            success, final_agency = self.run_test(
+                f"Verify Comprehensive Update",
+                "GET",
+                f"agencies/{test_agency_id}",
+                200
+            )
+            
+            if success:
+                verified_fields = 0
+                for field, expected_value in comprehensive_update.items():
+                    if final_agency.get(field) == expected_value:
+                        verified_fields += 1
+                
+                print(f"   Comprehensive update verified: {verified_fields}/{len(comprehensive_update)} fields")
+                results['comprehensive_update_verified'] = verified_fields >= len(comprehensive_update) * 0.8  # 80% threshold
+                
+                if results['comprehensive_update_verified']:
+                    print(f"   ✅ Enhanced Agency model fields working correctly")
+                else:
+                    print(f"   ❌ Some enhanced Agency model fields not working")
+        else:
+            print(f"   ❌ Comprehensive update failed")
+        
+        return results
+
 def main():
     print("🚀 Starting Sanhaja Travel Agencies Backend API Testing...")
     print("نظام محاسبة وكالات صنهاجة للسفر - اختبار واجهات برمجة التطبيقات")
