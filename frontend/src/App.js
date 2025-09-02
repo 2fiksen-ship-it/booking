@@ -1263,7 +1263,7 @@ const AgencyFilter = ({ selectedAgency, onAgencyChange, showAllOption = true }) 
 };
 
 // Enhanced Dashboard Component
-const Dashboard = () => {
+const Dashboard = ({ setActiveTab }) => {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedAgency, setSelectedAgency] = useState(null);
