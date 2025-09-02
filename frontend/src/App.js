@@ -1543,7 +1543,10 @@ const Dashboard = ({ setActiveTab }) => {
                 ⚠️ تنبيه: يوجد {stats.unpaid_invoices} فاتورة غير مسددة تحتاج للمتابعة
               </h3>
               <div className="mt-2">
-                <button className="text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1 rounded-md transition-colors">
+                <button 
+                  onClick={() => setActiveTab('invoices')}
+                  className="text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1 rounded-md transition-colors"
+                >
                   عرض الفواتير المعلقة ←
                 </button>
               </div>
