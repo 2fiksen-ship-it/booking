@@ -3254,13 +3254,22 @@ const PaymentsManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">{t('paymentsList')}</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              {t('addPayment')}
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center space-x-3">
+          <Button 
+            onClick={handlePrintPayments}
+            variant="outline" 
+            className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+          >
+            🖨️ طباعة القائمة
+          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                {t('addPayment')}
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingPayment ? t('edit') : t('addPayment')}</DialogTitle>
