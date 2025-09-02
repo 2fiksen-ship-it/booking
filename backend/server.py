@@ -3591,8 +3591,42 @@ async def print_operation_receipt(operation_id: str, current_user: User = Depend
         if not agency:
             raise HTTPException(status_code=404, detail="Agency not found")
         
-        # Generate PDF
-        pdf_data = create_receipt_pdf(operation, agency, user or {}, client or {}, service or {})
+        # NEW: Get real payment data for the receipt
+        payments = await db.payments.find({"daily_operation_id": operation_id}).to_list(1000)
+        total_paid = sum([p["amount"] for p in payments])
+        remaining_amount = operation["final_price"] - total_paid
+        
+        # Determine payment status
+        if remaining_amount <= 0:
+            payment_status = "مدفوع كاملاً"
+        elif total_paid > 0:
+            payment_status = "دفعة جزئية"
+        else:
+            payment_status = "غير مدفوع"
+        
+        # Determine payment method from last payment
+        payment_method = "نقدي"  # default
+        if payments:
+            last_payment = payments[-1]  # Most recent payment
+            payment_methods = {
+                'cash': 'نقدي',
+                'check': 'شيك',
+                'bank_transfer': 'تحويل بنكي',
+                'credit_card': 'بطاقة ائتمان'
+            }
+            payment_method = payment_methods.get(last_payment.get("method"), "نقدي")
+        
+        # Create payment info dictionary
+        payment_info = {
+            "total_paid": total_paid,
+            "remaining_amount": remaining_amount,
+            "payment_status": payment_status,
+            "payment_method": payment_method,
+            "payments_count": len(payments)
+        }
+        
+        # Generate PDF with real payment data
+        pdf_data = create_receipt_pdf(operation, agency, user or {}, client or {}, service or {}, payment_info)
         
         # Return PDF response
         return Response(
