@@ -2611,6 +2611,98 @@ async def get_daily_operations(
     operations = await db.daily_operations.find(query_filter).sort("date", -1).to_list(1000)
     return [DailyOperation(**operation) for operation in operations]
 
+@api_router.put("/daily-operations/{operation_id}", response_model=DailyOperation)
+async def update_daily_operation(
+    operation_id: str, 
+    operation_data: DailyOperationUpdate, 
+    current_user: User = Depends(get_current_user)
+):
+    """Update daily operation - allowed for staff if not yet approved, accountants can modify unapproved items"""
+    operation = await db.daily_operations.find_one({"id": operation_id})
+    if not operation:
+        raise HTTPException(status_code=404, detail="Operation not found")
+    
+    # Check agency access
+    can_manage_agency_data(current_user, operation["agency_id"])
+    
+    # Check approval status permissions
+    operation_status = operation.get("status", OperationStatus.DRAFT)
+    
+    if current_user.role == UserRole.AGENCY_STAFF:
+        # Staff can only edit if status is DRAFT, PENDING_APPROVAL, or REJECTED
+        if operation_status == OperationStatus.APPROVED:
+            raise HTTPException(
+                status_code=403, 
+                detail="Cannot modify approved operation. Contact accountant for changes."
+            )
+    elif current_user.role in [UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        # Accountants and Super Admin can modify any operation but log the action for approved ones
+        if operation_status == OperationStatus.APPROVED:
+            # Log modification in audit trail
+            await db.operation_modifications.insert_one({
+                "operation_id": operation_id,
+                "modified_by": current_user.id,
+                "modified_at": datetime.now(timezone.utc),
+                "original_data": operation,
+                "changes": operation_data.dict(exclude_unset=True),
+                "reason": "Post-approval modification by accountant"
+            })
+    
+    # Update operation
+    update_data = operation_data.dict(exclude_unset=True)
+    if update_data:
+        # Recalculate final price if discount changed
+        if "discount_amount" in update_data:
+            base_price = operation.get("base_price", 0)
+            new_discount = update_data["discount_amount"]
+            update_data["final_price"] = base_price - new_discount
+        
+        await db.daily_operations.update_one(
+            {"id": operation_id}, 
+            {"$set": update_data}
+        )
+    
+    updated_operation = await db.daily_operations.find_one({"id": operation_id})
+    return DailyOperation(**updated_operation)
+
+@api_router.delete("/daily-operations/{operation_id}")
+async def delete_daily_operation(operation_id: str, current_user: User = Depends(get_current_user)):
+    """Delete daily operation - allowed for staff if not yet approved, accountants can delete any"""
+    operation = await db.daily_operations.find_one({"id": operation_id})
+    if not operation:
+        raise HTTPException(status_code=404, detail="Operation not found")
+    
+    # Check agency access
+    can_manage_agency_data(current_user, operation["agency_id"])
+    
+    # Check approval status permissions
+    operation_status = operation.get("status", OperationStatus.DRAFT)
+    
+    if current_user.role == UserRole.AGENCY_STAFF:
+        # Staff can only delete if status is DRAFT, PENDING_APPROVAL, or REJECTED
+        if operation_status == OperationStatus.APPROVED:
+            raise HTTPException(
+                status_code=403, 
+                detail="Cannot delete approved operation. Contact accountant for deletion."
+            )
+    elif current_user.role in [UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        # Accountants and Super Admin can delete any operation but log the action
+        if operation_status == OperationStatus.APPROVED:
+            # Log the deletion for audit purposes
+            await db.operation_deletions.insert_one({
+                "operation_id": operation_id,
+                "operation_data": operation,
+                "deleted_by": current_user.id,
+                "deleted_at": datetime.now(timezone.utc),
+                "reason": "Post-approval deletion by accountant"
+            })
+    
+    result = await db.daily_operations.delete_one({"id": operation_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Operation not found")
+    
+    return {"message": "Daily operation deleted successfully"}
+
 @api_router.put("/daily-operations/{operation_id}/approve")
 async def approve_operation(operation_id: str, current_user: User = Depends(get_current_user)):
     """Approve daily operation - General Manager and General Accountant only"""
