@@ -612,7 +612,7 @@ agent_communication:
   - task: "Enhanced Approval Workflow for Operations and Bookings"
     implemented: true
     working: true
-    file: "backend/server.py"
+    file: "frontend/src/App.js"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
@@ -623,11 +623,14 @@ agent_communication:
       - working: true
         agent: "testing"
         comment: "✅ ENHANCED APPROVAL WORKFLOW TESTING COMPLETED - EXCELLENT RESULTS! ✅ Staff Permissions (staff1@tlemcen.sanhaja.com/staff123): Can UPDATE draft/pending operations ✅, Can DELETE draft/pending operations ✅, Correctly DENIED updating approved operations (403) ✅, Correctly DENIED deleting approved operations (403) ✅, Can UPDATE draft bookings ✅, Can DELETE draft bookings ✅, Correctly DENIED updating approved bookings (403) ✅. ✅ Accountant Override Permissions (generalaccountant@sanhaja.com/acc123): Can UPDATE approved operations with audit logging ✅, Can DELETE approved operations with audit logging ✅, Can DELETE approved bookings with audit logging ✅. ✅ Booking Approval/Rejection Endpoints: Accountant can APPROVE bookings ✅, Accountant can REJECT bookings with reason ✅. ✅ Authentication: All three user types tested successfully (Super Admin, General Accountant, Agency Staff). ✅ Audit Logging: Post-approval changes properly logged for accountability. MINOR ISSUE: One booking UPDATE test failed with 500 error (not critical). SUCCESS RATE: 94.4% (17/18 tests passed). Enhanced approval workflow system working excellently with proper role-based permissions and audit controls!"
+      - working: true
+        agent: "testing"
+        comment: "🎉 FRONTEND ENHANCED APPROVAL WORKFLOW UI TESTING COMPLETED - PERFECT RESULTS! ✅ Super Admin Testing (superadmin@sanhaja.com/super123): Login successful ✅, Daily Operations page accessible ✅, Edit/Delete buttons visible for all operations (22 each) ✅, Approve/Reject buttons visible for pending operations (2 each) ✅, Print buttons available for all operations (22) ✅. ✅ Agency Staff Testing (staff1@tlemcen.sanhaja.com/staff123): Login successful ✅, Daily Operations page accessible ✅, Edit/Delete buttons visible for non-approved operations only (9 each) ✅, Approve/Reject buttons correctly hidden (0) ✅, Print buttons available for all operations (20) ✅. ✅ Role-Based Permission Verification: Super Admin has full access to all workflow buttons ✅, Agency Staff correctly restricted from approval functions ✅, Edit/Delete permissions properly enforced based on operation status ✅. ✅ UI Functionality: Edit dialog opens correctly for authorized users ✅, Button tooltips and permissions working ✅, Operations table displays all workflow buttons appropriately ✅. SUCCESS RATE: 100% - Enhanced Approval Workflow UI working flawlessly with proper role-based permissions!"
 
   - task: "Advanced Filtering System for Operations and Bookings"
     implemented: true
     working: true
-    file: "backend/server.py"
+    file: "frontend/src/App.js"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
@@ -638,6 +641,9 @@ agent_communication:
       - working: true
         agent: "testing"
         comment: "✅ ADVANCED FILTERING SYSTEM TESTING COMPLETED - EXCELLENT RESULTS! ✅ Daily Operations Filtering: Agency filter (20 operations for تلمسان agency) ✅, Service filter (20 operations for عمرة اقتصادية) ✅, Client filter (18 operations for عبد القادر بن زيان) ✅, Date range filter (14 operations in 30-day range) ✅, Approval status filters (12 approved, 2 pending operations) ✅, Revenue range filter (22 operations in 50K-200K range) ✅, Combined filters (12 operations matching Agency+Service+Date) ✅. ✅ Specific Scenario Testing: 'انا اريد نشوف وكالة ما واش باعت اليوم بالاخص الا العمرة' - Agency+Today+Umrah filtering working perfectly ✅. ✅ Role-Based Access: General Accountant can use all filtering options ✅, Agency Staff filtering properly isolated to their agency ✅. ✅ Filter Accuracy: All filtered results verified to belong to specified criteria ✅. MINOR ISSUES: Bookings filtering endpoints returned 500 errors (4 failed tests) - needs investigation. SUCCESS RATE: 76.2% (16/21 tests passed). Daily operations filtering system working excellently, bookings filtering needs fixes. All requested filtering scenarios from review working perfectly!"
+      - working: true
+        agent: "testing"
+        comment: "🎉 FRONTEND ADVANCED FILTERING SYSTEM TESTING COMPLETED - PERFECT RESULTS! ✅ SelectItem Error Fix Verification: NO SelectItem console errors detected during comprehensive testing ✅, All dropdown components working without errors ✅. ✅ Advanced Filtering Interface: 'فلتر متقدم' button accessible ✅, Advanced filtering panel opens correctly ✅, All filter components present and functional ✅. ✅ Filter Components Testing: Agency dropdown (Super Admin only) ✅, Service type dropdown with عمرة option ✅, Status dropdown with approval options ✅, Client name search input ✅, Service name search input ✅, Date range filters (2 inputs) ✅, Amount range filters (2 inputs) ✅, Apply/Clear filter buttons ✅. ✅ Quick Filter Buttons: 'عمرة اليوم' ✅, 'تحتاج موافقة' ✅, 'مبالغ عالية' ✅ - all working perfectly. ✅ Combined Filter Functionality: User scenario 'Agency + عمرة + Today + Client name' fully supported ✅, All filters can be combined successfully ✅. ✅ Role-Based Filtering: Super Admin sees agency filter ✅, Agency Staff correctly has agency filter hidden ✅, All other filters available to both roles ✅. SUCCESS RATE: 100% (8/8 tests passed) - Advanced Filtering System working excellently with no SelectItem errors!"
   - agent: "main"
     message: "Starting implementation of comprehensive Daily Operations Management System. This will include: 1) Services catalog with fixed pricing, 2) Daily operations with approval workflow, 3) Comprehensive reports with filtering. Need to implement backend models and APIs first, then frontend interfaces."
   - agent: "testing"
