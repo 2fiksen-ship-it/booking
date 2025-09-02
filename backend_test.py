@@ -4605,7 +4605,39 @@ def main():
         print(f"🎯 معدل النجاح: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         print(f"🎯 Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
         
-        # Services Management and Daily Operations Results (PRIMARY FOCUS - CURRENT REVIEW)
+        # Agency Settings Management API Results (PRIMARY FOCUS - CURRENT REVIEW)
+        print(f"\n🏢 نتائج واجهة برمجة إدارة إعدادات الوكالات - AGENCY SETTINGS MANAGEMENT API RESULTS (PRIMARY FOCUS):")
+        agency_settings_keys = [
+            ('super_admin_get_agency', 'Super Admin - GET /api/agencies/{agency_id}'),
+            ('super_admin_update_agency', 'Super Admin - PUT /api/agencies/{agency_id}'),
+            ('super_admin_update_verified', 'Super Admin - Update Verification'),
+            ('general_accountant_login', 'General Accountant Login'),
+            ('general_accountant_get_agency', 'General Accountant - GET /api/agencies/{agency_id}'),
+            ('general_accountant_update_agency', 'General Accountant - PUT /api/agencies/{agency_id}'),
+            ('agency_staff_login', 'Agency Staff Login'),
+            ('agency_staff_get_own_agency', 'Agency Staff - GET Own Agency'),
+            ('agency_staff_cannot_access_other_agency', 'Agency Staff - Cannot Access Other Agencies'),
+            ('agency_staff_cannot_update_agency', 'Agency Staff - Cannot Update Agency'),
+            ('get_invalid_agency_404', 'GET Invalid Agency ID Returns 404'),
+            ('put_invalid_agency_404', 'PUT Invalid Agency ID Returns 404'),
+            ('put_empty_payload_400', 'PUT Empty Payload Returns 400'),
+            ('partial_update_success', 'Partial Updates Work'),
+            ('partial_update_verified', 'Partial Updates Verified'),
+            ('comprehensive_update_success', 'Comprehensive Update Success'),
+            ('comprehensive_update_verified', 'Enhanced Agency Model Fields Working')
+        ]
+        
+        for key, description in agency_settings_keys:
+            if key in agency_settings_results:
+                status = "✅" if agency_settings_results[key] else "❌"
+                print(f"   {status} {description}")
+        
+        # Agency Settings Functionality Score
+        as_working = sum(1 for key, _ in agency_settings_keys if agency_settings_results.get(key, False))
+        as_total = len(agency_settings_keys)
+        print(f"\n   📊 Agency Settings Management API Score: {as_working}/{as_total} ({(as_working/as_total)*100:.1f}%)")
+        
+        # Services Management and Daily Operations Results (SECONDARY FOCUS - PREVIOUS REVIEW)
         print(f"\n🛠️ نتائج نظام إدارة الخدمات والعمليات اليومية - SERVICES & DAILY OPERATIONS RESULTS (PRIMARY FOCUS):")
         services_operations_keys = [
             ('super_admin_login', 'Super Admin Login (superadmin@sanhaja.com)'),
