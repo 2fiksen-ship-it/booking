@@ -1297,6 +1297,9 @@ async def delete_supplier(supplier_id: str, current_user: User = Depends(get_cur
 async def create_booking(booking_data: BookingCreate, current_user: User = Depends(get_current_user)):
     booking_dict = booking_data.dict()
     booking_dict["agency_id"] = current_user.agency_id
+    booking_dict["created_by"] = current_user.id
+    booking_dict["status"] = OperationStatus.DRAFT
+    booking_dict["modification_history"] = []
     booking = Booking(**booking_dict)
     await db.bookings.insert_one(booking.dict())
     return booking
