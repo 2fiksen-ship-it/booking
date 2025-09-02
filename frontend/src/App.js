@@ -988,7 +988,7 @@ const Layout = ({ children }) => {
 
         {/* Main Content */}
         <main className="flex-1 p-6 overflow-auto">
-          <MainApp activeTab={activeTab} />
+          <MainApp activeTab={activeTab} setActiveTab={setActiveTab} />
         </main>
       </div>
     </div>
