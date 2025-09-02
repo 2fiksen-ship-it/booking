@@ -112,6 +112,20 @@ user_problem_statement: |
      - Daily operations receipts system with approval workflow
      - Comprehensive daily operations reports with filtering capabilities
      - Only General Manager and General Accountant can approve receipts and manage pricing
+  5. LATEST REQUIREMENT: Implement agency-specific settings functionality where users can input and modify detailed information (contact numbers, addresses, registration details) for each agency.
+
+backend:
+  - task: "Agency Settings Management API"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added comprehensive agency settings API endpoints including GET /api/agencies/{agency_id} for retrieving agency details and PUT /api/agencies/{agency_id} for updating agency settings. Enhanced Agency and AgencyUpdate models with additional fields: multiple phone numbers, fax, postal code, website, national register, business license, established date, and description. Implemented role-based access control - GM/GA can modify all agencies, Agency Staff can only view their own agency."
 
 backend:
   - task: "Authentication System"
