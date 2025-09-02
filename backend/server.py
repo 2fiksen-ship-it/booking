@@ -451,6 +451,17 @@ class BookingCreate(BaseModel):
     start_date: datetime
     end_date: datetime
 
+class BookingUpdate(BaseModel):
+    ref: Optional[str] = None
+    client_id: Optional[str] = None
+    supplier_id: Optional[str] = None
+    type: Optional[BookingType] = None
+    cost: Optional[float] = None
+    sell_price: Optional[float] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    status: Optional[OperationStatus] = None
+
 class InvoiceCreate(BaseModel):
     client_id: str
     amount_ht: float
