@@ -815,7 +815,7 @@ const Layout = ({ children }) => {
       ];
     }
 
-    // Agency Staff sees operational functions
+    // Agency Staff sees operational functions (LIMITED ACCESS)
     return [
       ...baseItems,
       // Daily Operations Category
@@ -825,18 +825,18 @@ const Layout = ({ children }) => {
         items: [
           { id: 'clients', label: t('clients'), icon: Users },
           { id: 'suppliers', label: t('suppliers'), icon: Building2 },
-          { id: 'bookings', label: t('bookings'), icon: Package },
           { id: 'dailyOperations', label: t('dailyOperations'), icon: FileText }
+          // REMOVED: bookings (restricted to managers/accountants)
         ]
       },
-      // Financial Transactions Category
+      // Financial Transactions Category (LIMITED)
       {
         category: 'financial',
         label: t('financialManagement'),
         items: [
-          { id: 'invoices', label: t('invoices'), icon: FileText },
-          { id: 'payments', label: t('payments'), icon: CreditCard },
+          { id: 'payments', label: '💰 ' + t('payments') + ' (العمليات)', icon: CreditCard },
           { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 }
+          // REMOVED: invoices (restricted to managers/accountants)
         ]
       },
       // Agency Information Category
