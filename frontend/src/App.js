@@ -6184,40 +6184,7 @@ const DailyOperationsReports = () => {
     setReportData(testData);
     alert('✅ تم إنشاء تقرير اختبار');
   };
-        const newWindow = window.open(url, '_blank');
-        if (newWindow) {
-          console.log('Report PDF opened in new window');
-          alert('✅ تم فتح التقرير في نافذة جديدة!');
-        } else {
-          console.log('New window blocked, trying download');
-          triggerReportDownload();
-        }
-      } else {
-        // Download file
-        triggerReportDownload();
-      }
-      
-      function triggerReportDownload() {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `daily_operations_report_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}.pdf`;
-        link.style.display = 'none';
-        
-        document.body.appendChild(link);
-        console.log('Report link added, triggering download...');
-        link.click();
-        
-        // Clean up
-        setTimeout(() => {
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-          console.log('Report cleanup completed');
-        }, 100);
-        
-        alert('✅ تم تحميل التقرير بنجاح! تحقق من مجلد التحميلات.');
-      }
-      
-      console.log('=== REPORT PRINT SUCCESS ===');
+
       
     } catch (error) {
       console.error('=== REPORT PRINT ERROR ===');
