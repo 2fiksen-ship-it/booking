@@ -550,7 +550,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "English Date Display Fix in Payments Page"
+    - "NEW Operation-Payment Integration System"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
