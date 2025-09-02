@@ -7451,6 +7451,7 @@ const MainApp = ({ activeTab, setActiveTab }) => {
     payments: PaymentsManagement,
     reports: ReportsManagement,
     userManagement: UserManagement,
+    agencyManagement: AgencyManagement,
     dailyReports: DailyReportsManagement,
     servicesManagement: ServicesManagement,
     agencySettings: AgencySettingsManagement,
