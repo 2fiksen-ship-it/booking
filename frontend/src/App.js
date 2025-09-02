@@ -6059,6 +6059,7 @@ const DailyOperationsReports = () => {
   const generateReport = async () => {
     setLoading(true);
     try {
+      console.log('=== GENERATING REPORT ===');
       const params = new URLSearchParams({
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
@@ -6071,14 +6072,28 @@ const DailyOperationsReports = () => {
         params.append('agency_ids', selectedAgency);
       }
 
-      const response = await axios.get(`${API}/reports/daily-operations?${params}`, {
+      console.log('Report params:', params.toString());
+      const apiUrl = `${API}/reports/daily-operations?${params}`;
+      console.log('Report API URL:', apiUrl);
+
+      const response = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       
-      setReportData(response.data);
+      console.log('Report response:', response.data);
+      console.log('Report response status:', response.status);
+      
+      if (response.data) {
+        setReportData(response.data);
+        console.log('✅ Report data set successfully');
+      } else {
+        console.log('❌ No report data received');
+        alert('لا توجد بيانات للفترة المحددة');
+      }
     } catch (error) {
       console.error('Error generating report:', error);
-      alert('خطأ في إنتاج التقرير');
+      console.error('Error details:', error.response?.data || error.message);
+      alert('خطأ في إنتاج التقرير: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
     }
