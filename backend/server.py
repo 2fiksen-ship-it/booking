@@ -86,6 +86,11 @@ class ReportStatus(str, Enum):
     APPROVED = "approved"  # تم الموافقة من المحاسب العام
     REJECTED = "rejected"  # مرفوض
 
+class ServiceSaleStatus(str, Enum):
+    SOLD = "sold"
+    PENDING_CASH = "pending_cash"
+    CASH_RECEIVED = "cash_received"
+
 # Service Types
 class ServiceType(str, Enum):
     UMRAH = "عمرة"
