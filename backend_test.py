@@ -4682,10 +4682,19 @@ def main():
     
     tester = SanhajaAPITester()
     
-    # AGENCY SETTINGS MANAGEMENT API TESTING (PRIMARY FOCUS from Current Review Request)
+    # REPORT CREATION FIX TESTING (HIGHEST PRIORITY from Current Review Request)
     print("\n" + "="*80)
-    print("🏢 AGENCY SETTINGS MANAGEMENT API TESTING - PRIMARY FOCUS")
-    print("اختبار واجهة برمجة إدارة إعدادات الوكالات - المحور الأساسي")
+    print("🎯 REPORT CREATION FIX TESTING - HIGHEST PRIORITY")
+    print("اختبار إصلاح إنشاء التقارير - الأولوية القصوى")
+    print("User Issue: مشكل في انشاءاختبارتقرير")
+    print("="*80)
+    
+    report_fix_results = tester.test_report_creation_fix_complete()
+    
+    # AGENCY SETTINGS MANAGEMENT API TESTING (SECONDARY FOCUS from Current Review Request)
+    print("\n" + "="*80)
+    print("🏢 AGENCY SETTINGS MANAGEMENT API TESTING - SECONDARY FOCUS")
+    print("اختبار واجهة برمجة إدارة إعدادات الوكالات - المحور الثانوي")
     print("="*80)
     
     agency_settings_results = tester.test_agency_settings_management_api()
