@@ -4842,18 +4842,119 @@ const InstallmentsManagement = () => {
       )}
 
       {activeTab === 'reports' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>تقارير التقسيط</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p>تقارير التقسيط ستكون متاحة قريباً</p>
-              <p className="text-sm">تقرير شامل لحالة الأقساط والمدفوعات</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          {/* Report Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle>تقارير حالة الأقساط</CardTitle>
+              <CardDescription>تقرير شامل لحالة جميع خطط التقسيط والمدفوعات</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>من تاريخ</Label>
+                  <Input
+                    type="date"
+                    value={reportFilters.start_date}
+                    onChange={(e) => setReportFilters({...reportFilters, start_date: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label>إلى تاريخ</Label>
+                  <Input
+                    type="date"
+                    value={reportFilters.end_date}
+                    onChange={(e) => setReportFilters({...reportFilters, end_date: e.target.value})}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={fetchStatusReport} className="w-full">
+                    📊 إنشاء التقرير
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Status Report Results */}
+          {statusReport && (
+            <Card>
+              <CardHeader>
+                <CardTitle>نتائج التقرير</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Summary Statistics */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {statusReport.summary?.total_clients || 0}
+                    </div>
+                    <div className="text-sm text-blue-600">إجمالي العملاء</div>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">
+                      {statusReport.summary?.total_plans || 0}
+                    </div>
+                    <div className="text-sm text-green-600">إجمالي الخطط</div>
+                  </div>
+                  <div className="bg-yellow-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {statusReport.summary?.total_due?.toLocaleString() || 0} دج
+                    </div>
+                    <div className="text-sm text-yellow-600">إجمالي المستحق</div>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {statusReport.summary?.total_paid?.toLocaleString() || 0} دج
+                    </div>
+                    <div className="text-sm text-purple-600">إجمالي المدفوع</div>
+                  </div>
+                </div>
+
+                {/* Client Details */}
+                {statusReport.clients && statusReport.clients.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-right">العميل</TableHead>
+                          <TableHead className="text-right">عدد الخطط</TableHead>
+                          <TableHead className="text-right">المبلغ المستحق</TableHead>
+                          <TableHead className="text-right">المبلغ المدفوع</TableHead>
+                          <TableHead className="text-right">المبلغ المتأخر</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {statusReport.clients.map((client, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{client.client_name}</TableCell>
+                            <TableCell>{client.total_plans}</TableCell>
+                            <TableCell>{client.total_due?.toLocaleString()} دج</TableCell>
+                            <TableCell className="text-green-600">
+                              {client.total_paid?.toLocaleString()} دج
+                            </TableCell>
+                            <TableCell className="text-red-600">
+                              {client.total_overdue?.toLocaleString()} دج
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {!statusReport && (
+            <Card>
+              <CardContent className="text-center py-8 text-gray-500">
+                <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <p>اضغط على "إنشاء التقرير" لعرض تقرير حالة الأقساط</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
     </div>
   );
