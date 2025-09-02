@@ -5994,6 +5994,32 @@ const DailyOperationsManagement = () => {
                       >
                         🖨️ طباعة
                       </Button>
+
+                      {/* NEW: Edit Button - Based on approval workflow permissions */}
+                      {canEditOperation(operation) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditOperation(operation)}
+                          className="text-orange-600 hover:text-orange-700 border-orange-600"
+                        >
+                          <Edit className="h-3 w-3" />
+                          تعديل
+                        </Button>
+                      )}
+
+                      {/* NEW: Delete Button - Based on approval workflow permissions */}
+                      {canDeleteOperation(operation) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteOperation(operation.id)}
+                          className="text-red-600 hover:text-red-700 border-red-600"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          حذف
+                        </Button>
+                      )}
                       
                       {/* Approval buttons - Only for managers */}
                       {canApproveOperations && operation.status === 'في انتظار الموافقة' && (
