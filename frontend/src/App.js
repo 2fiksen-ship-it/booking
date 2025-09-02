@@ -2149,9 +2149,24 @@ const BookingsManagement = () => {
         axios.get(`${API}/suppliers`)
       ]);
       
-      setBookings(bookingsRes.data);
-      setClients(clientsRes.data);
-      setSuppliers(suppliersRes.data);
+      // Sort bookings by creation date - newest first
+      const sortedBookings = bookingsRes.data.sort((a, b) => {
+        return new Date(b.created_at || b.date) - new Date(a.created_at || a.date);
+      });
+      
+      // Sort clients by creation date - newest first
+      const sortedClients = clientsRes.data.sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      
+      // Sort suppliers by creation date - newest first
+      const sortedSuppliers = suppliersRes.data.sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      
+      setBookings(sortedBookings);
+      setClients(sortedClients);
+      setSuppliers(sortedSuppliers);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
