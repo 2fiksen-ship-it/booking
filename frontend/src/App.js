@@ -4650,32 +4650,54 @@ const DailyOperationsManagement = () => {
         throw new Error('PDF file is empty');
       }
       
-      // Create blob URL and download
+      // Create blob URL and open in new window (alternative to download)
       const blob = new Blob([response.data], { type: 'application/pdf' });
       console.log('Blob created, size:', blob.size);
       
       const url = window.URL.createObjectURL(blob);
       console.log('Blob URL created:', url);
       
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `receipt_${operationNo}.pdf`;
-      link.style.display = 'none';
+      // Try both download and opening in new window
+      const userChoice = confirm('اختر طريقة عرض الوصل:\nموافق = فتح في نافذة جديدة\nإلغاء = تحميل الملف');
       
-      // Add to document, click, and remove
-      document.body.appendChild(link);
-      console.log('Link added to document, triggering click...');
-      link.click();
+      if (userChoice) {
+        // Open in new window
+        const newWindow = window.open(url, '_blank');
+        if (newWindow) {
+          console.log('PDF opened in new window');
+          alert('✅ تم فتح الوصل في نافذة جديدة!');
+        } else {
+          console.log('New window blocked, trying download');
+          // Fallback to download if popup blocked
+          triggerDownload();
+        }
+      } else {
+        // Download file
+        triggerDownload();
+      }
       
-      // Clean up after a short delay
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        console.log('Cleanup completed');
-      }, 100);
+      function triggerDownload() {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `receipt_${operationNo}.pdf`;
+        link.style.display = 'none';
+        
+        // Add to document, click, and remove
+        document.body.appendChild(link);
+        console.log('Link added to document, triggering click...');
+        link.click();
+        
+        // Clean up after a short delay
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          console.log('Cleanup completed');
+        }, 100);
+        
+        alert('✅ تم تحميل الوصل بنجاح! تحقق من مجلد التحميلات.');
+      }
       
       console.log('=== PRINT SUCCESS ===');
-      alert('✅ تم تحميل الوصل بنجاح!');
       
     } catch (error) {
       console.error('=== PRINT ERROR ===');
