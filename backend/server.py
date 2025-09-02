@@ -3637,6 +3637,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Database Migration Endpoint for Booking Model Update
+@api_router.post("/admin/migrate-bookings")
+async def migrate_bookings_data(current_user: User = Depends(get_current_user)):
+    """Migrate existing booking records to include new approval workflow fields"""
+    require_super_admin(current_user)
+    
+    try:
+        # Count bookings without the new fields
+        missing_fields_count = await db.bookings.count_documents({
+            "$or": [
+                {"created_by": {"$exists": False}},
+                {"status": {"$exists": False}},
+                {"modification_history": {"$exists": False}}
+            ]
+        })
+        
+        if missing_fields_count == 0:
+            return {"message": "All booking records are already up to date", "updated_count": 0}
+        
+        # Update all bookings that are missing the new fields
+        update_result = await db.bookings.update_many(
+            {
+                "$or": [
+                    {"created_by": {"$exists": False}},
+                    {"status": {"$exists": False}},
+                    {"modification_history": {"$exists": False}}
+                ]
+            },
+            {
+                "$set": {
+                    "created_by": None,  # Will be optional
+                    "status": OperationStatus.DRAFT,
+                    "approved_by": None,
+                    "approved_at": None,
+                    "rejected_reason": None,
+                    "modification_history": []
+                }
+            }
+        )
+        
+        return {
+            "message": "Booking migration completed successfully",
+            "updated_count": update_result.modified_count,
+            "found_needing_update": missing_fields_count
+        }
+        
+    except Exception as e:
+        logger.error(f"Error migrating booking data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
