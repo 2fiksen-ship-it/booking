@@ -6543,6 +6543,9 @@ const DailyOperationsManagement = () => {
                   <TableCell className="text-right">
                     {getStatusBadge(operation.status)}
                   </TableCell>
+                  <TableCell className="text-right">
+                    {getPaymentStatusBadge(operation.id)}
+                  </TableCell>
                   <TableCell>
                     <div className="flex justify-end space-x-2">
                       {/* Print Receipt Button - Available for everyone */}
