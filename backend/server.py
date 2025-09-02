@@ -4518,6 +4518,67 @@ async def installment_status_report(
         }
     }
 
+@api_router.post("/admin/check-overdue-installments")
+async def check_overdue_installments(current_user: User = Depends(get_current_user)):
+    """Check for overdue installments and update their status (Daily job)"""
+    require_super_admin(current_user)
+    
+    try:
+        # Find all pending installments that are past due
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        overdue_result = await db.installment_payments.update_many(
+            {
+                "due_date": {"$lt": today},
+                "status": InstallmentStatus.PENDING
+            },
+            {
+                "$set": {
+                    "status": InstallmentStatus.OVERDUE
+                }
+            }
+        )
+        
+        # Also check partial payments that are overdue
+        partial_overdue_result = await db.installment_payments.update_many(
+            {
+                "due_date": {"$lt": today},
+                "status": InstallmentStatus.PARTIAL,
+                "remaining_amount": {"$gt": 0}
+            },
+            {
+                "$set": {
+                    "status": InstallmentStatus.OVERDUE
+                }
+            }
+        )
+        
+        total_overdue = overdue_result.modified_count + partial_overdue_result.modified_count
+        
+        # Get list of affected clients for notification (optional)
+        overdue_payments = await db.installment_payments.find(
+            {"status": InstallmentStatus.OVERDUE}
+        ).to_list(1000)
+        
+        # Get unique plan IDs and their sales
+        plan_ids = list(set([p["plan_id"] for p in overdue_payments]))
+        plans = await db.installment_plans.find({"id": {"$in": plan_ids}}).to_list(1000)
+        
+        sale_ids = [plan["service_sale_id"] for plan in plans]
+        sales = await db.service_sales.find({"id": {"$in": sale_ids}}).to_list(1000)
+        
+        affected_clients = list(set([sale["client_name"] for sale in sales]))
+        
+        return {
+            "message": "Overdue installments check completed",
+            "overdue_count": total_overdue,
+            "affected_clients_count": len(affected_clients),
+            "affected_clients": affected_clients[:10]  # Show first 10 clients
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error checking overdue installments: {str(e)}")
+
 # Database Migration Endpoint for Booking Model Update
 @api_router.post("/admin/migrate-bookings")
 async def migrate_bookings_data(current_user: User = Depends(get_current_user)):
