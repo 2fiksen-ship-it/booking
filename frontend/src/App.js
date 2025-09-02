@@ -4377,6 +4377,35 @@ const InstallmentsManagement = () => {
     }
   };
 
+  const fetchStatusReport = async () => {
+    try {
+      console.log('=== FETCHING STATUS REPORT ===');
+      let url = `${API}/reports/installment-status`;
+      const params = new URLSearchParams();
+      
+      if (reportFilters.start_date) {
+        params.append('start_date', reportFilters.start_date);
+      }
+      if (reportFilters.end_date) {
+        params.append('end_date', reportFilters.end_date);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      console.log('Status report fetched:', response.data);
+      setStatusReport(response.data);
+    } catch (error) {
+      console.error('Error fetching status report:', error);
+      alert('فشل في تحميل تقرير حالة الأقساط: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   const createInstallmentPlan = async () => {
     if (!selectedSale) return;
     
