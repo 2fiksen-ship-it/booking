@@ -4260,6 +4260,423 @@ const UserManagement = () => {
   );
 };
 
+// Installments Management Component
+const InstallmentsManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
+  const [serviceSales, setServiceSales] = useState([]);
+  const [installmentPlans, setInstallmentPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('plans'); // plans, create, reports
+  
+  // Create Plan states
+  const [selectedSale, setSelectedSale] = useState(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [planFormData, setPlanFormData] = useState({
+    number_of_installments: 3,
+    start_date: new Date().toISOString().split('T')[0],
+    installment_dates: [],
+    notes: ''
+  });
+  
+  // Payment states
+  const [selectedPlanPayments, setSelectedPlanPayments] = useState([]);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [salesRes, plansRes] = await Promise.all([
+        axios.get(`${API}/service-sales`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }),
+        fetchInstallmentPlans()
+      ]);
+      
+      setServiceSales(salesRes.data);
+    } catch (error) {
+      console.error('Error fetching installments data:', error);
+      if (error.response?.status === 403) {
+        alert('ليس لديك صلاحية للوصول إلى التقسيط');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchInstallmentPlans = async () => {
+    try {
+      // For now, we'll fetch plans through service sales
+      // In a more advanced version, we could have a dedicated endpoint
+      return [];
+    } catch (error) {
+      console.error('Error fetching installment plans:', error);
+      return [];
+    }
+  };
+
+  const getSaleInstallmentPlan = async (saleId) => {
+    try {
+      const response = await axios.get(`${API}/service-sales/${saleId}/installment-plan`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return null; // No installment plan exists
+      }
+      throw error;
+    }
+  };
+
+  const createInstallmentPlan = async () => {
+    if (!selectedSale) return;
+    
+    try {
+      console.log('=== CREATING INSTALLMENT PLAN ===');
+      console.log('Sale ID:', selectedSale.id);
+      console.log('Plan data:', planFormData);
+      
+      await axios.post(`${API}/service-sales/${selectedSale.id}/installment-plan`, planFormData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      console.log('=== INSTALLMENT PLAN CREATED ===');
+      alert('✅ تم إنشاء خطة التقسيط بنجاح');
+      
+      setShowCreateDialog(false);
+      resetCreateForm();
+      fetchData();
+    } catch (error) {
+      console.error('=== INSTALLMENT PLAN ERROR ===');
+      console.error('Error creating installment plan:', error);
+      
+      if (error.response?.status === 400) {
+        alert('❌ خطأ: ' + (error.response?.data?.detail || error.message));
+      } else if (error.response?.status === 403) {
+        alert('❌ ليس لديك صلاحية لإنشاء خطة تقسيط لهذا البيع');
+      } else {
+        alert('❌ فشل في إنشاء خطة التقسيط: ' + (error.response?.data?.detail || error.message));
+      }
+    }
+  };
+
+  const resetCreateForm = () => {
+    setSelectedSale(null);
+    setPlanFormData({
+      number_of_installments: 3,
+      start_date: new Date().toISOString().split('T')[0],
+      installment_dates: [],
+      notes: ''
+    });
+  };
+
+  const generateInstallmentDates = (numberOfInstallments, startDate) => {
+    const dates = [];
+    const start = new Date(startDate);
+    
+    for (let i = 0; i < numberOfInstallments; i++) {
+      const date = new Date(start);
+      date.setMonth(date.getMonth() + i + 1); // Monthly installments starting next month
+      dates.push(date.toISOString().split('T')[0]);
+    }
+    
+    return dates;
+  };
+
+  const updateInstallmentDate = (index, date) => {
+    const updatedDates = [...planFormData.installment_dates];
+    updatedDates[index] = date;
+    setPlanFormData({
+      ...planFormData,
+      installment_dates: updatedDates
+    });
+  };
+
+  const viewPlanPayments = async (plan) => {
+    try {
+      const response = await axios.get(`${API}/installment-plans/${plan.id}/payments`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setSelectedPlanPayments(response.data);
+    } catch (error) {
+      console.error('Error fetching plan payments:', error);
+      alert('فشل في تحميل تفاصيل الأقساط');
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!selectedPayment || !paymentAmount) return;
+    
+    try {
+      console.log('=== PROCESSING INSTALLMENT PAYMENT ===');
+      console.log('Payment ID:', selectedPayment.id);
+      console.log('Amount:', paymentAmount);
+      
+      await axios.put(`${API}/installment-payments/${selectedPayment.id}/pay`, {
+        paid_amount: parseFloat(paymentAmount),
+        notes: paymentNotes
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      console.log('=== PAYMENT PROCESSED ===');
+      alert('✅ تم تسجيل الدفعة بنجاح');
+      
+      setShowPaymentDialog(false);
+      setSelectedPayment(null);
+      setPaymentAmount('');
+      setPaymentNotes('');
+      
+      // Refresh payments
+      if (selectedPlanPayments.length > 0) {
+        const plan = { id: selectedPlanPayments[0].plan_id };
+        await viewPlanPayments(plan);
+      }
+    } catch (error) {
+      console.error('=== PAYMENT ERROR ===');
+      console.error('Error processing payment:', error);
+      
+      if (error.response?.status === 400) {
+        alert('❌ خطأ في المبلغ: ' + (error.response?.data?.detail || error.message));
+      } else {
+        alert('❌ فشل في تسجيل الدفعة: ' + (error.response?.data?.detail || error.message));
+      }
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      pending: { label: '⏳ معلق', class: 'bg-yellow-100 text-yellow-800' },
+      partial: { label: '🟡 جزئي', class: 'bg-orange-100 text-orange-800' },
+      paid: { label: '✅ مدفوع', class: 'bg-green-100 text-green-800' },
+      overdue: { label: '🔴 متأخر', class: 'bg-red-100 text-red-800' }
+    };
+    
+    const statusInfo = statusMap[status] || { label: status, class: 'bg-gray-100 text-gray-800' };
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.class}`}>
+        {statusInfo.label}
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">📅 إدارة التقسيط</h1>
+          <p className="text-sm text-gray-600 mt-1">إدارة خطط التقسيط والأقساط لمبيعات الخدمات</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('plans')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'plans'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            📋 خطط التقسيط
+          </button>
+          <button
+            onClick={() => setActiveTab('create')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'create'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            ➕ إنشاء خطة جديدة
+          </button>
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'reports'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            📊 التقارير
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'plans' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>خطط التقسيط النشطة</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-gray-500">
+              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p>لا توجد خطط تقسيط حالياً</p>
+              <p className="text-sm">انتقل إلى "إنشاء خطة جديدة" لإضافة خطة تقسيط</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === 'create' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>إنشاء خطة تقسيط جديدة</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Select Service Sale */}
+            <div>
+              <Label>اختر بيع الخدمة المراد تقسيطها *</Label>
+              <Select value={selectedSale?.id || ''} onValueChange={(value) => {
+                const sale = serviceSales.find(s => s.id === value);
+                setSelectedSale(sale);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر من مبيعات الخدمات المتاحة" />
+                </SelectTrigger>
+                <SelectContent>
+                  {serviceSales.map((sale) => (
+                    <SelectItem key={sale.id} value={sale.id}>
+                      {sale.service_name} - {sale.client_name} - {sale.amount.toLocaleString()} دج
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedSale && (
+              <>
+                {/* Selected Sale Details */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 className="font-bold text-blue-800 mb-2">تفاصيل البيع المحدد:</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><strong>الخدمة:</strong> {selectedSale.service_name}</div>
+                    <div><strong>العميل:</strong> {selectedSale.client_name}</div>
+                    <div><strong>المبلغ الإجمالي:</strong> {selectedSale.amount.toLocaleString()} دج</div>
+                    <div><strong>حالة البيع:</strong> {selectedSale.status}</div>
+                  </div>
+                </div>
+
+                {/* Number of Installments */}
+                <div>
+                  <Label>عدد الأقساط *</Label>
+                  <Input
+                    type="number"
+                    min="2"
+                    max="12"
+                    value={planFormData.number_of_installments}
+                    onChange={(e) => {
+                      const count = parseInt(e.target.value) || 3;
+                      const dates = generateInstallmentDates(count, planFormData.start_date);
+                      setPlanFormData({
+                        ...planFormData,
+                        number_of_installments: count,
+                        installment_dates: dates
+                      });
+                    }}
+                    placeholder="عدد الأقساط (2-12)"
+                  />
+                </div>
+
+                {/* Installment Amount Preview */}
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <p className="text-green-800">
+                    <strong>مبلغ كل قسط:</strong> {(selectedSale.amount / planFormData.number_of_installments).toLocaleString()} دج
+                  </p>
+                </div>
+
+                {/* Start Date */}
+                <div>
+                  <Label>تاريخ بداية التقسيط *</Label>
+                  <Input
+                    type="date"
+                    value={planFormData.start_date}
+                    onChange={(e) => {
+                      const dates = generateInstallmentDates(planFormData.number_of_installments, e.target.value);
+                      setPlanFormData({
+                        ...planFormData,
+                        start_date: e.target.value,
+                        installment_dates: dates
+                      });
+                    }}
+                  />
+                </div>
+
+                {/* Custom Installment Dates */}
+                <div>
+                  <Label>تواريخ الأقساط المخصصة</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                    {Array.from({ length: planFormData.number_of_installments }, (_, i) => (
+                      <div key={i}>
+                        <Label className="text-sm">القسط {i + 1}</Label>
+                        <Input
+                          type="date"
+                          value={planFormData.installment_dates[i] || ''}
+                          onChange={(e) => updateInstallmentDate(i, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <Label>ملاحظات</Label>
+                  <Input
+                    value={planFormData.notes}
+                    onChange={(e) => setPlanFormData({...planFormData, notes: e.target.value})}
+                    placeholder="ملاحظات إضافية حول خطة التقسيط (اختياري)"
+                  />
+                </div>
+
+                {/* Create Button */}
+                <div className="flex justify-end">
+                  <Button onClick={createInstallmentPlan} className="bg-green-600 hover:bg-green-700">
+                    📅 إنشاء خطة التقسيط
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === 'reports' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>تقارير التقسيط</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-gray-500">
+              <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p>تقارير التقسيط ستكون متاحة قريباً</p>
+              <p className="text-sm">تقرير شامل لحالة الأقساط والمدفوعات</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
 // Agency Management Component (Super Admin Only)
 const AgencyManagement = () => {
   const { t } = useContext(LanguageContext);
