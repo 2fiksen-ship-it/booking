@@ -5804,6 +5804,108 @@ const DailyOperationsManagement = () => {
     fetchOperations();
   };
 
+  // NEW: Payment management functions
+  const fetchOperationPaymentStatus = async (operationId) => {
+    try {
+      const response = await axios.get(`${API}/daily-operations/${operationId}/payment-status`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching payment status:', error);
+      return null;
+    }
+  };
+
+  const updatePaymentStatuses = async () => {
+    const statuses = {};
+    for (const operation of operations) {
+      const status = await fetchOperationPaymentStatus(operation.id);
+      if (status) {
+        statuses[operation.id] = status;
+      }
+    }
+    setOperationPaymentStatuses(statuses);
+  };
+
+  const handleAddPayment = (operation) => {
+    setSelectedOperationForPayment(operation);
+    const status = operationPaymentStatuses[operation.id];
+    setPaymentFormData({
+      method: 'cash',
+      amount: status?.remaining_amount?.toString() || operation.final_price.toString(),
+      payment_date: new Date().toISOString().split('T')[0],
+      notes: ''
+    });
+    setShowPaymentDialog(true);
+  };
+
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedOperationForPayment) return;
+    
+    try {
+      console.log('=== ADDING PAYMENT TO OPERATION ===');
+      console.log('Operation ID:', selectedOperationForPayment.id);
+      console.log('Payment data:', paymentFormData);
+      
+      await axios.post(
+        `${API}/daily-operations/${selectedOperationForPayment.id}/payments`,
+        paymentFormData,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }
+      );
+      
+      console.log('=== PAYMENT ADDED SUCCESSFULLY ===');
+      alert('✅ تم إضافة المدفوعة بنجاح');
+      
+      // Reset form and close dialog
+      setShowPaymentDialog(false);
+      setSelectedOperationForPayment(null);
+      setPaymentFormData({
+        method: 'cash',
+        amount: '',
+        payment_date: new Date().toISOString().split('T')[0],
+        notes: ''
+      });
+      
+      // Refresh operations and payment statuses
+      fetchOperations();
+      setTimeout(updatePaymentStatuses, 1000);
+      
+    } catch (error) {
+      console.error('=== PAYMENT ERROR ===');
+      console.error('Error adding payment:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 403) {
+        alert('❌ ليس لديك صلاحية لإضافة مدفوعات لهذه العملية');
+      } else if (error.response?.status === 400) {
+        alert('❌ خطأ في البيانات: ' + (error.response?.data?.detail || error.message));
+      } else {
+        alert('❌ فشل في إضافة المدفوعة: ' + (error.response?.data?.detail || error.message));
+      }
+    }
+  };
+
+  const getPaymentStatusBadge = (operationId) => {
+    const status = operationPaymentStatuses[operationId];
+    if (!status) return <span className="text-gray-500">⏳ جاري التحميل...</span>;
+    
+    switch (status.payment_status) {
+      case 'fully_paid':
+        return <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">🟢 مدفوع كاملاً</span>;
+      case 'partially_paid':
+        return <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">🟡 مدفوع جزئياً</span>;
+      case 'unpaid':
+        return <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">🔴 غير مدفوع</span>;
+      default:
+        return <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">❓ غير محدد</span>;
+    }
+  };
+
   const fetchServices = async () => {
     try {
       const response = await axios.get(`${API}/services?is_active=true`, {
