@@ -2248,6 +2248,8 @@ const SuppliersManagement = () => {
               <Button className="bg-blue-600 hover:bg-blue-700">
                 <Plus className="h-4 w-4 mr-2" />
                 {t('addSupplier')}
+              </Button>
+            </DialogTrigger>
             </Button>
           </DialogTrigger>
           <DialogContent>
