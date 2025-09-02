@@ -5496,7 +5496,7 @@ const DailyOperationsManagement = () => {
                 <h4 className="font-bold mb-3 text-center bg-gray-100 p-2 rounded">تفاصيل الوصل</h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><strong>رقم الوصل:</strong> {selectedOperationForPrint.operation_no}</div>
-                  <div><strong>التاريخ:</strong> {new Date(selectedOperationForPrint.date).toLocaleDateString('ar-SA')}</div>
+                  <div><strong>التاريخ:</strong> {formatDateWithEnglishNumerals(selectedOperationForPrint.date)}</div>
                   <div><strong>اسم العميل:</strong> {clients.find(c => c.id === selectedOperationForPrint.client_id)?.name || 'غير محدد'}</div>
                   <div><strong>الخدمة:</strong> {selectedOperationForPrint.service_name}</div>
                   <div><strong>السعر الأساسي:</strong> {selectedOperationForPrint.base_price.toLocaleString()} دج</div>
