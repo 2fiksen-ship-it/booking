@@ -5047,29 +5047,51 @@ const DailyOperationsReports = () => {
         throw new Error('PDF report is empty');
       }
       
-      // Create blob URL and download
+      // Create blob URL
       const blob = new Blob([response.data], { type: 'application/pdf' });
       console.log('Report blob created, size:', blob.size);
       
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `daily_operations_report_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}.pdf`;
-      link.style.display = 'none';
       
-      document.body.appendChild(link);
-      console.log('Report link added, triggering download...');
-      link.click();
+      // Ask user for preference
+      const userChoice = confirm('اختر طريقة عرض التقرير:\nموافق = فتح في نافذة جديدة\nإلغاء = تحميل الملف');
       
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        console.log('Report cleanup completed');
-      }, 100);
+      if (userChoice) {
+        // Open in new window
+        const newWindow = window.open(url, '_blank');
+        if (newWindow) {
+          console.log('Report PDF opened in new window');
+          alert('✅ تم فتح التقرير في نافذة جديدة!');
+        } else {
+          console.log('New window blocked, trying download');
+          triggerReportDownload();
+        }
+      } else {
+        // Download file
+        triggerReportDownload();
+      }
+      
+      function triggerReportDownload() {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `daily_operations_report_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}.pdf`;
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        console.log('Report link added, triggering download...');
+        link.click();
+        
+        // Clean up
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          console.log('Report cleanup completed');
+        }, 100);
+        
+        alert('✅ تم تحميل التقرير بنجاح! تحقق من مجلد التحميلات.');
+      }
       
       console.log('=== REPORT PRINT SUCCESS ===');
-      alert('✅ تم تحميل التقرير بنجاح!');
       
     } catch (error) {
       console.error('=== REPORT PRINT ERROR ===');
