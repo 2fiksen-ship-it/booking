@@ -745,7 +745,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Service Installments Module - Complete Implementation Testing"
+    - "InstallmentsManagement Frontend Implementation"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
