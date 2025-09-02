@@ -4491,6 +4491,28 @@ const ServicesManagement = () => {
             </div>
 
             <div>
+              <Label htmlFor="price_type">{t('priceType')}</Label>
+              <Select 
+                value={formData.is_fixed_price ? 'fixed' : 'variable'} 
+                onValueChange={(value) => setFormData({...formData, is_fixed_price: value === 'fixed'})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">🔒 {t('fixedPriceService')}</SelectItem>
+                  <SelectItem value="variable">🔄 {t('variablePriceService')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-gray-600 mt-1">
+                {formData.is_fixed_price 
+                  ? "🔒 موظفو الوكالة لا يستطيعون تغيير السعر" 
+                  : "🔄 يمكن لموظفي الوكالة تعديل السعر في العمليات اليومية"
+                }
+              </p>
+            </div>
+
+            <div>
               <Label htmlFor="description">{t('serviceDescription')}</Label>
               <Textarea
                 id="description"
