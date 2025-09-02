@@ -3326,7 +3326,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
     # Receipt details
     elements.append(Paragraph("<b>تفاصيل الوصل</b>", header_style))
     
-    # Create receipt details table
+    # Create receipt details table with payment information
     receipt_data = [
         ['رقم الوصل:', operation_data['operation_no']],
         ['التاريخ:', operation_data['date'][:10] if isinstance(operation_data['date'], str) else operation_data['date'].strftime('%Y-%m-%d')],
@@ -3337,6 +3337,26 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         ['المبلغ النهائي:', f"{operation_data['final_price']:,.0f} دج"],
         ['الحالة:', operation_data['status']],
     ]
+    
+    # Add payment information if available
+    if payment_info:
+        receipt_data.extend([
+            ['═══ معلومات الدفع ═══', ''],
+            ['طريقة الدفع:', payment_info.get('payment_method', 'نقدي')],
+            ['المبلغ المدفوع:', f"{payment_info.get('total_paid', 0):,.0f} دج"],
+            ['المبلغ المتبقي:', f"{payment_info.get('remaining_amount', 0):,.0f} دج"],
+            ['حالة الدفع:', payment_info.get('payment_status', 'غير محدد')],
+            ['عدد الدفعات:', str(payment_info.get('payments_count', 0))],
+        ])
+    else:
+        # Fallback to default payment info
+        receipt_data.extend([
+            ['═══ معلومات الدفع ═══', ''],
+            ['طريقة الدفع:', 'نقدي'],
+            ['المبلغ المدفوع:', '0 دج'],
+            ['المبلغ المتبقي:', f"{operation_data['final_price']:,.0f} دج"],
+            ['حالة الدفع:', 'غير مدفوع'],
+        ])
     
     if operation_data.get('notes'):
         receipt_data.append(['ملاحظات:', operation_data['notes']])
