@@ -2943,7 +2943,7 @@ const PaymentsManagement = () => {
                     <TableCell>{getInvoiceNo(payment.invoice_id)}</TableCell>
                     <TableCell>{getMethodBadge(payment.method)}</TableCell>
                     <TableCell className="font-medium">{payment.amount} دج</TableCell>
-                    <TableCell>{new Date(payment.payment_date).toLocaleDateString('ar-DZ')}</TableCell>
+                    <TableCell>{formatDateWithEnglishNumerals(payment.payment_date)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
