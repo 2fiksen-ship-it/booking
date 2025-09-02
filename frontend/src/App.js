@@ -3062,9 +3062,16 @@ const PaymentsManagement = () => {
 
   const fetchData = async () => {
     try {
-      const [paymentsRes, invoicesRes] = await Promise.all([
-        axios.get(`${API}/payments`),
-        axios.get(`${API}/invoices`)
+      const [paymentsRes, operationsRes, clientsRes] = await Promise.all([
+        axios.get(`${API}/payments?payment_type=operation`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }),
+        axios.get(`${API}/daily-operations`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        }),
+        axios.get(`${API}/clients`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        })
       ]);
       
       // Sort payments by payment date - newest first
@@ -3072,15 +3079,14 @@ const PaymentsManagement = () => {
         return new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at);
       });
       
-      // Sort invoices by due date - newest first
-      const sortedInvoices = invoicesRes.data.sort((a, b) => {
-        return new Date(b.due_date || b.created_at) - new Date(a.due_date || a.created_at);
-      });
-      
       setPayments(sortedPayments);
-      setInvoices(sortedInvoices);
+      setOperations(operationsRes.data);
+      setClients(clientsRes.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching payment data:', error);
+      if (error.response?.status === 403) {
+        alert('ليس لديك صلاحية للوصول إلى المدفوعات');
+      }
     } finally {
       setLoading(false);
     }
