@@ -1887,14 +1887,14 @@ async def create_user(user_data: UserCreate, current_user: User = Depends(get_cu
         id=str(uuid.uuid4()),
         name=user_data.name,
         email=user_data.email,
+        password_hash=password_hash,  # Add password_hash to the model
         role=user_data.role,
         agency_id=user_data.agency_id,
         created_at=datetime.now(timezone.utc)
     )
     
-    # Insert user with password_hash
+    # Insert user
     user_dict = user.dict()
-    user_dict["password_hash"] = password_hash
     await db.users.insert_one(user_dict)
     return user
 
