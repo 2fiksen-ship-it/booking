@@ -318,7 +318,7 @@ class Booking(BaseModel):
     agency_id: str
     # NEW: Approval workflow fields
     status: OperationStatus = OperationStatus.DRAFT
-    created_by: str  # الموظف الذي أنشأ الحجز
+    created_by: Optional[str] = None  # الموظف الذي أنشأ الحجز (optional for backward compatibility)
     approved_by: Optional[str] = None  # المحاسب/المدير الذي اعتمد
     approved_at: Optional[datetime] = None
     rejected_reason: Optional[str] = None
