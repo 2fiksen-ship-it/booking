@@ -454,7 +454,7 @@ class BookingUpdate(BaseModel):
     sell_price: Optional[float] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    operation_status: Optional[OperationStatus] = None
+    status: Optional[OperationStatus] = None
 
 class InvoiceCreate(BaseModel):
     client_id: str
