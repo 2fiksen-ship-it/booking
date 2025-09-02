@@ -2951,7 +2951,7 @@ async def get_operation_payments(
     payments = await db.payments.find({"daily_operation_id": operation_id}).sort("payment_date", -1).to_list(1000)
     return [Payment(**payment) for payment in payments]
 
-@api_router.get"/daily-operations/{operation_id}/payment-status")
+@api_router.get("/daily-operations/{operation_id}/payment-status")
 async def get_operation_payment_status(
     operation_id: str,
     current_user: User = Depends(get_current_user)
