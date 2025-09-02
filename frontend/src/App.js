@@ -809,6 +809,14 @@ const Layout = ({ children }) => {
           { id: 'payments', label: t('payments'), icon: CreditCard },
           { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 }
         ]
+      },
+      // Agency Information Category
+      {
+        category: 'agencyInfo',
+        label: 'معلومات الوكالة',
+        items: [
+          { id: 'agencySettings', label: t('agencySettings') + ' (للعرض فقط)', icon: Building2 }
+        ]
       }
     ];
   };
