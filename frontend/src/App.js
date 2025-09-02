@@ -1935,7 +1935,11 @@ const SuppliersManagement = () => {
   const fetchSuppliers = async () => {
     try {
       const response = await axios.get(`${API}/suppliers`);
-      setSuppliers(response.data);
+      // Sort suppliers by creation date - newest first
+      const sortedSuppliers = response.data.sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      setSuppliers(sortedSuppliers);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
     } finally {
