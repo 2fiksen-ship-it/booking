@@ -281,6 +281,78 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: Super Admin Daily Reports Management working perfectly! GET /api/daily-reports endpoint accessible and working correctly. Super Admin can see reports from all agencies. Currently no reports in system (0 reports), but endpoint functionality confirmed working."
 
+  - task: "ServiceCashFlow Module - Record Service Sale"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: POST /api/service-sales endpoint working perfectly! Agency Staff (staff1@tlemcen.sanhaja.com/staff123) can successfully record service sales. Test data: service_name='عمرة اقتصادية', client_name='أحمد محمد', amount=45000 DZD. Sale created with correct status 'sold' and proper user attribution (sold_by field). All required fields captured correctly including Arabic text support."
+
+  - task: "ServiceCashFlow Module - Deliver Cash to Accountant"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: PUT /api/service-sales/{id}/deliver-cash endpoint working perfectly! Agency Staff can mark cash as delivered, status correctly changes from 'sold' to 'pending_cash'. Access control working - only the seller can mark their own sales as delivered (other staff correctly denied with 403 status). Response message: 'Cash delivery marked successfully'."
+
+  - task: "ServiceCashFlow Module - Confirm Cash Receipt"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: PUT /api/service-sales/{id}/confirm-cash endpoint working perfectly! General Accountant (generalaccountant@sanhaja.com/acc123) can confirm cash receipt, status correctly changes from 'pending_cash' to 'cash_received'. Journal entries created as confirmed by response message: 'Cash receipt confirmed and journal entries created'. Role-based access control working - Agency Staff correctly denied with 403 status and message 'Only accountants can confirm cash receipt'."
+
+  - task: "ServiceCashFlow Module - Get Service Sales"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/service-sales endpoint working perfectly! Role-based access control functioning correctly - Agency Staff see only their own sales (proper isolation), General Accountant can access all service sales. Status filtering works correctly (GET /api/service-sales?status=sold returns only sales with 'sold' status). Date range filtering supported for reconciliation purposes."
+
+  - task: "ServiceCashFlow Module - Service Cash Reconciliation Report"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/reports/service-cash-reconciliation endpoint working perfectly! Report correctly grouped by seller (sold_by field). Grand totals calculation accurate: total_sales, total_pending, total_received, sales_count, pending_count, received_count. Date range filtering working with start_date and end_date parameters. Report shows user names and detailed breakdown per seller. Only General Accountant can access this report (role-based access control confirmed)."
+
+  - task: "ServiceCashFlow Module - End-to-End Workflow"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Complete ServiceCashFlow workflow working perfectly! End-to-end test successful with 100% pass rate (18/18 tests passed). Workflow: Agency Staff Login → Record Service Sale → Deliver Cash → General Accountant Login → Confirm Cash Receipt → Generate Reconciliation Report. All status transitions working correctly: sold → pending_cash → cash_received. Role-based permissions enforced throughout. Arabic text support confirmed. Journal entries created automatically upon cash confirmation."
+
 frontend:
   - task: "Agency Settings Management Interface"
     implemented: true
