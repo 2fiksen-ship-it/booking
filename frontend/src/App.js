@@ -834,7 +834,7 @@ const Layout = ({ children }) => {
         category: 'financial',
         label: t('financialManagement'),
         items: [
-          { id: 'payments', label: '💰 ' + t('payments') + ' (العمليات)', icon: CreditCard },
+          { id: 'payments', label: '💰 المدفوعات (العمليات)', icon: CreditCard },
           { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 }
           // REMOVED: invoices (restricted to managers/accountants)
         ]
