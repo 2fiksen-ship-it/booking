@@ -3059,7 +3059,6 @@ const PaymentsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('all'); // all, today, this_week, this_month
-  const [isDialogOpen, setIsDialogOpen] = useState(false); // for legacy dialog support
 
   const fetchData = async () => {
     try {
