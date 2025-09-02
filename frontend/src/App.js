@@ -5386,6 +5386,21 @@ const DailyOperationsManagement = () => {
     notes: ''
   });
 
+  // NEW: Advanced Filtering State
+  const [filters, setFilters] = useState({
+    agency_id: '',
+    client_name: '',
+    service_name: '',
+    service_type: '',
+    status: '',
+    start_date: '',
+    end_date: '',
+    min_amount: '',
+    max_amount: ''
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [filteredOperations, setFilteredOperations] = useState([]);
+
   // Check if user can approve operations
   const canApproveOperations = user?.role === 'super_admin' || user?.role === 'general_accountant';
 
