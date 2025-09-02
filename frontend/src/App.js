@@ -6180,7 +6180,9 @@ const DailyOperationsManagement = () => {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="sm:max-w-[500px]" dir="rtl">
           <DialogHeader>
-            <DialogTitle>{t('addOperation')}</DialogTitle>
+            <DialogTitle>
+              {editingOperation ? '✏️ تعديل العملية' : '➕ ' + t('addOperation')}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
