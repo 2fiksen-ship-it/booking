@@ -2617,13 +2617,12 @@ const BookingsManagement = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">{t('bookingsList')}</h2>
         <div className="flex items-center space-x-3">
-          {/* Print Button */}
           <Button 
             onClick={handlePrintBookings}
             variant="outline" 
             className="bg-green-600 hover:bg-green-700 text-white border-green-600"
           >
-            🖨️ طباعة القائمة
+            🖨️ طباعة
           </Button>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
