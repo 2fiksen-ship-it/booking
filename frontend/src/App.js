@@ -2765,8 +2765,18 @@ const PaymentsManagement = () => {
         axios.get(`${API}/invoices`)
       ]);
       
-      setPayments(paymentsRes.data);
-      setInvoices(invoicesRes.data);
+      // Sort payments by payment date - newest first
+      const sortedPayments = paymentsRes.data.sort((a, b) => {
+        return new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at);
+      });
+      
+      // Sort invoices by due date - newest first
+      const sortedInvoices = invoicesRes.data.sort((a, b) => {
+        return new Date(b.due_date || b.created_at) - new Date(a.due_date || a.created_at);
+      });
+      
+      setPayments(sortedPayments);
+      setInvoices(sortedInvoices);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
