@@ -1305,15 +1305,66 @@ async def create_booking(booking_data: BookingCreate, current_user: User = Depen
     return booking
 
 @api_router.get("/bookings", response_model=List[Booking])
-async def get_bookings(agency_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    # Super Admin and General Accountant see all bookings, can filter by agency
-    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
-        query_filter = {"agency_id": agency_id} if agency_id else {}
-    else:
-        # Agency staff only see their own agency bookings
-        query_filter = {"agency_id": current_user.agency_id}
+async def get_bookings(
+    agency_id: Optional[str] = None,
+    client_id: Optional[str] = None,
+    supplier_id: Optional[str] = None,
+    booking_type: Optional[BookingType] = None,
+    status: Optional[OperationStatus] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    min_cost: Optional[float] = None,
+    max_cost: Optional[float] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get bookings with advanced filtering"""
+    query_filter = {}
     
-    bookings = await db.bookings.find(query_filter).to_list(1000)
+    # Role-based access
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        if agency_id:
+            query_filter["agency_id"] = agency_id
+        # else: show all agencies
+    else:
+        query_filter["agency_id"] = current_user.agency_id
+    
+    # Advanced filtering
+    if client_id:
+        query_filter["client_id"] = client_id
+    if supplier_id:
+        query_filter["supplier_id"] = supplier_id
+    if booking_type:
+        query_filter["type"] = booking_type
+    if status:
+        query_filter["status"] = status
+    
+    # Date range filtering
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            query_filter["start_date"] = {"$gte": start_dt}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+    
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date)
+            if "start_date" in query_filter:
+                query_filter["start_date"]["$lte"] = end_dt
+            else:
+                query_filter["start_date"] = {"$lte": end_dt}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+    
+    # Cost range filtering
+    if min_cost is not None and max_cost is not None:
+        query_filter["cost"] = {"$gte": min_cost, "$lte": max_cost}
+    elif min_cost is not None:
+        query_filter["cost"] = {"$gte": min_cost}
+    elif max_cost is not None:
+        query_filter["cost"] = {"$lte": max_cost}
+    
+    bookings = await db.bookings.find(query_filter).sort("created_at", -1).to_list(1000)
     return [Booking(**booking) for booking in bookings]
 
 # Invoice Routes
