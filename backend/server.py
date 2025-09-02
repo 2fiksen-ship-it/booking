@@ -495,6 +495,19 @@ class ChartOfAccountsCreate(BaseModel):
     name: str
     type: AccountType
 
+class ServiceSaleCreate(BaseModel):
+    service_name: str
+    client_name: str
+    amount: float
+    notes: Optional[str] = None
+
+class ServiceSaleUpdate(BaseModel):
+    service_name: Optional[str] = None
+    client_name: Optional[str] = None
+    amount: Optional[float] = None
+    status: Optional[ServiceSaleStatus] = None
+    notes: Optional[str] = None
+
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
