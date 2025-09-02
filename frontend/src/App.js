@@ -4172,7 +4172,7 @@ const DailyReportsManagement = () => {
                 reports.map((report) => (
                   <TableRow key={report.id} className="hover:bg-gray-50">
                     <TableCell className="font-medium text-right">
-                      {new Date(report.date).toLocaleDateString('ar-DZ')}
+                      {formatDateWithEnglishNumerals(report.date)}
                     </TableCell>
                     <TableCell className="text-right text-green-600 font-semibold">
                       {report.income.toLocaleString()} دج
