@@ -1792,6 +1792,15 @@ const ClientsManagement = () => {
             </p>
           </div>
           <div className="flex items-center space-x-3">
+            {/* Print Button */}
+            <Button 
+              onClick={handlePrintClients}
+              variant="outline" 
+              className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+            >
+              🖨️ طباعة القائمة
+            </Button>
+            
             {/* View Mode Toggle */}
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
