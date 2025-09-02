@@ -4292,6 +4292,318 @@ const UserManagement = () => {
   );
 };
 
+// Agency Management Component (Super Admin Only)
+const AgencyManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
+  const [agencies, setAgencies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingAgency, setEditingAgency] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    city: '',
+    phone_numbers: [''],
+    fax_number: '',
+    commercial_register_number: '',
+    tax_registration_number: '',
+    address: ''
+  });
+
+  // Only Super Admin can access this
+  useEffect(() => {
+    if (user?.role !== 'super_admin') {
+      return;
+    }
+    fetchAgencies();
+  }, [user]);
+
+  const fetchAgencies = async () => {
+    try {
+      const response = await axios.get(`${API}/agencies`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setAgencies(response.data);
+    } catch (error) {
+      console.error('Error fetching agencies:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const submitData = {
+        ...formData,
+        phone_numbers: formData.phone_numbers.filter(phone => phone.trim() !== '')
+      };
+
+      if (editingAgency) {
+        await axios.put(`${API}/agencies/${editingAgency.id}`, submitData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        alert('✅ تم تحديث الوكالة بنجاح');
+      } else {
+        await axios.post(`${API}/agencies`, submitData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        alert('✅ تم إنشاء الوكالة بنجاح');
+      }
+      
+      setShowAddDialog(false);
+      setEditingAgency(null);
+      setFormData({
+        name: '',
+        city: '',
+        phone_numbers: [''],
+        fax_number: '',
+        commercial_register_number: '',
+        tax_registration_number: '',
+        address: ''
+      });
+      fetchAgencies();
+    } catch (error) {
+      console.error('Error saving agency:', error);
+      alert('خطأ في حفظ الوكالة: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleEdit = (agency) => {
+    setEditingAgency(agency);
+    setFormData({
+      name: agency.name,
+      city: agency.city,
+      phone_numbers: agency.phone_numbers || [''],
+      fax_number: agency.fax_number || '',
+      commercial_register_number: agency.commercial_register_number || '',
+      tax_registration_number: agency.tax_registration_number || '',
+      address: agency.address || ''
+    });
+    setShowAddDialog(true);
+  };
+
+  const addPhoneNumber = () => {
+    setFormData({
+      ...formData,
+      phone_numbers: [...formData.phone_numbers, '']
+    });
+  };
+
+  const updatePhoneNumber = (index, value) => {
+    const updatedPhones = [...formData.phone_numbers];
+    updatedPhones[index] = value;
+    setFormData({
+      ...formData,
+      phone_numbers: updatedPhones
+    });
+  };
+
+  const removePhoneNumber = (index) => {
+    if (formData.phone_numbers.length > 1) {
+      const updatedPhones = formData.phone_numbers.filter((_, i) => i !== index);
+      setFormData({
+        ...formData,
+        phone_numbers: updatedPhones
+      });
+    }
+  };
+
+  if (user?.role !== 'super_admin') {
+    return (
+      <div className="text-center py-8">
+        <h2 className="text-xl font-bold text-red-600 mb-4">⛔ وصول محظور</h2>
+        <p className="text-gray-600">هذا القسم مخصص للمدير العام فقط</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900">🏢 إدارة الوكالات</h1>
+        <Button onClick={() => setShowAddDialog(true)} className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="h-4 w-4 ml-2" />
+          إضافة وكالة جديدة
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة الوكالات</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-right">اسم الوكالة</TableHead>
+                  <TableHead className="text-right">المدينة</TableHead>
+                  <TableHead className="text-right">أرقام الهاتف</TableHead>
+                  <TableHead className="text-right">السجل التجاري</TableHead>
+                  <TableHead className="text-right">الرقم الضريبي</TableHead>
+                  <TableHead className="text-right">الإجراءات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {agencies.map((agency) => (
+                  <TableRow key={agency.id}>
+                    <TableCell className="font-medium text-right">{agency.name}</TableCell>
+                    <TableCell className="text-right">{agency.city}</TableCell>
+                    <TableCell className="text-right">
+                      {agency.phone_numbers?.join(', ') || 'غير محدد'}
+                    </TableCell>
+                    <TableCell className="text-right">{agency.commercial_register_number || 'غير محدد'}</TableCell>
+                    <TableCell className="text-right">{agency.tax_registration_number || 'غير محدد'}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(agency)}
+                        className="ml-2"
+                      >
+                        <Edit className="h-3 w-3" />
+                        تعديل
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Agency Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="sm:max-w-[600px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingAgency ? '✏️ تعديل الوكالة' : '➕ إضافة وكالة جديدة'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">اسم الوكالة *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="مثال: وكالة صنهاجة للسياحة"
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="city">المدينة *</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  placeholder="مثال: تلمسان"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>أرقام الهاتف</Label>
+              {formData.phone_numbers.map((phone, index) => (
+                <div key={index} className="flex items-center space-x-2 mt-2">
+                  <Input
+                    value={phone}
+                    onChange={(e) => updatePhoneNumber(index, e.target.value)}
+                    placeholder="مثال: 043123456"
+                    className="flex-1"
+                  />
+                  {formData.phone_numbers.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removePhoneNumber(index)}
+                      className="text-red-600"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addPhoneNumber}
+                className="mt-2"
+              >
+                <Plus className="h-3 w-3 ml-1" />
+                إضافة رقم هاتف
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="fax_number">رقم الفاكس</Label>
+                <Input
+                  id="fax_number"
+                  value={formData.fax_number}
+                  onChange={(e) => setFormData({ ...formData, fax_number: e.target.value })}
+                  placeholder="مثال: 043123457"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="commercial_register_number">رقم السجل التجاري</Label>
+                <Input
+                  id="commercial_register_number"
+                  value={formData.commercial_register_number}
+                  onChange={(e) => setFormData({ ...formData, commercial_register_number: e.target.value })}
+                  placeholder="مثال: 123456789"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="tax_registration_number">الرقم الضريبي</Label>
+              <Input
+                id="tax_registration_number"
+                value={formData.tax_registration_number}
+                onChange={(e) => setFormData({ ...formData, tax_registration_number: e.target.value })}
+                placeholder="مثال: 987654321"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="address">العنوان</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="مثال: شارع العربي بن مهيدي، تلمسان"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setShowAddDialog(false)}>
+                إلغاء
+              </Button>
+              <Button type="submit">
+                {editingAgency ? '💾 حفظ التغييرات' : '➕ إضافة الوكالة'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
 // Daily Reports Management Component
 const DailyReportsManagement = () => {
   const { t } = useContext(LanguageContext);
