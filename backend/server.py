@@ -1579,11 +1579,18 @@ async def create_invoice(invoice_data: InvoiceCreate, current_user: User = Depen
 
 @api_router.get("/invoices", response_model=List[Invoice])
 async def get_invoices(agency_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Get invoices - Restricted to Manager/Accountant only"""
+    # NEW: Block Agency Staff from accessing invoices
+    if current_user.role == UserRole.AGENCY_STAFF:
+        raise HTTPException(
+            status_code=403, 
+            detail="Invoices access restricted to managers and accountants only"
+        )
+    
     # Super Admin and General Accountant see all invoices, can filter by agency
     if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
         query_filter = {"agency_id": agency_id} if agency_id else {}
     else:
-        # Agency staff only see their own agency invoices
         query_filter = {"agency_id": current_user.agency_id}
     
     invoices = await db.invoices.find(query_filter).to_list(1000)
