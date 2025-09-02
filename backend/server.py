@@ -369,6 +369,20 @@ class JournalEntry(BaseModel):
     agency_id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class ServiceSale(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    service_name: str
+    client_name: str
+    amount: float
+    status: ServiceSaleStatus = ServiceSaleStatus.SOLD
+    sold_by: str  # User ID who sold the service
+    confirmed_by: Optional[str] = None  # User ID who confirmed cash receipt
+    agency_id: str
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    cash_delivered_at: Optional[datetime] = None  # When staff marked cash as delivered
+    cash_received_at: Optional[datetime] = None   # When accountant confirmed receipt
+
 class ChartOfAccounts(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     code: str
