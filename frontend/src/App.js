@@ -4385,6 +4385,11 @@ const ServicesManagement = () => {
                   <TableCell className="text-right">{service.category}</TableCell>
                   <TableCell className="text-right">{service.base_price.toLocaleString()} دج</TableCell>
                   <TableCell className="text-right">
+                    <Badge variant={service.is_fixed_price ? "default" : "outline"}>
+                      {service.is_fixed_price ? '🔒 ثابت' : '🔄 متغير'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
                     <Badge variant={service.is_active ? "default" : "secondary"}>
                       {service.is_active ? t('isActive') : 'غير نشطة'}
                     </Badge>
