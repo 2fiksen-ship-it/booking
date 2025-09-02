@@ -1349,7 +1349,14 @@ async def get_bookings(
     max_cost: Optional[float] = None,
     current_user: User = Depends(get_current_user)
 ):
-    """Get bookings with advanced filtering"""
+    """Get bookings with advanced filtering - Restricted to Manager/Accountant only"""
+    # NEW: Block Agency Staff from accessing bookings
+    if current_user.role == UserRole.AGENCY_STAFF:
+        raise HTTPException(
+            status_code=403, 
+            detail="Bookings access restricted to managers and accountants only"
+        )
+    
     query_filter = {}
     
     # Role-based access
