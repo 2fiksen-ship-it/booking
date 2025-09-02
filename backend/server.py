@@ -79,13 +79,7 @@ class AccountType(str, Enum):
     REVENUE = "revenue"
     EXPENSE = "expense"
 
-# Add AccountType enum back
-class AccountType(str, Enum):
-    ASSET = "asset"
-    LIABILITY = "liability"
-    EQUITY = "equity"
-    REVENUE = "revenue"
-    EXPENSE = "expense"
+
 
 class ReportStatus(str, Enum):
     PENDING = "pending"  # في انتظار الموافقة
