@@ -6181,7 +6181,10 @@ const DailyOperationsReports = () => {
       group_by_agency: true
     };
     
+    console.log('Setting report data...', testData);
     setReportData(testData);
+    console.log('Report data set successfully');
+    setLoading(false); // Make sure loading is false
     alert('✅ تم إنشاء تقرير اختبار');
   };
 
