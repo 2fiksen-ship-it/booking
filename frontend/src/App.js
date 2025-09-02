@@ -3270,7 +3270,7 @@ const PaymentsManagement = () => {
                 {t('addPayment')}
               </Button>
             </DialogTrigger>
-          <DialogContent>
+            <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingPayment ? t('edit') : t('addPayment')}</DialogTitle>
             </DialogHeader>
