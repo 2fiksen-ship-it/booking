@@ -5589,7 +5589,7 @@ const DailyOperationsManagement = () => {
                 <div className="text-center space-y-2">
                   <div><strong>اسم الموظف:</strong> {user?.name || 'غير محدد'}</div>
                   <div><strong>المنصب:</strong> {user?.job_title || 'موظف'}</div>
-                  <div><strong>تاريخ الإصدار:</strong> {new Date().toLocaleDateString('ar-SA')} - {new Date().toLocaleTimeString('ar-SA')}</div>
+                  <div><strong>تاريخ الإصدار:</strong> {formatDateWithEnglishNumerals(new Date())} - {formatTimeWithEnglishNumerals(new Date())}</div>
                   {user?.signature_url ? (
                     <div className="mt-3">
                       <p className="text-sm text-green-600">✅ التوقيع الإلكتروني متوفر</p>
