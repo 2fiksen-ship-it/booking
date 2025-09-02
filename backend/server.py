@@ -555,6 +555,25 @@ class ServiceSaleUpdate(BaseModel):
     status: Optional[ServiceSaleStatus] = None
     notes: Optional[str] = None
 
+class InstallmentPlanCreate(BaseModel):
+    service_sale_id: str
+    number_of_installments: int
+    start_date: datetime
+    installment_dates: List[datetime]  # Custom dates for each installment
+    notes: Optional[str] = None
+
+class InstallmentPlanUpdate(BaseModel):
+    number_of_installments: Optional[int] = None
+    start_date: Optional[datetime] = None
+    status: Optional[InstallmentPlanStatus] = None
+    notes: Optional[str] = None
+    cancellation_reason: Optional[str] = None
+
+class InstallmentPaymentUpdate(BaseModel):
+    paid_amount: Optional[float] = None
+    status: Optional[InstallmentStatus] = None
+    notes: Optional[str] = None
+
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
