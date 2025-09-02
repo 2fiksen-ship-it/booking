@@ -6524,6 +6524,7 @@ const DailyOperationsManagement = () => {
                 <TableHead className="text-right">{t('serviceName')}</TableHead>
                 <TableHead className="text-right">{t('finalPrice')}</TableHead>
                 <TableHead className="text-right">{t('operationStatus')}</TableHead>
+                <TableHead className="text-right">💰 حالة الدفع</TableHead>
                 <TableHead className="text-right">{t('actions')}</TableHead>
               </TableRow>
             </TableHeader>
