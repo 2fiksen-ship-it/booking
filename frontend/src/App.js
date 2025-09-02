@@ -1468,27 +1468,44 @@ const Dashboard = ({ setActiveTab }) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+              <button 
+                onClick={() => setActiveTab('bookings')}
+                className="w-full flex items-center space-x-3 p-2 bg-gray-50 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
+              >
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                 <div className="flex-1 text-right">
                   <p className="text-sm font-medium">تم إنشاء حجز جديد</p>
                   <p className="text-xs text-gray-500">منذ 5 دقائق</p>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+              </button>
+              <button 
+                onClick={() => setActiveTab('payments')}
+                className="w-full flex items-center space-x-3 p-2 bg-gray-50 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
+              >
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <div className="flex-1 text-right">
                   <p className="text-sm font-medium">دفعة جديدة مستلمة</p>
                   <p className="text-xs text-gray-500">منذ 15 دقيقة</p>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
+              </button>
+              <button 
+                onClick={() => setActiveTab('invoices')}
+                className="w-full flex items-center space-x-3 p-2 bg-gray-50 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
+              >
                 <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                 <div className="flex-1 text-right">
                   <p className="text-sm font-medium">فاتورة تحتاج مراجعة</p>
                   <p className="text-xs text-gray-500">منذ ساعة</p>
                 </div>
-              </div>
+              </button>
+            </div>
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <button 
+                onClick={() => setActiveTab('reports')}
+                className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                عرض جميع النشاطات ←
+              </button>
             </div>
           </CardContent>
         </Card>
