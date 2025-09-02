@@ -5881,7 +5881,7 @@ const DailyOperationsManagement = () => {
                       <SelectValue placeholder="جميع الوكالات" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">جميع الوكالات</SelectItem>
+                      <SelectItem value="all">جميع الوكالات</SelectItem>
                       {agencies.map((agency) => (
                         <SelectItem key={agency.id} value={agency.id}>
                           🏢 {agency.name} - {agency.city}
