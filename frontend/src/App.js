@@ -2491,8 +2491,18 @@ const InvoicesManagement = () => {
         axios.get(`${API}/clients`)
       ]);
       
-      setInvoices(invoicesRes.data);
-      setClients(clientsRes.data);
+      // Sort invoices by due date - newest first
+      const sortedInvoices = invoicesRes.data.sort((a, b) => {
+        return new Date(b.due_date || b.created_at) - new Date(a.due_date || a.created_at);
+      });
+      
+      // Sort clients by creation date - newest first
+      const sortedClients = clientsRes.data.sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      
+      setInvoices(sortedInvoices);
+      setClients(sortedClients);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
