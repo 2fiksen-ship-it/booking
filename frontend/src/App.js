@@ -2459,6 +2459,9 @@ const BookingsManagement = () => {
   const handlePrintBookings = async () => {
     try {
       console.log('=== PRINTING BOOKINGS LIST ===');
+      console.log('Bookings count:', bookings.length);
+      
+      alert(`سيتم طباعة قائمة تحتوي على ${bookings.length} حجز`);
       
       const printContent = `
         <html dir="rtl">
@@ -2470,19 +2473,13 @@ const BookingsManagement = () => {
               table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
               th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
               th { background-color: #f3f4f6; font-weight: bold; }
-              .header { text-align: center; margin-bottom: 20px; }
-              .date { text-align: left; margin-bottom: 20px; color: #6b7280; }
               .profit { color: #059669; font-weight: bold; }
               .loss { color: #dc2626; font-weight: bold; }
-              @media print { body { margin: 0; } }
             </style>
           </head>
           <body>
-            <div class="header">
-              <h1>🏢 نظام إدارة الوكالات السياحية</h1>
-              <h2>📋 قائمة الحجوزات</h2>
-            </div>
-            <div class="date">تاريخ الطباعة: ${formatDateWithEnglishNumerals(new Date())}</div>
+            <h1>📋 قائمة الحجوزات</h1>
+            <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-SA')}</p>
             <table>
               <thead>
                 <tr>
@@ -2493,8 +2490,6 @@ const BookingsManagement = () => {
                   <th>التكلفة</th>
                   <th>سعر البيع</th>
                   <th>الربح</th>
-                  <th>تاريخ البداية</th>
-                  <th>تاريخ النهاية</th>
                 </tr>
               </thead>
               <tbody>
@@ -2510,20 +2505,16 @@ const BookingsManagement = () => {
                       <td>${booking.cost.toLocaleString()} دج</td>
                       <td>${booking.sell_price.toLocaleString()} دج</td>
                       <td class="${profitClass}">${profit.toLocaleString()} دج</td>
-                      <td>${formatDateWithEnglishNumerals(booking.start_date)}</td>
-                      <td>${formatDateWithEnglishNumerals(booking.end_date)}</td>
                     </tr>
                   `;
                 }).join('')}
               </tbody>
             </table>
-            <div style="margin-top: 30px; text-align: center; color: #6b7280;">
+            <div style="margin-top: 20px;">
               <p>إجمالي الحجوزات: ${bookings.length}</p>
               <p>إجمالي التكاليف: ${bookings.reduce((sum, b) => sum + b.cost, 0).toLocaleString()} دج</p>
               <p>إجمالي المبيعات: ${bookings.reduce((sum, b) => sum + b.sell_price, 0).toLocaleString()} دج</p>
-              <p class="${bookings.reduce((sum, b) => sum + (b.sell_price - b.cost), 0) >= 0 ? 'profit' : 'loss'}">
-                إجمالي الأرباح: ${bookings.reduce((sum, b) => sum + (b.sell_price - b.cost), 0).toLocaleString()} دج
-              </p>
+              <p>صافي الأرباح: ${bookings.reduce((sum, b) => sum + (b.sell_price - b.cost), 0).toLocaleString()} دج</p>
             </div>
           </body>
         </html>
@@ -2532,31 +2523,22 @@ const BookingsManagement = () => {
       const blob = new Blob([printContent], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
       
-      const userChoice = confirm('اختر طريقة الطباعة:\nموافق = فتح في نافذة جديدة للطباعة\nإلغاء = تحميل ملف HTML');
-      
-      if (userChoice) {
-        const newWindow = window.open(url, '_blank');
-        if (newWindow) {
-          newWindow.onload = function() {
-            setTimeout(() => {
-              newWindow.print();
-            }, 500);
-          };
-        }
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.onload = function() {
+          setTimeout(() => {
+            newWindow.print();
+            alert('✅ تم فتح نافذة طباعة الحجوزات بنجاح!');
+          }, 1000);
+        };
+        console.log('✅ Bookings print window opened');
       } else {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `bookings_list_${formatDateWithEnglishNumerals(new Date()).replace(/\//g, '-')}.html`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        alert('✅ تم تحميل قائمة الحجوزات بنجاح!');
+        alert('❌ لم يتم فتح نافذة الطباعة. تأكد من السماح للنوافذ المنبثقة.');
       }
       
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
-      }, 1000);
+      }, 2000);
       
     } catch (error) {
       console.error('Error printing bookings list:', error);
