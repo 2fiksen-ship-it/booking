@@ -1653,8 +1653,12 @@ const ClientsManagement = () => {
   const handlePrintClients = async () => {
     try {
       console.log('=== PRINTING CLIENTS LIST ===');
+      console.log('Filtered clients count:', filteredClients.length);
       
-      // Create a simple HTML structure for printing
+      // Simple test - just alert first
+      alert(`سيتم طباعة قائمة تحتوي على ${filteredClients.length} عميل`);
+      
+      // For now, just open a simple print window
       const printContent = `
         <html dir="rtl">
           <head>
@@ -1665,25 +1669,17 @@ const ClientsManagement = () => {
               table { width: 100%; border-collapse: collapse; margin-top: 20px; }
               th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
               th { background-color: #f3f4f6; font-weight: bold; }
-              .header { text-align: center; margin-bottom: 20px; }
-              .date { text-align: left; margin-bottom: 20px; color: #6b7280; }
-              @media print { body { margin: 0; } }
             </style>
           </head>
           <body>
-            <div class="header">
-              <h1>🏢 نظام إدارة الوكالات السياحية</h1>
-              <h2>📋 قائمة العملاء</h2>
-            </div>
-            <div class="date">تاريخ الطباعة: ${formatDateWithEnglishNumerals(new Date())}</div>
+            <h1>🏢 قائمة العملاء</h1>
+            <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-SA')}</p>
             <table>
               <thead>
                 <tr>
                   <th>اسم العميل</th>
                   <th>الهاتف</th>
                   <th>البريد الإلكتروني</th>
-                  <th>بطاقة الهوية/جواز السفر</th>
-                  <th>تاريخ التسجيل</th>
                 </tr>
               </thead>
               <tbody>
@@ -1692,54 +1688,36 @@ const ClientsManagement = () => {
                     <td>${client.name}</td>
                     <td>${client.phone || '-'}</td>
                     <td>${client.email || '-'}</td>
-                    <td>${client.cin_passport || '-'}</td>
-                    <td>${formatDateWithEnglishNumerals(client.created_at)}</td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
-            <div style="margin-top: 30px; text-align: center; color: #6b7280;">
-              <p>إجمالي العملاء: ${filteredClients.length}</p>
-              <p>تم إنشاء هذا التقرير من نظام إدارة الوكالات السياحية</p>
-            </div>
+            <p>إجمالي العملاء: ${filteredClients.length}</p>
           </body>
         </html>
       `;
 
-      // Create blob and trigger download/print
       const blob = new Blob([printContent], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
       
-      // Ask user for preference
-      const userChoice = confirm('اختر طريقة الطباعة:\nموافق = فتح في نافذة جديدة للطباعة\nإلغاء = تحميل ملف HTML');
-      
-      if (userChoice) {
-        // Open in new window for printing
-        const newWindow = window.open(url, '_blank');
-        if (newWindow) {
-          newWindow.onload = function() {
-            setTimeout(() => {
-              newWindow.print();
-            }, 500);
-          };
-          console.log('Clients list opened for printing');
-        }
+      // Open in new window
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.onload = function() {
+          setTimeout(() => {
+            newWindow.print();
+            alert('✅ تم فتح نافذة الطباعة بنجاح!');
+          }, 1000);
+        };
+        console.log('✅ Print window opened successfully');
       } else {
-        // Download HTML file
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `clients_list_${formatDateWithEnglishNumerals(new Date()).replace(/\//g, '-')}.html`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        alert('✅ تم تحميل قائمة العملاء بنجاح!');
+        alert('❌ لم يتم فتح نافذة الطباعة. تأكد من السماح للنوافذ المنبثقة.');
       }
       
       // Clean up
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
-      }, 1000);
+      }, 2000);
       
     } catch (error) {
       console.error('Error printing clients list:', error);
