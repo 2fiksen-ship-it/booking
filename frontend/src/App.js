@@ -5928,7 +5928,7 @@ const DailyOperationsManagement = () => {
                     <SelectValue placeholder="جميع الأنواع" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">جميع الأنواع</SelectItem>
+                    <SelectItem value="all">جميع الأنواع</SelectItem>
                     <SelectItem value="عمرة">🕋 عمرة</SelectItem>
                     <SelectItem value="حج">🕌 حج</SelectItem>
                     <SelectItem value="تذكرة طيران">✈️ تذكرة طيران</SelectItem>
