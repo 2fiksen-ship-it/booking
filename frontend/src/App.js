@@ -4307,7 +4307,11 @@ const ServicesManagement = () => {
       const response = await axios.get(`${API}/services`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setServices(response.data);
+      // Sort services by creation date - newest first
+      const sortedServices = response.data.sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      setServices(sortedServices);
     } catch (error) {
       console.error('Error fetching services:', error);
     } finally {
