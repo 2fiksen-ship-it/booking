@@ -3283,16 +3283,9 @@ const PaymentsManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPayments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                    {t('noData')}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredPayments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell className="font-medium">{payment.payment_no}</TableCell>
+              {filteredPayments.map((payment) => (
+                <TableRow key={payment.id}>
+                  <TableCell>{payment.payment_no}</TableCell>
                     <TableCell>{getInvoiceNo(payment.invoice_id)}</TableCell>
                     <TableCell>{getMethodBadge(payment.payment_method)}</TableCell>
                     <TableCell className="font-medium">{payment.amount} دج</TableCell>
