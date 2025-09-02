@@ -4372,6 +4372,7 @@ const ServicesManagement = () => {
                 <TableHead className="text-right">{t('serviceType')}</TableHead>
                 <TableHead className="text-right">{t('serviceCategory')}</TableHead>
                 <TableHead className="text-right">{t('basePrice')}</TableHead>
+                <TableHead className="text-right">{t('priceType')}</TableHead>
                 <TableHead className="text-right">{t('status')}</TableHead>
                 <TableHead className="text-right">{t('actions')}</TableHead>
               </TableRow>
