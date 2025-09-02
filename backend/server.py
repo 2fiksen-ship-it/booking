@@ -128,7 +128,7 @@ class DailyReport(BaseModel):
     expenses: float
     cashbox_balance: float
     notes: Optional[str] = ""
-    status: ReportStatus = ReportStatus.PENDING
+    report_status: ReportStatus = ReportStatus.PENDING
     agency_id: str
     created_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
