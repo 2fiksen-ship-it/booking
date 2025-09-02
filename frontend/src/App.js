@@ -4488,6 +4488,7 @@ const DailyOperationsManagement = () => {
     fetchOperations();
     fetchServices();
     fetchClients();
+    fetchAgencies();
   }, []);
 
   const fetchOperations = async () => {
@@ -4522,6 +4523,17 @@ const DailyOperationsManagement = () => {
       setClients(response.data);
     } catch (error) {
       console.error('Error fetching clients:', error);
+    }
+  };
+
+  const fetchAgencies = async () => {
+    try {
+      const response = await axios.get(`${API}/agencies`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setAgencies(response.data);
+    } catch (error) {
+      console.error('Error fetching agencies:', error);
     }
   };
 
