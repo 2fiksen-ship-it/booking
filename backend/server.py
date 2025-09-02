@@ -237,7 +237,7 @@ class BackupRecord(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     filename: str
     file_size: Optional[int] = None
-    status: BackupStatus = BackupStatus.PENDING
+    backup_status: BackupStatus = BackupStatus.PENDING
     backup_type: str = "full"  # full, partial
     agency_id: Optional[str] = None  # إذا كان للوكالة المحددة
     created_by: str
