@@ -2678,7 +2678,7 @@ const InvoicesManagement = () => {
                     <TableCell>{invoice.tva_rate}%</TableCell>
                     <TableCell className="font-medium">{invoice.amount_ttc} دج</TableCell>
                     <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                    <TableCell>{new Date(invoice.due_date).toLocaleDateString('ar-DZ')}</TableCell>
+                    <TableCell>{formatDateWithEnglishNumerals(invoice.due_date)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
