@@ -625,6 +625,18 @@ agent_communication:
         agent: "testing"
         comment: "🎉 FRONTEND ENHANCED APPROVAL WORKFLOW UI TESTING COMPLETED - PERFECT RESULTS! ✅ Super Admin Testing (superadmin@sanhaja.com/super123): Login successful ✅, Daily Operations page accessible ✅, Edit/Delete buttons visible for all operations (22 each) ✅, Approve/Reject buttons visible for pending operations (2 each) ✅, Print buttons available for all operations (22) ✅. ✅ Agency Staff Testing (staff1@tlemcen.sanhaja.com/staff123): Login successful ✅, Daily Operations page accessible ✅, Edit/Delete buttons visible for non-approved operations only (9 each) ✅, Approve/Reject buttons correctly hidden (0) ✅, Print buttons available for all operations (20) ✅. ✅ Role-Based Permission Verification: Super Admin has full access to all workflow buttons ✅, Agency Staff correctly restricted from approval functions ✅, Edit/Delete permissions properly enforced based on operation status ✅. ✅ UI Functionality: Edit dialog opens correctly for authorized users ✅, Button tooltips and permissions working ✅, Operations table displays all workflow buttons appropriately ✅. SUCCESS RATE: 100% - Enhanced Approval Workflow UI working flawlessly with proper role-based permissions!"
 
+  - task: "Report Creation Fix - Database Migration"
+    implemented: false
+    working: false
+    file: "backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ISSUE IDENTIFIED: User reported 'مشكل في انشاءاختبارتقرير' (problem creating test report). Testing revealed that POST /api/admin/migrate-bookings endpoint returns 404 - not implemented. Root cause: 126 out of 128 bookings are missing the 'created_by' field, causing Pydantic validation errors when generating reports. While report creation endpoints are working (POST /api/daily-reports ✅, GET /api/reports/daily-operations ✅, GET /api/reports/sales ✅), the underlying data integrity issue persists. NEEDS IMPLEMENTATION: Database migration endpoint to add missing created_by field to existing booking records. This will fully resolve the user's report creation issue."
+
   - task: "Advanced Filtering System for Operations and Bookings"
     implemented: true
     working: true
