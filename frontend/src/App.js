@@ -6184,8 +6184,6 @@ const DailyOperationsReports = () => {
     setReportData(testData);
     alert('✅ تم إنشاء تقرير اختبار');
   };
-
-      
     } catch (error) {
       console.error('=== REPORT PRINT ERROR ===');
       console.error('Error printing report:', error);
