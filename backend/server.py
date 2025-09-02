@@ -2572,13 +2572,20 @@ async def create_daily_operation(operation_data: DailyOperationCreate, current_u
 @api_router.get("/daily-operations", response_model=List[DailyOperation])
 async def get_daily_operations(
     date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     agency_id: Optional[str] = None,
     status: Optional[OperationStatus] = None,
     client_id: Optional[str] = None,
+    client_name: Optional[str] = None,
     service_id: Optional[str] = None,
+    service_name: Optional[str] = None,
+    service_type: Optional[ServiceType] = None,
+    min_amount: Optional[float] = None,
+    max_amount: Optional[float] = None,
     current_user: User = Depends(get_current_user)
 ):
-    """Get daily operations with filters"""
+    """Get daily operations with advanced filtering"""
     query_filter = {}
     
     # Role-based access
@@ -2589,7 +2596,7 @@ async def get_daily_operations(
     else:
         query_filter["agency_id"] = current_user.agency_id
     
-    # Date filter
+    # Date filters
     if date:
         try:
             filter_date = datetime.fromisoformat(date).date()
@@ -2599,6 +2606,24 @@ async def get_daily_operations(
             }
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    elif start_date or end_date:
+        date_filter = {}
+        if start_date:
+            try:
+                start_dt = datetime.fromisoformat(start_date)
+                date_filter["$gte"] = start_dt
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+        
+        if end_date:
+            try:
+                end_dt = datetime.fromisoformat(end_date)
+                date_filter["$lte"] = end_dt
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+        
+        if date_filter:
+            query_filter["date"] = date_filter
     
     # Additional filters
     if status:
@@ -2608,7 +2633,41 @@ async def get_daily_operations(
     if service_id:
         query_filter["service_id"] = service_id
     
+    # Service name filter (contains search)
+    if service_name:
+        query_filter["service_name"] = {"$regex": service_name, "$options": "i"}
+    
+    # Amount range filtering  
+    if min_amount is not None and max_amount is not None:
+        query_filter["final_price"] = {"$gte": min_amount, "$lte": max_amount}
+    elif min_amount is not None:
+        query_filter["final_price"] = {"$gte": min_amount}
+    elif max_amount is not None:
+        query_filter["final_price"] = {"$lte": max_amount}
+    
+    # Get operations
     operations = await db.daily_operations.find(query_filter).sort("date", -1).to_list(1000)
+    
+    # Client name filtering (requires joining with clients collection)
+    if client_name:
+        # Get client IDs that match the name
+        clients = await db.clients.find(
+            {"name": {"$regex": client_name, "$options": "i"}}
+        ).to_list(1000)
+        client_ids = [client["id"] for client in clients]
+        
+        # Filter operations by matching client IDs
+        operations = [op for op in operations if op.get("client_id") in client_ids]
+    
+    # Service type filtering (requires joining with services collection)
+    if service_type:
+        # Get service IDs that match the type
+        services = await db.services.find({"service_type": service_type}).to_list(1000)
+        service_ids = [service["id"] for service in services]
+        
+        # Filter operations by matching service IDs
+        operations = [op for op in operations if op.get("service_id") in service_ids]
+    
     return [DailyOperation(**operation) for operation in operations]
 
 @api_router.put("/daily-operations/{operation_id}", response_model=DailyOperation)
