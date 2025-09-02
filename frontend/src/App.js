@@ -3668,8 +3668,19 @@ const UserManagement = () => {
         axios.get(`${API}/users`),
         axios.get(`${API}/agencies`)
       ]);
-      setUsers(usersResponse.data);
-      setAgencies(agenciesResponse.data);
+      
+      // Sort users by creation date - newest first
+      const sortedUsers = usersResponse.data.sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      
+      // Sort agencies by creation date - newest first
+      const sortedAgencies = agenciesResponse.data.sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      
+      setUsers(sortedUsers);
+      setAgencies(sortedAgencies);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
