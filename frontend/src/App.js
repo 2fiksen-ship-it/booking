@@ -2632,7 +2632,7 @@ const BookingsManagement = () => {
                 {t('addBooking')}
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingBooking ? t('edit') : t('addBooking')}</DialogTitle>
             </DialogHeader>
