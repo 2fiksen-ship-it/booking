@@ -5685,6 +5685,18 @@ const DailyOperationsManagement = () => {
   const [selectedOperationForPrint, setSelectedOperationForPrint] = useState(null);
   const [editingOperation, setEditingOperation] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
+  
+  // NEW: Payment states
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [selectedOperationForPayment, setSelectedOperationForPayment] = useState(null);
+  const [paymentFormData, setPaymentFormData] = useState({
+    method: 'cash',
+    amount: '',
+    payment_date: new Date().toISOString().split('T')[0],
+    notes: ''
+  });
+  const [operationPaymentStatuses, setOperationPaymentStatuses] = useState({});
+  
   const [printDetails, setPrintDetails] = useState({
     paymentType: 'نقدي', // نقدي، بنكي، قسط
     amountPaid: 0,
