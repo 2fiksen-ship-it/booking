@@ -6100,8 +6100,15 @@ const DailyOperationsReports = () => {
   };
 
   const handlePrintReport = async () => {
+    if (!reportData) {
+      alert('يجب إنشاء التقرير أولاً');
+      return;
+    }
+    
     try {
       console.log('=== PRINTING REPORT ===');
+      alert('بدء طباعة التقرير...');
+      
       const params = new URLSearchParams({
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
@@ -6115,17 +6122,13 @@ const DailyOperationsReports = () => {
 
       const apiUrl = `${API}/reports/daily-operations/print?${params}`;
       console.log('Print API URL:', apiUrl);
-      console.log('Token:', localStorage.getItem('token') ? 'Present' : 'Missing');
 
       const response = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         responseType: 'blob'
       });
       
-      console.log('Print response received');
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-      console.log('Response data size:', response.data.size);
+      console.log('Print response received, size:', response.data.size);
       
       // Check if response is actually a PDF
       if (response.data.size === 0) {
@@ -6134,15 +6137,53 @@ const DailyOperationsReports = () => {
       
       // Create blob URL
       const blob = new Blob([response.data], { type: 'application/pdf' });
-      console.log('Report blob created, size:', blob.size);
-      
       const url = window.URL.createObjectURL(blob);
       
-      // Ask user for preference
-      const userChoice = confirm('اختر طريقة عرض التقرير:\nموافق = فتح في نافذة جديدة\nإلغاء = تحميل الملف');
+      // Always open in new window for now
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        alert('✅ تم فتح التقرير في نافذة جديدة');
+      } else {
+        alert('❌ لم يتم فتح النافذة. تأكد من السماح للنوافذ المنبثقة');
+      }
       
-      if (userChoice) {
-        // Open in new window
+      // Clean up after 2 seconds
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error printing report:', error);
+      alert('خطأ في طباعة التقرير: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  // Test function to create dummy report data
+  const createTestReport = () => {
+    console.log('Creating test report data...');
+    const testData = {
+      title: 'تقرير العمليات اليومية - اختبار',
+      period: `من ${startDate.toLocaleDateString('ar-SA')} إلى ${endDate.toLocaleDateString('ar-SA')}`,
+      total_operations: 5,
+      total_amount: 125000,
+      agencies_data: [
+        {
+          agency_name: 'وكالة سنهاجة الرئيسية',
+          operations_count: 3,
+          total_amount: 75000,
+          operations: [
+            { operation_no: 'OP-001', service_name: 'حجز طيران', amount: 25000, date: '2025-09-02' },
+            { operation_no: 'OP-002', service_name: 'حجز فندق', amount: 30000, date: '2025-09-02' },
+            { operation_no: 'OP-003', service_name: 'تأشيرة', amount: 20000, date: '2025-09-02' }
+          ]
+        }
+      ],
+      group_by_agency: true
+    };
+    
+    setReportData(testData);
+    alert('✅ تم إنشاء تقرير اختبار');
+  };
         const newWindow = window.open(url, '_blank');
         if (newWindow) {
           console.log('Report PDF opened in new window');
