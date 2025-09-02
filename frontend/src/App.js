@@ -3197,7 +3197,10 @@ const PaymentsManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">{t('paymentsList')}</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">💰 مدفوعات العمليات</h2>
+          <p className="text-sm text-gray-600 mt-1">إدارة مدفوعات العملاء للعمليات اليومية - سداد مباشر بدون فواتير</p>
+        </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-blue-600 hover:bg-blue-700">
