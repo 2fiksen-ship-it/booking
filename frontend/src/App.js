@@ -4460,9 +4460,18 @@ const DailyOperationsManagement = () => {
   const [operations, setOperations] = useState([]);
   const [services, setServices] = useState([]);
   const [clients, setClients] = useState([]);
+  const [agencies, setAgencies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [selectedOperationForPrint, setSelectedOperationForPrint] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
+  const [printDetails, setPrintDetails] = useState({
+    paymentType: 'نقدي', // نقدي، بنكي، قسط
+    amountPaid: 0,
+    remainingAmount: 0,
+    paymentStatus: 'مدفوع كاملاً' // مدفوع كاملاً، دفعة مقدمة، مؤجل
+  });
   const [formData, setFormData] = useState({
     service_id: '',
     client_id: '',
