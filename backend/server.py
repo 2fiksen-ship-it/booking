@@ -397,6 +397,36 @@ class ServiceSale(BaseModel):
     cash_delivered_at: Optional[datetime] = None  # When staff marked cash as delivered
     cash_received_at: Optional[datetime] = None   # When accountant confirmed receipt
 
+class InstallmentPlan(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    service_sale_id: str  # Reference to ServiceSale
+    total_amount: float
+    number_of_installments: int
+    start_date: datetime
+    status: InstallmentPlanStatus = InstallmentPlanStatus.ACTIVE
+    created_by: str  # User ID who created the plan
+    agency_id: str
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    cancelled_at: Optional[datetime] = None
+    cancelled_by: Optional[str] = None
+    cancellation_reason: Optional[str] = None
+
+class InstallmentPayment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    plan_id: str  # Reference to InstallmentPlan
+    installment_number: int  # Which installment (1, 2, 3, etc.)
+    due_date: datetime
+    original_amount: float  # Original installment amount
+    paid_amount: float = 0.0  # Amount actually paid (for partial payments)
+    remaining_amount: float  # Calculated: original_amount - paid_amount
+    status: InstallmentStatus = InstallmentStatus.PENDING
+    paid_at: Optional[datetime] = None
+    confirmed_by: Optional[str] = None
+    agency_id: str
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class ChartOfAccounts(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     code: str
