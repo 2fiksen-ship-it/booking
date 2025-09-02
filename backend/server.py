@@ -322,6 +322,13 @@ class Booking(BaseModel):
     start_date: datetime
     end_date: datetime
     agency_id: str
+    # NEW: Approval workflow fields
+    status: OperationStatus = OperationStatus.DRAFT
+    created_by: str  # الموظف الذي أنشأ الحجز
+    approved_by: Optional[str] = None  # المحاسب/المدير الذي اعتمد
+    approved_at: Optional[datetime] = None
+    rejected_reason: Optional[str] = None
+    modification_history: Optional[List[dict]] = []  # تاريخ التعديلات
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Invoice(BaseModel):
