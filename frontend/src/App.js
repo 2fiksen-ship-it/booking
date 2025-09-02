@@ -4496,6 +4496,453 @@ const ServicesManagement = () => {
   );
 };
 
+// Agency Settings Management Component
+const AgencySettingsManagement = () => {
+  const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
+  const [agencies, setAgencies] = useState([]);
+  const [selectedAgency, setSelectedAgency] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    address: '',
+    city: '',
+    postal_code: '',
+    phone: '',
+    phone_2: '',
+    phone_3: '',
+    fax: '',
+    email: '',
+    website: '',
+    tax_number: '',
+    commercial_register: '',
+    national_register: '',
+    business_license: '',
+    manager_name: '',
+    established_date: '',
+    description: '',
+    logo_url: '',
+    header_text: '',
+    footer_text: '',
+    manager_signature_url: ''
+  });
+
+  const showToast = (message, type = 'success') => {
+    // Toast implementation (you might want to use a toast library)
+    console.log(`${type}: ${message}`);
+  };
+
+  // Load agencies and set initial data
+  useEffect(() => {
+    loadAgencies();
+  }, []);
+
+  const loadAgencies = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/agencies`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setAgencies(response.data);
+      
+      // For agency staff, auto-select their agency
+      if (user?.role === 'agency_staff' && user?.agency_id) {
+        const userAgency = response.data.find(agency => agency.id === user.agency_id);
+        if (userAgency) {
+          setSelectedAgency(userAgency);
+          loadAgencyDetails(userAgency.id);
+        }
+      } else if (response.data.length > 0) {
+        // For GM/GA, select first agency by default
+        setSelectedAgency(response.data[0]);
+        loadAgencyDetails(response.data[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading agencies:', error);
+      showToast('فشل في تحميل الوكالات', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAgencyDetails = async (agencyId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/agencies/${agencyId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const agency = response.data;
+      setFormData({
+        name: agency.name || '',
+        address: agency.address || '',
+        city: agency.city || '',
+        postal_code: agency.postal_code || '',
+        phone: agency.phone || '',
+        phone_2: agency.phone_2 || '',
+        phone_3: agency.phone_3 || '',
+        fax: agency.fax || '',
+        email: agency.email || '',
+        website: agency.website || '',
+        tax_number: agency.tax_number || '',
+        commercial_register: agency.commercial_register || '',
+        national_register: agency.national_register || '',
+        business_license: agency.business_license || '',
+        manager_name: agency.manager_name || '',
+        established_date: agency.established_date || '',
+        description: agency.description || '',
+        logo_url: agency.logo_url || '',
+        header_text: agency.header_text || '',
+        footer_text: agency.footer_text || '',
+        manager_signature_url: agency.manager_signature_url || ''
+      });
+    } catch (error) {
+      console.error('Error loading agency details:', error);
+      showToast('فشل في تحميل تفاصيل الوكالة', 'error');
+    }
+  };
+
+  const handleAgencyChange = (agencyId) => {
+    const agency = agencies.find(a => a.id === agencyId);
+    setSelectedAgency(agency);
+    loadAgencyDetails(agencyId);
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!selectedAgency) return;
+    
+    // Agency staff cannot save
+    if (user?.role === 'agency_staff') {
+      showToast('ليس لديك صلاحية لتعديل إعدادات الوكالة', 'error');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const token = localStorage.getItem('token');
+      
+      await axios.put(`${API}/agencies/${selectedAgency.id}`, formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      showToast(t('settingsUpdated'));
+      loadAgencies(); // Refresh agencies list
+    } catch (error) {
+      console.error('Error saving agency settings:', error);
+      showToast(t('settingsUpdateFailed'), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isReadOnly = user?.role === 'agency_staff';
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="text-center">جاري التحميل...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto" dir="rtl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('agencySettings')}</h1>
+        <p className="text-gray-600">
+          {isReadOnly ? 'عرض معلومات الوكالة' : 'إدارة وتحديث معلومات الوكالات'}
+        </p>
+      </div>
+
+      {/* Agency Selector (for GM/GA only) */}
+      {!isReadOnly && agencies.length > 1 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>اختيار الوكالة</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select value={selectedAgency?.id || ''} onValueChange={handleAgencyChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="اختر الوكالة" />
+              </SelectTrigger>
+              <SelectContent>
+                {agencies.map(agency => (
+                  <SelectItem key={agency.id} value={agency.id}>
+                    {agency.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedAgency && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('basicInformation')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="name">{t('agencyName')}</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="address">{t('agencyAddress')}</Label>
+                <Textarea
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  disabled={isReadOnly}
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="city">{t('agencyCity')}</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    disabled={isReadOnly}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="postal_code">{t('postalCode')}</Label>
+                  <Input
+                    id="postal_code"
+                    value={formData.postal_code}
+                    onChange={(e) => handleInputChange('postal_code', e.target.value)}
+                    disabled={isReadOnly}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="description">{t('agencyDescription')}</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  disabled={isReadOnly}
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label htmlFor="established_date">{t('establishedDate')}</Label>
+                <Input
+                  id="established_date"
+                  type="date"
+                  value={formData.established_date}
+                  onChange={(e) => handleInputChange('established_date', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contact Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('contactInformation')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="phone">{t('primaryPhone')}</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone_2">{t('secondaryPhone')}</Label>
+                <Input
+                  id="phone_2"
+                  value={formData.phone_2}
+                  onChange={(e) => handleInputChange('phone_2', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone_3">{t('additionalPhone')}</Label>
+                <Input
+                  id="phone_3"
+                  value={formData.phone_3}
+                  onChange={(e) => handleInputChange('phone_3', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="fax">{t('faxNumber')}</Label>
+                <Input
+                  id="fax"
+                  value={formData.fax}
+                  onChange={(e) => handleInputChange('fax', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">{t('agencyEmail')}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="website">{t('agencyWebsite')}</Label>
+                <Input
+                  id="website"
+                  type="url"
+                  value={formData.website}
+                  onChange={(e) => handleInputChange('website', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Registration Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('registrationDetails')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="tax_number">{t('taxNumber')}</Label>
+                <Input
+                  id="tax_number"
+                  value={formData.tax_number}
+                  onChange={(e) => handleInputChange('tax_number', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="commercial_register">{t('commercialRegister')}</Label>
+                <Input
+                  id="commercial_register"
+                  value={formData.commercial_register}
+                  onChange={(e) => handleInputChange('commercial_register', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="national_register">{t('nationalRegister')}</Label>
+                <Input
+                  id="national_register"
+                  value={formData.national_register}
+                  onChange={(e) => handleInputChange('national_register', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="business_license">{t('businessLicense')}</Label>
+                <Input
+                  id="business_license"
+                  value={formData.business_license}
+                  onChange={(e) => handleInputChange('business_license', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Management & Branding */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('managementInfo')} & {t('brandingSettings')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="manager_name">{t('managerName')}</Label>
+                <Input
+                  id="manager_name"
+                  value={formData.manager_name}
+                  onChange={(e) => handleInputChange('manager_name', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="logo_url">{t('logoUrl')}</Label>
+                <Input
+                  id="logo_url"
+                  type="url"
+                  value={formData.logo_url}
+                  onChange={(e) => handleInputChange('logo_url', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+              <div>
+                <Label htmlFor="header_text">{t('headerText')}</Label>
+                <Textarea
+                  id="header_text"
+                  value={formData.header_text}
+                  onChange={(e) => handleInputChange('header_text', e.target.value)}
+                  disabled={isReadOnly}
+                  rows={2}
+                />
+              </div>
+              <div>
+                <Label htmlFor="footer_text">{t('footerText')}</Label>
+                <Textarea
+                  id="footer_text"
+                  value={formData.footer_text}
+                  onChange={(e) => handleInputChange('footer_text', e.target.value)}
+                  disabled={isReadOnly}
+                  rows={2}
+                />
+              </div>
+              <div>
+                <Label htmlFor="manager_signature_url">{t('managerSignature')}</Label>
+                <Input
+                  id="manager_signature_url"
+                  type="url"
+                  value={formData.manager_signature_url}
+                  onChange={(e) => handleInputChange('manager_signature_url', e.target.value)}
+                  disabled={isReadOnly}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Save Button (only for GM/GA) */}
+      {!isReadOnly && selectedAgency && (
+        <div className="mt-6 flex justify-end">
+          <Button 
+            onClick={handleSave} 
+            disabled={saving}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {saving ? 'جاري الحفظ...' : t('saveSettings')}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Daily Operations Management Component
 const DailyOperationsManagement = () => {
   const { t } = useContext(LanguageContext);
