@@ -7040,6 +7040,371 @@ def main():
         
         return results
 
+    def test_service_installments_module(self):
+        """Test the NEW SERVICE INSTALLMENTS MODULE implementation as requested in review"""
+        print(f"\n💰 Testing SERVICE INSTALLMENTS MODULE (Review Request)...")
+        print(f"   Testing comprehensive installment system with custom dates, partial payments, and plan management")
+        
+        results = {}
+        
+        # Step 1: Login as Agency Staff (staff1@tlemcen.sanhaja.com / staff123)
+        print(f"\n   1. Agency Staff Login (staff1@tlemcen.sanhaja.com / staff123)...")
+        auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['agency_staff_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Agency Staff login failed - cannot proceed with installment tests")
+            return results
+            
+        print(f"   ✅ Agency Staff authenticated successfully")
+        print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+        print(f"   Agency: {self.current_user.get('agency_id')}")
+        
+        # Step 2: Create a Service Sale first (prerequisite for installment plan)
+        print(f"\n   2. Creating Service Sale for Installment Testing...")
+        
+        # Create service sale
+        service_sale_data = {
+            "service_name": "عمرة اقتصادية - تقسيط",
+            "client_name": "أحمد محمد - عميل التقسيط",
+            "amount": 120000.0,  # 120,000 DZD for installment testing
+            "notes": "خدمة عمرة للاختبار نظام التقسيط"
+        }
+        
+        success, sale_response = self.run_test(
+            "Create Service Sale for Installments",
+            "POST",
+            "service-sales",
+            200,
+            data=service_sale_data
+        )
+        results['create_service_sale'] = success
+        
+        if not success:
+            print("   ❌ CRITICAL: Cannot create service sale - installment tests cannot proceed")
+            return results
+        
+        sale_id = sale_response.get('id')
+        print(f"   ✅ Service sale created successfully (ID: {sale_id})")
+        print(f"   Sale amount: {service_sale_data['amount']} DZD")
+        
+        # Step 3: Test Installment Plan Creation (POST /api/service-sales/{sale_id}/installment-plan)
+        print(f"\n   3. Testing Installment Plan Creation with Custom Dates...")
+        
+        # Create custom installment dates (not automatic 30-day intervals)
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        installment_dates = [
+            (today + timedelta(days=30)).isoformat(),   # First installment in 30 days
+            (today + timedelta(days=75)).isoformat(),   # Second installment in 75 days (45 days later)
+            (today + timedelta(days=120)).isoformat(),  # Third installment in 120 days (45 days later)
+            (today + timedelta(days=180)).isoformat()   # Fourth installment in 180 days (60 days later)
+        ]
+        
+        installment_plan_data = {
+            "service_sale_id": sale_id,
+            "number_of_installments": 4,
+            "start_date": today.isoformat(),
+            "installment_dates": installment_dates,
+            "notes": "خطة تقسيط مخصصة بتواريخ غير منتظمة"
+        }
+        
+        success, plan_response = self.run_test(
+            "Create Installment Plan with Custom Dates",
+            "POST",
+            f"service-sales/{sale_id}/installment-plan",
+            200,
+            data=installment_plan_data
+        )
+        results['create_installment_plan'] = success
+        
+        if not success:
+            print("   ❌ CRITICAL: Cannot create installment plan - remaining tests cannot proceed")
+            return results
+        
+        plan_id = plan_response.get('id')
+        print(f"   ✅ Installment plan created successfully (ID: {plan_id})")
+        print(f"   Number of installments: {installment_plan_data['number_of_installments']}")
+        print(f"   Total amount: {plan_response.get('total_amount')} DZD")
+        print(f"   Expected installment amount: {120000.0 / 4} DZD each")
+        
+        # Step 4: Test Get Installment Plan (GET /api/service-sales/{sale_id}/installment-plan)
+        print(f"\n   4. Testing Get Installment Plan...")
+        
+        success, retrieved_plan = self.run_test(
+            "Get Installment Plan",
+            "GET",
+            f"service-sales/{sale_id}/installment-plan",
+            200
+        )
+        results['get_installment_plan'] = success
+        
+        if success:
+            print(f"   ✅ Installment plan retrieved successfully")
+            print(f"   Plan status: {retrieved_plan.get('status')}")
+            print(f"   Total amount: {retrieved_plan.get('total_amount')} DZD")
+            print(f"   Number of installments: {retrieved_plan.get('number_of_installments')}")
+        
+        # Step 5: Test Get Installment Payments (GET /api/installment-plans/{plan_id}/payments)
+        print(f"\n   5. Testing Get Installment Payments...")
+        
+        success, payments_list = self.run_test(
+            "Get Installment Payments",
+            "GET",
+            f"installment-plans/{plan_id}/payments",
+            200
+        )
+        results['get_installment_payments'] = success
+        
+        if success:
+            print(f"   ✅ Installment payments retrieved successfully")
+            print(f"   Number of payments: {len(payments_list)}")
+            
+            # Verify payments are sorted by installment_number
+            installment_numbers = [p.get('installment_number') for p in payments_list]
+            is_sorted = installment_numbers == sorted(installment_numbers)
+            results['payments_sorted'] = is_sorted
+            
+            if is_sorted:
+                print(f"   ✅ Payments correctly sorted by installment number: {installment_numbers}")
+            else:
+                print(f"   ❌ Payments not properly sorted: {installment_numbers}")
+            
+            # Check payment statuses
+            statuses = [p.get('status') for p in payments_list]
+            print(f"   Payment statuses: {statuses}")
+            
+            # Store first payment ID for testing
+            first_payment_id = payments_list[0].get('id') if payments_list else None
+            first_payment_amount = payments_list[0].get('original_amount') if payments_list else 0
+            
+        # Step 6: Test Partial Payment (PUT /api/installment-payments/{payment_id}/pay)
+        print(f"\n   6. Testing PARTIAL Payment of Installment...")
+        
+        if first_payment_id:
+            # Pay only half of the first installment (partial payment)
+            partial_amount = first_payment_amount / 2
+            
+            success, payment_response = self.run_test(
+                "Make Partial Payment",
+                "PUT",
+                f"installment-payments/{first_payment_id}/pay",
+                200,
+                data={
+                    "paid_amount": partial_amount,
+                    "notes": "دفعة جزئية - نصف القسط الأول"
+                }
+            )
+            results['partial_payment'] = success
+            
+            if success:
+                print(f"   ✅ Partial payment processed successfully")
+                print(f"   Paid amount: {payment_response.get('paid_amount')} DZD")
+                print(f"   Remaining amount: {payment_response.get('remaining_amount')} DZD")
+                print(f"   Status: {payment_response.get('status')}")
+                
+                # Verify status changed to 'partial'
+                if payment_response.get('status') == 'partial':
+                    print(f"   ✅ Status correctly changed to 'partial'")
+                    results['partial_status_correct'] = True
+                else:
+                    print(f"   ❌ Status should be 'partial', got: {payment_response.get('status')}")
+                    results['partial_status_correct'] = False
+        
+        # Step 7: Test Full Payment of Remaining Amount
+        print(f"\n   7. Testing Full Payment of Remaining Amount...")
+        
+        if first_payment_id and success:
+            # Pay the remaining amount to complete the first installment
+            remaining_amount = payment_response.get('remaining_amount', 0)
+            
+            success, full_payment_response = self.run_test(
+                "Complete First Installment Payment",
+                "PUT",
+                f"installment-payments/{first_payment_id}/pay",
+                200,
+                data={
+                    "paid_amount": remaining_amount,
+                    "notes": "إكمال دفع القسط الأول"
+                }
+            )
+            results['complete_payment'] = success
+            
+            if success:
+                print(f"   ✅ Full payment completed successfully")
+                print(f"   Total paid amount: {full_payment_response.get('paid_amount')} DZD")
+                print(f"   Remaining amount: {full_payment_response.get('remaining_amount')} DZD")
+                print(f"   Status: {full_payment_response.get('status')}")
+                
+                # Verify status changed to 'paid'
+                if full_payment_response.get('status') == 'paid':
+                    print(f"   ✅ Status correctly changed to 'paid'")
+                    results['paid_status_correct'] = True
+                else:
+                    print(f"   ❌ Status should be 'paid', got: {full_payment_response.get('status')}")
+                    results['paid_status_correct'] = False
+        
+        # Step 8: Test Plan Cancellation (PUT /api/installment-plans/{plan_id}/cancel)
+        print(f"\n   8. Testing Plan Cancellation...")
+        
+        # First, let's create another plan to test cancellation (since we don't want to cancel the active one)
+        # Create another service sale
+        test_sale_data = {
+            "service_name": "خدمة اختبار الإلغاء",
+            "client_name": "عميل اختبار الإلغاء",
+            "amount": 60000.0,
+            "notes": "خدمة لاختبار إلغاء خطة التقسيط"
+        }
+        
+        success, test_sale_response = self.run_test(
+            "Create Test Service Sale for Cancellation",
+            "POST",
+            "service-sales",
+            200,
+            data=test_sale_data
+        )
+        
+        if success:
+            test_sale_id = test_sale_response.get('id')
+            
+            # Create test installment plan
+            test_plan_data = {
+                "service_sale_id": test_sale_id,
+                "number_of_installments": 2,
+                "start_date": today.isoformat(),
+                "installment_dates": [
+                    (today + timedelta(days=30)).isoformat(),
+                    (today + timedelta(days=60)).isoformat()
+                ],
+                "notes": "خطة تقسيط للاختبار الإلغاء"
+            }
+            
+            success, test_plan_response = self.run_test(
+                "Create Test Installment Plan for Cancellation",
+                "POST",
+                f"service-sales/{test_sale_id}/installment-plan",
+                200,
+                data=test_plan_data
+            )
+            
+            if success:
+                test_plan_id = test_plan_response.get('id')
+                
+                # Now test cancellation
+                success, cancel_response = self.run_test(
+                    "Cancel Installment Plan",
+                    "PUT",
+                    f"installment-plans/{test_plan_id}/cancel",
+                    200,
+                    data={
+                        "reason": "إلغاء لأغراض الاختبار"
+                    }
+                )
+                results['cancel_plan'] = success
+                
+                if success:
+                    print(f"   ✅ Plan cancellation successful")
+                    print(f"   Response: {cancel_response.get('message')}")
+        
+        # Step 9: Test Installment Status Report (GET /api/reports/installment-status)
+        print(f"\n   9. Testing Installment Status Report...")
+        
+        success, report_response = self.run_test(
+            "Generate Installment Status Report",
+            "GET",
+            "reports/installment-status",
+            200
+        )
+        results['installment_status_report'] = success
+        
+        if success:
+            print(f"   ✅ Installment status report generated successfully")
+            report_data = report_response.get('report_data', {})
+            grand_totals = report_response.get('grand_totals', {})
+            
+            print(f"   Total clients with installments: {grand_totals.get('total_clients', 0)}")
+            print(f"   Total installment plans: {grand_totals.get('total_plans', 0)}")
+            print(f"   Active plans: {grand_totals.get('active_plans', 0)}")
+            print(f"   Completed plans: {grand_totals.get('completed_plans', 0)}")
+            print(f"   Total due: {grand_totals.get('total_due', 0)} DZD")
+            print(f"   Total paid: {grand_totals.get('total_paid', 0)} DZD")
+            print(f"   Total overdue: {grand_totals.get('total_overdue', 0)} DZD")
+        
+        # Step 10: Test Role-Based Access Control
+        print(f"\n   10. Testing Role-Based Access Control...")
+        
+        # Test General Accountant Access
+        print(f"\n   10a. Testing General Accountant Access...")
+        ga_auth_success = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        
+        if ga_auth_success:
+            print(f"   ✅ General Accountant authenticated")
+            
+            # General Accountant should access all installments in their agency
+            success, ga_report = self.run_test(
+                "General Accountant - Installment Status Report",
+                "GET",
+                "reports/installment-status",
+                200
+            )
+            results['ga_installment_access'] = success
+            
+            if success:
+                print(f"   ✅ General Accountant can access installment reports")
+        
+        # Test Super Admin Access
+        print(f"\n   10b. Testing Super Admin Access...")
+        sa_auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        
+        if sa_auth_success:
+            print(f"   ✅ Super Admin authenticated")
+            
+            # Super Admin should access all installments
+            success, sa_report = self.run_test(
+                "Super Admin - Installment Status Report",
+                "GET",
+                "reports/installment-status",
+                200
+            )
+            results['sa_installment_access'] = success
+            
+            if success:
+                print(f"   ✅ Super Admin can access all installment reports")
+        
+        # Step 11: Test Overdue Check (POST /api/admin/check-overdue-installments)
+        print(f"\n   11. Testing Overdue Installments Check (Super Admin Only)...")
+        
+        if sa_auth_success:
+            success, overdue_response = self.run_test(
+                "Check Overdue Installments",
+                "POST",
+                "admin/check-overdue-installments",
+                200
+            )
+            results['check_overdue'] = success
+            
+            if success:
+                print(f"   ✅ Overdue installments check completed")
+                print(f"   Updated installments: {overdue_response.get('updated_count', 0)}")
+        
+        # Step 12: Test Advanced Features
+        print(f"\n   12. Testing Advanced Features...")
+        
+        # Test flexible date setting (already tested in step 3)
+        results['flexible_dates'] = results.get('create_installment_plan', False)
+        
+        # Test partial payment support (already tested in steps 6-7)
+        results['partial_payments'] = results.get('partial_payment', False) and results.get('complete_payment', False)
+        
+        # Test plan status management
+        results['plan_status_management'] = results.get('cancel_plan', False)
+        
+        print(f"   ✅ Flexible Date Setting: {'Working' if results['flexible_dates'] else 'Failed'}")
+        print(f"   ✅ Partial Payment Support: {'Working' if results['partial_payments'] else 'Failed'}")
+        print(f"   ✅ Plan Status Management: {'Working' if results['plan_status_management'] else 'Failed'}")
+        
+        return results
+
 if __name__ == "__main__":
     # Check if specific test is requested
     if len(sys.argv) > 1:
