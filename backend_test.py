@@ -4910,7 +4910,23 @@ def main():
         print(f"\n⚠️  القضايا الحرجة - Critical Issues:")
         critical_issues = []
         
-        # Services Management and Daily Operations Critical Issues (PRIMARY FOCUS - CURRENT REVIEW)
+        # Agency Settings Management API Critical Issues (PRIMARY FOCUS - CURRENT REVIEW)
+        if not agency_settings_results.get('super_admin_get_agency'):
+            critical_issues.append("❌ Super Admin cannot GET agency details")
+        if not agency_settings_results.get('super_admin_update_agency'):
+            critical_issues.append("❌ Super Admin cannot UPDATE agency settings")
+        if not agency_settings_results.get('general_accountant_get_agency'):
+            critical_issues.append("❌ General Accountant cannot GET agency details")
+        if not agency_settings_results.get('general_accountant_update_agency'):
+            critical_issues.append("❌ General Accountant cannot UPDATE agency settings")
+        if not agency_settings_results.get('agency_staff_get_own_agency'):
+            critical_issues.append("❌ Agency Staff cannot view their own agency")
+        if not agency_settings_results.get('agency_staff_cannot_update_agency'):
+            critical_issues.append("❌ Agency Staff can incorrectly modify agency settings")
+        if not agency_settings_results.get('comprehensive_update_verified'):
+            critical_issues.append("❌ Enhanced Agency model fields not working properly")
+        
+        # Services Management and Daily Operations Critical Issues (SECONDARY FOCUS - PREVIOUS REVIEW)
         if not services_operations_results.get('super_admin_login'):
             critical_issues.append("❌ Super Admin login failed (superadmin@sanhaja.com)")
         if not services_operations_results.get('create_umrah_service'):
