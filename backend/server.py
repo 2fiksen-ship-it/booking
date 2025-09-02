@@ -1628,15 +1628,34 @@ async def create_payment(payment_data: PaymentCreate, current_user: User = Depen
     return payment
 
 @api_router.get("/payments", response_model=List[Payment])
-async def get_payments(agency_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    # Super Admin and General Accountant see all payments, can filter by agency
-    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
-        query_filter = {"agency_id": agency_id} if agency_id else {}
-    else:
-        # Agency staff only see their own agency payments
-        query_filter = {"agency_id": current_user.agency_id}
+async def get_payments(
+    agency_id: Optional[str] = None,
+    payment_type: Optional[str] = None,  # "invoice" or "operation"
+    current_user: User = Depends(get_current_user)
+):
+    """Get payments with role-based filtering"""
+    query_filter = {}
     
-    payments = await db.payments.find(query_filter).to_list(1000)
+    # Role-based access
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        # Managers/Accountants see all payments, can filter by agency
+        if agency_id:
+            query_filter["agency_id"] = agency_id
+    else:
+        # Agency staff see only their agency payments
+        query_filter["agency_id"] = current_user.agency_id
+        
+        # Agency staff can only see operation payments (not invoice payments)
+        if current_user.role == UserRole.AGENCY_STAFF:
+            query_filter["daily_operation_id"] = {"$exists": True, "$ne": None}
+    
+    # Filter by payment type
+    if payment_type == "invoice":
+        query_filter["invoice_id"] = {"$exists": True, "$ne": None}
+    elif payment_type == "operation":
+        query_filter["daily_operation_id"] = {"$exists": True, "$ne": None}
+    
+    payments = await db.payments.find(query_filter).sort("payment_date", -1).to_list(1000)
     return [Payment(**payment) for payment in payments]
 
 # Dashboard Route
