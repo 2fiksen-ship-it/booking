@@ -4947,6 +4947,170 @@ const DailyOperationsManagement = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Print Preview Modal */}
+      <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl">🖨️ معاينة الوصل قبل الطباعة</DialogTitle>
+          </DialogHeader>
+          
+          {selectedOperationForPrint && (
+            <div className="space-y-6">
+              {/* Agency Information */}
+              <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                <h3 className="text-lg font-bold text-blue-800 mb-3 text-center">
+                  {agencies.find(a => a.id === user?.agency_id)?.name || 'وكالة صنهاجة للسياحة والسفر'}
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <strong>العنوان:</strong> {agencies.find(a => a.id === user?.agency_id)?.address || 'غير محدد'}
+                  </div>
+                  <div>
+                    <strong>المدينة:</strong> {agencies.find(a => a.id === user?.agency_id)?.city || 'غير محدد'}
+                  </div>
+                  <div>
+                    <strong>الهاتف:</strong> {agencies.find(a => a.id === user?.agency_id)?.phone || 'غير محدد'}
+                  </div>
+                  <div>
+                    <strong>البريد:</strong> {agencies.find(a => a.id === user?.agency_id)?.email || 'غير محدد'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Receipt Details */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-bold mb-3 text-center bg-gray-100 p-2 rounded">تفاصيل الوصل</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div><strong>رقم الوصل:</strong> {selectedOperationForPrint.operation_no}</div>
+                  <div><strong>التاريخ:</strong> {new Date(selectedOperationForPrint.date).toLocaleDateString('ar-SA')}</div>
+                  <div><strong>اسم العميل:</strong> {clients.find(c => c.id === selectedOperationForPrint.client_id)?.name || 'غير محدد'}</div>
+                  <div><strong>الخدمة:</strong> {selectedOperationForPrint.service_name}</div>
+                  <div><strong>السعر الأساسي:</strong> {selectedOperationForPrint.base_price.toLocaleString()} دج</div>
+                  <div><strong>التخفيض:</strong> {selectedOperationForPrint.discount_amount.toLocaleString()} دج</div>
+                  <div><strong>المبلغ النهائي:</strong> <span className="font-bold text-green-600">{selectedOperationForPrint.final_price.toLocaleString()} دج</span></div>
+                  <div><strong>الحالة:</strong> {selectedOperationForPrint.status}</div>
+                </div>
+                {selectedOperationForPrint.notes && (
+                  <div className="mt-3">
+                    <strong>ملاحظات:</strong> {selectedOperationForPrint.notes}
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Details Form */}
+              <div className="border rounded-lg p-4 bg-yellow-50">
+                <h4 className="font-bold mb-3 text-center bg-yellow-100 p-2 rounded">تفاصيل الدفع</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>نوع الدفع</Label>
+                    <Select value={printDetails.paymentType} onValueChange={(value) => setPrintDetails({...printDetails, paymentType: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="نقدي">💵 نقدي</SelectItem>
+                        <SelectItem value="بنكي">🏦 تحويل بنكي</SelectItem>
+                        <SelectItem value="شيك">📋 شيك</SelectItem>
+                        <SelectItem value="قسط">📅 دفع بالأقساط</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label>حالة الدفع</Label>
+                    <Select value={printDetails.paymentStatus} onValueChange={(value) => {
+                      setPrintDetails({...printDetails, paymentStatus: value});
+                      // Auto-calculate amounts based on status
+                      if (value === 'مدفوع كاملاً') {
+                        setPrintDetails(prev => ({
+                          ...prev,
+                          paymentStatus: value,
+                          amountPaid: selectedOperationForPrint.final_price,
+                          remainingAmount: 0
+                        }));
+                      }
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="مدفوع كاملاً">✅ مدفوع كاملاً</SelectItem>
+                        <SelectItem value="دفعة مقدمة">💰 دفعة مقدمة</SelectItem>
+                        <SelectItem value="مؤجل">⏰ دفع مؤجل</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>المبلغ المدفوع (دج)</Label>
+                    <Input
+                      type="number"
+                      value={printDetails.amountPaid}
+                      onChange={(e) => {
+                        const paid = parseFloat(e.target.value) || 0;
+                        setPrintDetails({
+                          ...printDetails, 
+                          amountPaid: paid,
+                          remainingAmount: Math.max(0, selectedOperationForPrint.final_price - paid)
+                        });
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <Label>المبلغ المتبقي (دج)</Label>
+                    <Input
+                      type="number"
+                      value={printDetails.remainingAmount}
+                      readOnly
+                      className="bg-gray-100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Employee Signature */}
+              <div className="border rounded-lg p-4 bg-green-50">
+                <h4 className="font-bold mb-3 text-center bg-green-100 p-2 rounded">توقيع الموظف</h4>
+                <div className="text-center space-y-2">
+                  <div><strong>اسم الموظف:</strong> {user?.name || 'غير محدد'}</div>
+                  <div><strong>المنصب:</strong> {user?.job_title || 'موظف'}</div>
+                  <div><strong>تاريخ الإصدار:</strong> {new Date().toLocaleDateString('ar-SA')} - {new Date().toLocaleTimeString('ar-SA')}</div>
+                  {user?.signature_url ? (
+                    <div className="mt-3">
+                      <p className="text-sm text-green-600">✅ التوقيع الإلكتروني متوفر</p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 p-3 border-2 border-dashed border-gray-300 rounded">
+                      <p className="text-sm text-gray-600">التوقيع الإلكتروني: ________________</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowPrintPreview(false);
+                    setSelectedOperationForPrint(null);
+                  }}
+                >
+                  ❌ إلغاء
+                </Button>
+                <Button 
+                  onClick={handleConfirmPrint}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  🖨️ طباعة الوصل الآن
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
