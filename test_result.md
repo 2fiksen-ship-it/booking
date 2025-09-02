@@ -553,7 +553,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "COMPLETE NEW SYSTEM: Operation-Payment Integration + Agency Management + Updated Permissions"
+    - "RECEIPT PRINTING FIX for Daily Operations with Real Payment Values"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
