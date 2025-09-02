@@ -4188,6 +4188,336 @@ async def service_cash_reconciliation_report(
         }
     }
 
+# ================================
+# SERVICE INSTALLMENTS ENDPOINTS
+# ================================
+
+@api_router.post("/service-sales/{sale_id}/installment-plan", response_model=InstallmentPlan)
+async def create_installment_plan(
+    sale_id: str,
+    plan_data: InstallmentPlanCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Create installment plan for a service sale"""
+    # Get the service sale
+    sale = await db.service_sales.find_one({"id": sale_id})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Service sale not found")
+    
+    # Check agency access
+    if sale["agency_id"] != current_user.agency_id and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Check if installment plan already exists
+    existing_plan = await db.installment_plans.find_one({"service_sale_id": sale_id, "status": {"$ne": InstallmentPlanStatus.CANCELLED}})
+    if existing_plan:
+        raise HTTPException(status_code=400, detail="Active installment plan already exists for this sale")
+    
+    # Validate installment dates
+    if len(plan_data.installment_dates) != plan_data.number_of_installments:
+        raise HTTPException(status_code=400, detail="Number of installment dates must match number of installments")
+    
+    # Calculate installment amount
+    installment_amount = sale["amount"] / plan_data.number_of_installments
+    
+    # Create installment plan
+    plan_dict = plan_data.dict()
+    plan_dict["total_amount"] = sale["amount"]
+    plan_dict["created_by"] = current_user.id
+    plan_dict["agency_id"] = sale["agency_id"]
+    
+    plan = InstallmentPlan(**plan_dict)
+    await db.installment_plans.insert_one(plan.dict())
+    
+    # Create individual installment payments
+    for i, due_date in enumerate(plan_data.installment_dates, 1):
+        installment_payment = InstallmentPayment(
+            plan_id=plan.id,
+            installment_number=i,
+            due_date=due_date,
+            original_amount=installment_amount,
+            remaining_amount=installment_amount,
+            agency_id=sale["agency_id"]
+        )
+        await db.installment_payments.insert_one(installment_payment.dict())
+    
+    return plan
+
+@api_router.get("/service-sales/{sale_id}/installment-plan", response_model=InstallmentPlan)
+async def get_installment_plan(
+    sale_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get installment plan for a service sale"""
+    # Get the service sale
+    sale = await db.service_sales.find_one({"id": sale_id})
+    if not sale:
+        raise HTTPException(status_code=404, detail="Service sale not found")
+    
+    # Check agency access
+    if sale["agency_id"] != current_user.agency_id and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get installment plan
+    plan = await db.installment_plans.find_one({"service_sale_id": sale_id, "status": {"$ne": InstallmentPlanStatus.CANCELLED}})
+    if not plan:
+        raise HTTPException(status_code=404, detail="No active installment plan found for this sale")
+    
+    return InstallmentPlan(**plan)
+
+@api_router.get("/installment-plans/{plan_id}/payments", response_model=List[InstallmentPayment])
+async def get_installment_payments(
+    plan_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all installment payments for a plan"""
+    # Get the plan
+    plan = await db.installment_plans.find_one({"id": plan_id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Installment plan not found")
+    
+    # Check agency access
+    if plan["agency_id"] != current_user.agency_id and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get installment payments
+    payments = await db.installment_payments.find({"plan_id": plan_id}).sort("installment_number", 1).to_list(1000)
+    return [InstallmentPayment(**payment) for payment in payments]
+
+@api_router.put("/installment-payments/{payment_id}/pay", response_model=InstallmentPayment)
+async def pay_installment(
+    payment_id: str,
+    paid_amount: float,
+    notes: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Record payment for an installment (supports partial payments)"""
+    # Get the installment payment
+    payment = await db.installment_payments.find_one({"id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Installment payment not found")
+    
+    # Check agency access
+    if payment["agency_id"] != current_user.agency_id and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Validate payment amount
+    if paid_amount <= 0:
+        raise HTTPException(status_code=400, detail="Payment amount must be positive")
+    
+    if paid_amount > payment["remaining_amount"]:
+        raise HTTPException(status_code=400, detail="Payment amount exceeds remaining amount")
+    
+    # Update payment
+    new_paid_amount = payment["paid_amount"] + paid_amount
+    new_remaining_amount = payment["original_amount"] - new_paid_amount
+    
+    # Determine new status
+    if new_remaining_amount <= 0:
+        new_status = InstallmentStatus.PAID
+    elif new_paid_amount > 0:
+        new_status = InstallmentStatus.PARTIAL
+    else:
+        new_status = InstallmentStatus.PENDING
+    
+    # Update the installment payment
+    await db.installment_payments.update_one(
+        {"id": payment_id},
+        {
+            "$set": {
+                "paid_amount": new_paid_amount,
+                "remaining_amount": new_remaining_amount,
+                "status": new_status,
+                "paid_at": datetime.now(timezone.utc),
+                "confirmed_by": current_user.id,
+                "notes": notes
+            }
+        }
+    )
+    
+    # Create journal entry for the payment
+    journal_entry = JournalEntry(
+        date=datetime.now(timezone.utc),
+        account_code="1000",  # Cash account
+        debit=paid_amount,
+        credit=0.0,
+        reference=f"Installment payment - Plan {payment['plan_id']} - Installment {payment['installment_number']}",
+        agency_id=payment["agency_id"]
+    )
+    await db.journal_entries.insert_one(journal_entry.dict())
+    
+    # Create corresponding credit entry for installment revenue
+    revenue_entry = JournalEntry(
+        date=datetime.now(timezone.utc),
+        account_code="4100",  # Installment Revenue account
+        debit=0.0,
+        credit=paid_amount,
+        reference=f"Installment revenue - Plan {payment['plan_id']} - Installment {payment['installment_number']}",
+        agency_id=payment["agency_id"]
+    )
+    await db.journal_entries.insert_one(revenue_entry.dict())
+    
+    # Check if plan is completed
+    plan_payments = await db.installment_payments.find({"plan_id": payment["plan_id"]}).to_list(1000)
+    all_paid = all(p["status"] == InstallmentStatus.PAID for p in plan_payments)
+    
+    if all_paid:
+        await db.installment_plans.update_one(
+            {"id": payment["plan_id"]},
+            {"$set": {"status": InstallmentPlanStatus.COMPLETED}}
+        )
+    
+    # Return updated payment
+    updated_payment = await db.installment_payments.find_one({"id": payment_id})
+    return InstallmentPayment(**updated_payment)
+
+@api_router.put("/installment-plans/{plan_id}/cancel")
+async def cancel_installment_plan(
+    plan_id: str,
+    reason: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Cancel an installment plan"""
+    # Get the plan
+    plan = await db.installment_plans.find_one({"id": plan_id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Installment plan not found")
+    
+    # Check agency access
+    if plan["agency_id"] != current_user.agency_id and current_user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Check if plan can be cancelled
+    if plan["status"] == InstallmentPlanStatus.CANCELLED:
+        raise HTTPException(status_code=400, detail="Plan is already cancelled")
+    
+    if plan["status"] == InstallmentPlanStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail="Cannot cancel completed plan")
+    
+    # Cancel the plan
+    await db.installment_plans.update_one(
+        {"id": plan_id},
+        {
+            "$set": {
+                "status": InstallmentPlanStatus.CANCELLED,
+                "cancelled_at": datetime.now(timezone.utc),
+                "cancelled_by": current_user.id,
+                "cancellation_reason": reason
+            }
+        }
+    )
+    
+    return {"message": "Installment plan cancelled successfully"}
+
+@api_router.get("/reports/installment-status")
+async def installment_status_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    agency_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate installment status report grouped by client"""
+    query_filter = {}
+    
+    # Role-based access
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        if current_user.role == UserRole.GENERAL_ACCOUNTANT:
+            query_filter["agency_id"] = current_user.agency_id
+        elif agency_id:  # Super Admin can filter by agency
+            query_filter["agency_id"] = agency_id
+    else:
+        # Agency Staff only see their own agency
+        query_filter["agency_id"] = current_user.agency_id
+    
+    # Date range filtering
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            query_filter["created_at"] = {"$gte": start_dt}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format")
+    
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date)
+            if "created_at" in query_filter:
+                query_filter["created_at"]["$lte"] = end_dt
+            else:
+                query_filter["created_at"] = {"$lte": end_dt}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format")
+    
+    # Get all installment plans
+    plans = await db.installment_plans.find(query_filter).to_list(1000)
+    
+    # Get corresponding service sales
+    plan_ids = [plan["id"] for plan in plans]
+    all_payments = await db.installment_payments.find({"plan_id": {"$in": plan_ids}}).to_list(1000)
+    
+    # Get service sales data
+    sale_ids = [plan["service_sale_id"] for plan in plans]
+    sales = await db.service_sales.find({"id": {"$in": sale_ids}}).to_list(1000)
+    sale_map = {sale["id"]: sale for sale in sales}
+    
+    # Group by client name
+    report_data = {}
+    
+    for plan in plans:
+        sale = sale_map.get(plan["service_sale_id"])
+        if not sale:
+            continue
+        
+        client_name = sale["client_name"]
+        plan_payments = [p for p in all_payments if p["plan_id"] == plan["id"]]
+        
+        if client_name not in report_data:
+            report_data[client_name] = {
+                "total_due": 0.0,
+                "total_paid": 0.0,
+                "total_overdue": 0.0,
+                "plans_count": 0,
+                "active_plans": 0,
+                "completed_plans": 0
+            }
+        
+        report_data[client_name]["plans_count"] += 1
+        
+        if plan["status"] == InstallmentPlanStatus.ACTIVE:
+            report_data[client_name]["active_plans"] += 1
+        elif plan["status"] == InstallmentPlanStatus.COMPLETED:
+            report_data[client_name]["completed_plans"] += 1
+        
+        for payment in plan_payments:
+            if payment["status"] == InstallmentStatus.PENDING:
+                report_data[client_name]["total_due"] += payment["remaining_amount"]
+            elif payment["status"] == InstallmentStatus.PAID:
+                report_data[client_name]["total_paid"] += payment["paid_amount"]
+            elif payment["status"] == InstallmentStatus.PARTIAL:
+                report_data[client_name]["total_paid"] += payment["paid_amount"]
+                report_data[client_name]["total_due"] += payment["remaining_amount"]
+            elif payment["status"] == InstallmentStatus.OVERDUE:
+                report_data[client_name]["total_overdue"] += payment["remaining_amount"]
+    
+    # Calculate grand totals
+    grand_totals = {
+        "total_due": sum([data["total_due"] for data in report_data.values()]),
+        "total_paid": sum([data["total_paid"] for data in report_data.values()]),
+        "total_overdue": sum([data["total_overdue"] for data in report_data.values()]),
+        "total_clients": len(report_data),
+        "total_plans": sum([data["plans_count"] for data in report_data.values()]),
+        "active_plans": sum([data["active_plans"] for data in report_data.values()]),
+        "completed_plans": sum([data["completed_plans"] for data in report_data.values()])
+    }
+    
+    return {
+        "report_data": report_data,
+        "grand_totals": grand_totals,
+        "period": {
+            "start_date": start_date,
+            "end_date": end_date
+        }
+    }
+
 # Database Migration Endpoint for Booking Model Update
 @api_router.post("/admin/migrate-bookings")
 async def migrate_bookings_data(current_user: User = Depends(get_current_user)):
