@@ -282,6 +282,17 @@ backend:
         comment: "✅ TESTED: Super Admin Daily Reports Management working perfectly! GET /api/daily-reports endpoint accessible and working correctly. Super Admin can see reports from all agencies. Currently no reports in system (0 reports), but endpoint functionality confirmed working."
 
 frontend:
+  - task: "Agency Settings Management Interface"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"  
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Successfully implemented comprehensive Agency Settings Management component with role-based access control. Features include: Multi-section form layout (Basic Info, Contact Info, Registration Details, Management & Branding), Agency selector for GM/GA to choose which agency to edit, Read-only mode for Agency Staff (can view their own agency only), Form validation and API integration for GET/PUT operations, Professional Arabic UI with proper RTL layout, Enhanced contact fields (multiple phones, fax, email, website), Registration details (tax number, commercial register, national register, business license), Management info (manager name, established date, description), Branding settings (logo URL, header/footer text, manager signature). Navigation successfully added to all user roles with appropriate access levels."
   - task: "Login System"
     implemented: true
     working: true
