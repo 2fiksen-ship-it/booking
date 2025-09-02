@@ -5718,11 +5718,241 @@ const DailyOperationsManagement = () => {
     <div className="p-6 space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">{t('dailyOperations')}</h1>
-        <Button onClick={() => setShowAddDialog(true)} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 ml-2" />
-          {t('addOperation')}
-        </Button>
+        <div className="flex items-center space-x-3">
+          <Button 
+            onClick={() => setShowFilters(!showFilters)} 
+            variant="outline"
+            className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+          >
+            <Search className="h-4 w-4 ml-2" />
+            🔍 فلتر متقدم
+          </Button>
+          <Button onClick={() => setShowAddDialog(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="h-4 w-4 ml-2" />
+            {t('addOperation')}
+          </Button>
+        </div>
       </div>
+
+      {/* NEW: Advanced Filtering Panel */}
+      {showFilters && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-lg text-blue-800 flex items-center">
+              <Search className="h-5 w-5 ml-2" />
+              🔍 البحث والفلترة المتقدمة
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Agency Filter - for Super Admin and General Accountant */}
+              {['super_admin', 'general_accountant'].includes(user?.role) && (
+                <div>
+                  <Label htmlFor="filter-agency" className="text-sm font-medium text-gray-700">
+                    🏢 الوكالة
+                  </Label>
+                  <Select value={filters.agency_id} onValueChange={(value) => setFilters({...filters, agency_id: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="جميع الوكالات" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">جميع الوكالات</SelectItem>
+                      {agencies.map((agency) => (
+                        <SelectItem key={agency.id} value={agency.id}>
+                          🏢 {agency.name} - {agency.city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Client Name Search */}
+              <div>
+                <Label htmlFor="filter-client-name" className="text-sm font-medium text-gray-700">
+                  👤 اسم العميل
+                </Label>
+                <Input
+                  id="filter-client-name"
+                  placeholder="ابحث بالاسم..."
+                  value={filters.client_name}
+                  onChange={(e) => setFilters({...filters, client_name: e.target.value})}
+                />
+              </div>
+
+              {/* Service Name Search */}
+              <div>
+                <Label htmlFor="filter-service-name" className="text-sm font-medium text-gray-700">
+                  🛠️ اسم الخدمة
+                </Label>
+                <Input
+                  id="filter-service-name"
+                  placeholder="ابحث بنوع الخدمة..."
+                  value={filters.service_name}
+                  onChange={(e) => setFilters({...filters, service_name: e.target.value})}
+                />
+              </div>
+
+              {/* Service Type Filter */}
+              <div>
+                <Label htmlFor="filter-service-type" className="text-sm font-medium text-gray-700">
+                  📋 نوع الخدمة
+                </Label>
+                <Select value={filters.service_type} onValueChange={(value) => setFilters({...filters, service_type: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="جميع الأنواع" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">جميع الأنواع</SelectItem>
+                    <SelectItem value="عمرة">🕋 عمرة</SelectItem>
+                    <SelectItem value="حج">🕌 حج</SelectItem>
+                    <SelectItem value="تذكرة طيران">✈️ تذكرة طيران</SelectItem>
+                    <SelectItem value="حجز فندق">🏨 حجز فندق</SelectItem>
+                    <SelectItem value="خدمة تأشيرة">📋 خدمة تأشيرة</SelectItem>
+                    <SelectItem value="نقل">🚌 نقل</SelectItem>
+                    <SelectItem value="أخرى">🔧 أخرى</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <Label htmlFor="filter-status" className="text-sm font-medium text-gray-700">
+                  📊 حالة الموافقة
+                </Label>
+                <Select value={filters.status} onValueChange={(value) => setFilters({...filters, status: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="جميع الحالات" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">جميع الحالات</SelectItem>
+                    <SelectItem value="مسودة">📝 مسودة</SelectItem>
+                    <SelectItem value="في انتظار الموافقة">⏳ في انتظار الموافقة</SelectItem>
+                    <SelectItem value="معتمد">✅ معتمد</SelectItem>
+                    <SelectItem value="مرفوض">❌ مرفوض</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <Label htmlFor="filter-start-date" className="text-sm font-medium text-gray-700">
+                  📅 من تاريخ
+                </Label>
+                <Input
+                  id="filter-start-date"
+                  type="date"
+                  value={filters.start_date}
+                  onChange={(e) => setFilters({...filters, start_date: e.target.value})}
+                />
+              </div>
+
+              {/* End Date */}
+              <div>
+                <Label htmlFor="filter-end-date" className="text-sm font-medium text-gray-700">
+                  📅 إلى تاريخ
+                </Label>
+                <Input
+                  id="filter-end-date"
+                  type="date"
+                  value={filters.end_date}
+                  onChange={(e) => setFilters({...filters, end_date: e.target.value})}
+                />
+              </div>
+
+              {/* Minimum Amount */}
+              <div>
+                <Label htmlFor="filter-min-amount" className="text-sm font-medium text-gray-700">
+                  💰 أقل مبلغ (دج)
+                </Label>
+                <Input
+                  id="filter-min-amount"
+                  type="number"
+                  placeholder="0"
+                  value={filters.min_amount}
+                  onChange={(e) => setFilters({...filters, min_amount: e.target.value})}
+                />
+              </div>
+
+              {/* Maximum Amount */}
+              <div>
+                <Label htmlFor="filter-max-amount" className="text-sm font-medium text-gray-700">
+                  💰 أعلى مبلغ (دج)
+                </Label>
+                <Input
+                  id="filter-max-amount"
+                  type="number"
+                  placeholder="999999999"
+                  value={filters.max_amount}
+                  onChange={(e) => setFilters({...filters, max_amount: e.target.value})}
+                />
+              </div>
+            </div>
+
+            {/* Filter Action Buttons */}
+            <div className="flex justify-between items-center pt-4 border-t border-blue-200">
+              <div className="text-sm text-blue-700">
+                📊 عدد العمليات المعروضة: {operations.length}
+              </div>
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={clearFilters}
+                  variant="outline" 
+                  className="text-gray-700 border-gray-300"
+                >
+                  🗑️ مسح الفلاتر
+                </Button>
+                <Button 
+                  onClick={applyFilters}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  🔍 تطبيق الفلتر
+                </Button>
+              </div>
+            </div>
+
+            {/* Quick Filter Examples */}
+            <div className="bg-white p-3 rounded-lg border border-blue-200">
+              <p className="text-sm font-medium text-blue-800 mb-2">🚀 فلاتر سريعة:</p>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    setFilters({...filters, start_date: new Date().toISOString().split('T')[0], service_name: 'عمرة'});
+                    setTimeout(applyFilters, 100);
+                  }}
+                  className="text-xs bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                >
+                  🕋 عمرة اليوم
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    setFilters({...filters, status: 'في انتظار الموافقة'});
+                    setTimeout(applyFilters, 100);
+                  }}
+                  className="text-xs bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+                >
+                  ⏳ تحتاج موافقة
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    setFilters({...filters, min_amount: '100000'});
+                    setTimeout(applyFilters, 100);
+                  }}
+                  className="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
+                >
+                  💰 مبالغ عالية
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-6">
