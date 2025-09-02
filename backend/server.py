@@ -345,12 +345,15 @@ class Invoice(BaseModel):
 class Payment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     payment_no: str
-    invoice_id: str
+    # Support both invoice and daily operation payments
+    invoice_id: Optional[str] = None
+    daily_operation_id: Optional[str] = None
     method: PaymentMethod
     amount: float
     payment_date: datetime
     agency_id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    notes: Optional[str] = None
 
 class Cashbox(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
