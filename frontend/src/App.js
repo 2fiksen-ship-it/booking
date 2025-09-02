@@ -3901,7 +3901,7 @@ const UserManagement = () => {
                   </TableCell>
                   <TableCell className="text-right">{getAgencyName(user.agency_id)}</TableCell>
                   <TableCell className="text-right">
-                    {new Date(user.created_at).toLocaleDateString('ar-DZ')}
+                    {formatDateWithEnglishNumerals(user.created_at)}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end space-x-2">
