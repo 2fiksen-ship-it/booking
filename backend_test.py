@@ -4675,6 +4675,294 @@ class SanhajaAPITester:
         
         return results
 
+    def test_report_creation_fix_final_verification(self):
+        """FINAL TEST: Complete Report Creation Fix verification as requested in review"""
+        print(f"\n🎯 FINAL TEST: Complete Report Creation Fix Verification")
+        print(f"   USER ISSUE: 'مشكل في انشاءاختبارتقرير' (problem creating test report)")
+        print(f"   TESTING: Login as Super Admin → Execute migration → Verify reports → Confirm fix")
+        
+        results = {}
+        
+        # Step 1: Login as Super Admin (superadmin@sanhaja.com / super123)
+        print(f"\n   1. Super Admin Login (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with final test")
+            return results
+            
+        print(f"   ✅ Super Admin authenticated successfully")
+        print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+        
+        # Step 2: Execute POST /api/admin/migrate-bookings (should work now)
+        print(f"\n   2. Execute POST /api/admin/migrate-bookings (should work now)...")
+        success, response = self.run_test(
+            "Database Migration - Migrate Bookings",
+            "POST",
+            "admin/migrate-bookings",
+            200,
+            data={}
+        )
+        results['migrate_bookings_endpoint'] = success
+        
+        if success:
+            print(f"   ✅ Migration endpoint working - bookings migration executed")
+            if 'message' in response:
+                print(f"   Migration result: {response['message']}")
+            if 'updated_count' in response:
+                print(f"   Updated bookings: {response['updated_count']}")
+        else:
+            print(f"   ❌ Migration endpoint failed - this is the core issue to fix")
+        
+        # Step 3: Verify migration updates existing booking records
+        print(f"\n   3. Verify migration updates existing booking records...")
+        success, bookings_data = self.run_test(
+            "Verify Bookings After Migration",
+            "GET",
+            "bookings",
+            200
+        )
+        results['bookings_after_migration'] = success
+        
+        if success:
+            print(f"   ✅ Bookings endpoint accessible after migration")
+            print(f"   Total bookings: {len(bookings_data)}")
+            
+            # Check how many bookings now have created_by field
+            bookings_with_created_by = 0
+            bookings_without_created_by = 0
+            
+            for booking in bookings_data:
+                if booking.get('created_by'):
+                    bookings_with_created_by += 1
+                else:
+                    bookings_without_created_by += 1
+            
+            print(f"   Bookings with created_by: {bookings_with_created_by}")
+            print(f"   Bookings without created_by: {bookings_without_created_by}")
+            
+            if bookings_without_created_by == 0:
+                print(f"   ✅ MIGRATION SUCCESS: All bookings now have created_by field")
+                results['migration_successful'] = True
+            else:
+                print(f"   ⚠️  MIGRATION PARTIAL: {bookings_without_created_by} bookings still missing created_by")
+                results['migration_successful'] = False
+        
+        # Step 4: Test all report creation endpoints
+        print(f"\n   4. Test all report creation endpoints...")
+        
+        # Test 4a: Daily Reports Creation
+        print(f"\n   4a. Testing Daily Reports Creation...")
+        today = datetime.now()
+        report_date = today.strftime('%Y-%m-%d')
+        
+        success, response = self.run_test(
+            "Create Daily Report",
+            "POST",
+            "daily-reports",
+            200,
+            data={
+                "date": f"{report_date}T00:00:00Z",
+                "income": 25000.0,
+                "expenses": 12000.0,
+                "cashbox_balance": 150000.0,
+                "notes": "تقرير تجريبي للتحقق من إصلاح إنشاء التقارير"
+            }
+        )
+        results['daily_report_creation'] = success
+        
+        if success:
+            print(f"   ✅ Daily report creation working")
+            if 'id' in response:
+                print(f"   Created report ID: {response['id']}")
+        
+        # Test 4b: Daily Operations Reports
+        print(f"\n   4b. Testing Daily Operations Reports...")
+        start_date = (today - timedelta(days=7)).strftime('%Y-%m-%d')
+        end_date = today.strftime('%Y-%m-%d')
+        
+        success, response = self.run_test(
+            "Generate Daily Operations Report",
+            "GET",
+            f"reports/daily-operations?start_date={start_date}&end_date={end_date}",
+            200
+        )
+        results['daily_operations_report'] = success
+        
+        if success:
+            print(f"   ✅ Daily operations report generation working")
+            if 'data' in response:
+                print(f"   Operations in report: {len(response['data'])}")
+        
+        # Test 4c: Sales Reports
+        print(f"\n   4c. Testing Sales Reports...")
+        success, response = self.run_test(
+            "Generate Sales Report",
+            "GET",
+            f"reports/sales?start_date={start_date}&end_date={end_date}&report_type=daily",
+            200
+        )
+        results['sales_report'] = success
+        
+        if success:
+            print(f"   ✅ Sales report generation working")
+            if 'totals' in response:
+                totals = response['totals']
+                print(f"   Total sales: {totals.get('sales', 0)} DZD")
+                print(f"   Total bookings: {totals.get('bookings', 0)}")
+        
+        # Test 4d: Aging Reports
+        print(f"\n   4d. Testing Aging Reports...")
+        success, response = self.run_test(
+            "Generate Aging Report",
+            "GET",
+            "reports/aging",
+            200
+        )
+        results['aging_report'] = success
+        
+        if success:
+            print(f"   ✅ Aging report generation working")
+            if 'totals' in response:
+                totals = response['totals']
+                print(f"   Outstanding amount: {totals.get('amount', 0)} DZD")
+        
+        # Step 5: Confirm user can now create test reports successfully
+        print(f"\n   5. End-to-End Report Creation Verification...")
+        
+        # Create a new booking to test the complete flow
+        print(f"\n   5a. Creating new booking to test complete flow...")
+        
+        # Get a client and supplier for the booking
+        success, clients = self.run_test("Get Clients for Test Booking", "GET", "clients", 200)
+        success2, suppliers = self.run_test("Get Suppliers for Test Booking", "GET", "suppliers", 200)
+        
+        if success and success2 and clients and suppliers:
+            client_id = clients[0]['id']
+            supplier_id = suppliers[0]['id']
+            
+            # Create test booking
+            success, booking_response = self.run_test(
+                "Create Test Booking",
+                "POST",
+                "bookings",
+                200,
+                data={
+                    "ref": f"TEST-{datetime.now().strftime('%H%M%S')}",
+                    "client_id": client_id,
+                    "supplier_id": supplier_id,
+                    "type": "عمرة",
+                    "cost": 80000.0,
+                    "sell_price": 95000.0,
+                    "start_date": (today + timedelta(days=30)).isoformat(),
+                    "end_date": (today + timedelta(days=40)).isoformat()
+                }
+            )
+            results['test_booking_creation'] = success
+            
+            if success:
+                print(f"   ✅ Test booking created successfully")
+                booking_id = booking_response.get('id')
+                
+                # Verify the booking has created_by field
+                if booking_response.get('created_by'):
+                    print(f"   ✅ New booking has created_by field: {booking_response['created_by']}")
+                    results['new_booking_has_created_by'] = True
+                else:
+                    print(f"   ❌ New booking missing created_by field")
+                    results['new_booking_has_created_by'] = False
+        
+        # Test 5b: Create daily operation to test operations reports
+        print(f"\n   5b. Creating daily operation to test operations reports...")
+        
+        # Get services for daily operation
+        success, services = self.run_test("Get Services for Test Operation", "GET", "services", 200)
+        
+        if success and services and clients:
+            service_id = services[0]['id']
+            client_id = clients[0]['id']
+            
+            success, operation_response = self.run_test(
+                "Create Test Daily Operation",
+                "POST",
+                "daily-operations",
+                200,
+                data={
+                    "service_id": service_id,
+                    "client_id": client_id,
+                    "base_price": 15000.0,
+                    "discount_amount": 0.0,
+                    "notes": "عملية تجريبية للتحقق من إصلاح التقارير"
+                }
+            )
+            results['test_operation_creation'] = success
+            
+            if success:
+                print(f"   ✅ Test daily operation created successfully")
+                operation_id = operation_response.get('id')
+        
+        # Test 5c: Generate final comprehensive report including new data
+        print(f"\n   5c. Generate final comprehensive report including new data...")
+        
+        success, final_report = self.run_test(
+            "Final Comprehensive Report Test",
+            "GET",
+            f"reports/daily-operations?start_date={start_date}&end_date={end_date}&group_by_agency=true",
+            200
+        )
+        results['final_comprehensive_report'] = success
+        
+        if success:
+            print(f"   ✅ Final comprehensive report generated successfully")
+            if 'data' in final_report:
+                print(f"   Operations in final report: {len(final_report['data'])}")
+            if 'totals' in final_report:
+                totals = final_report['totals']
+                print(f"   Total revenue: {totals.get('total_revenue', 0)} DZD")
+        
+        # Step 6: Final Verification Summary
+        print(f"\n   6. FINAL VERIFICATION SUMMARY:")
+        
+        critical_tests = [
+            ('super_admin_login', 'Super Admin Login'),
+            ('migrate_bookings_endpoint', 'Migration Endpoint'),
+            ('migration_successful', 'Migration Success'),
+            ('daily_report_creation', 'Daily Report Creation'),
+            ('daily_operations_report', 'Daily Operations Report'),
+            ('sales_report', 'Sales Report'),
+            ('aging_report', 'Aging Report'),
+            ('final_comprehensive_report', 'Final Comprehensive Report')
+        ]
+        
+        passed_tests = 0
+        total_tests = len(critical_tests)
+        
+        for test_key, test_name in critical_tests:
+            if results.get(test_key, False):
+                print(f"   ✅ {test_name}: PASS")
+                passed_tests += 1
+            else:
+                print(f"   ❌ {test_name}: FAIL")
+        
+        success_rate = (passed_tests / total_tests) * 100
+        print(f"\n   📊 FINAL TEST RESULTS: {passed_tests}/{total_tests} tests passed ({success_rate:.1f}%)")
+        
+        if success_rate >= 90:
+            print(f"   🎉 REPORT CREATION FIX VERIFICATION: SUCCESS!")
+            print(f"   ✅ User's issue 'مشكل في انشاءاختبارتقرير' has been resolved")
+            results['overall_success'] = True
+        elif success_rate >= 70:
+            print(f"   ⚠️  REPORT CREATION FIX VERIFICATION: PARTIAL SUCCESS")
+            print(f"   🔧 Some issues remain - needs additional fixes")
+            results['overall_success'] = False
+        else:
+            print(f"   ❌ REPORT CREATION FIX VERIFICATION: FAILED")
+            print(f"   🚨 Critical issues remain - major fixes needed")
+            results['overall_success'] = False
+        
+        return results
+
 def main():
     print("🚀 Starting Sanhaja Travel Agencies Backend API Testing...")
     print("نظام محاسبة وكالات صنهاجة للسفر - اختبار واجهات برمجة التطبيقات")
