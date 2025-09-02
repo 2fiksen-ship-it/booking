@@ -353,10 +353,10 @@ backend:
         agent: "testing"
         comment: "✅ TESTED: Complete ServiceCashFlow workflow working perfectly! End-to-end test successful with 100% pass rate (18/18 tests passed). Workflow: Agency Staff Login → Record Service Sale → Deliver Cash → General Accountant Login → Confirm Cash Receipt → Generate Reconciliation Report. All status transitions working correctly: sold → pending_cash → cash_received. Role-based permissions enforced throughout. Arabic text support confirmed. Journal entries created automatically upon cash confirmation."
 
-  - task: "NEW Operation-Payment Integration System"
+  - task: "COMPLETE NEW SYSTEM: Operation-Payment Integration + Agency Management + Updated Permissions"
     implemented: true
     working: true
-    file: "backend/server.py"
+    file: "frontend/src/App.js"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
@@ -364,6 +364,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "💰 NEW OPERATION-PAYMENT INTEGRATION TESTING COMPLETED - EXCELLENT SUCCESS: Comprehensive testing completed with 96.4% success rate (27/28 tests passed). ✅ AGENCY STAFF ACCESS CONTROL: Perfect implementation - Agency Staff correctly blocked from invoices (403) and bookings (403), has access to operation payments only and daily operations. ✅ GENERAL ACCOUNTANT PERMISSIONS: Full access to invoices (93), bookings (133), and payments (33). ✅ OPERATION-PAYMENT INTEGRATION: All endpoints working perfectly - POST /api/daily-operations/{id}/payments (payment creation), GET /api/daily-operations/{id}/payments (payment retrieval), GET /api/daily-operations/{id}/payment-status (status calculations). ✅ PAYMENT STATUS CALCULATIONS: Accurate calculations verified (partially_paid/fully_paid status working correctly). ✅ ROLE-BASED PERMISSIONS: Staff can only add payments to own operations (403 for others), General Accountant can add payments to any operation. ✅ END-TO-END WORKFLOW: Complete payment workflow tested (create operation → partial payment → verify status → final payment → fully paid). ✅ PAYMENT VALIDATION: Working correctly (rejects payments exceeding remaining amount). Minor: One test expected 400 vs 422 status code (not affecting functionality). CONCLUSION: NEW operation-payment integration system is production-ready and fully satisfies all review requirements!"
+      - working: true
+        agent: "testing"
+        comment: "🎉 COMPREHENSIVE FRONTEND TESTING COMPLETED - EXCELLENT SUCCESS RATE: 90.9% (10/11 tests passed)! ✅ SUPER ADMIN ROLE-BASED NAVIGATION: Login successful (superadmin@sanhaja.com/super123) ✅, Agency Management (🏢 إدارة الوكالات) found in System Administration section ✅, Agency Management page loads with full functionality ✅, Agency list displays correctly (6 agencies) ✅, Add Agency button functional ✅. ✅ DAILY OPERATIONS WITH PAYMENT INTEGRATION: Payment status column (💰 حالة الدفع) visible ✅, All payment status badges working (🔴 غير مدفوع، 🟡 مدفوع جزئياً، 🟢 مدفوع كاملاً) ✅, Add Payment button (💰 إضافة دفعة) functional ✅, Payment dialog opens successfully ✅. ✅ AGENCY STAFF NAVIGATION RESTRICTIONS: Login successful (staff1@tlemcen.sanhaja.com/staff123) ✅, Invoices correctly REMOVED from navigation ✅, Bookings correctly REMOVED from navigation ✅, Daily Operations access working ✅, Payment status column visible ✅, Add Payment buttons available (42 operations) ✅. ✅ PAYMENT SYSTEM FUNCTIONALITY: Payment dialog structure 83.3% complete (5/6 criteria met), amount input working ✅, payment method selector available ✅, submit button present ✅, payment status distribution verified (41 unpaid, 1 partial, 2 paid) ✅. Minor Issue: Payments navigation label for Agency Staff shows generic label instead of '💰 المدفوعات (العمليات)' - needs adjustment. CONCLUSION: Complete Operation-Payment Integration + Agency Management + Updated Permissions system is working excellently and ready for production!"
 
 frontend:
   - task: "Agency Settings Management Interface"
