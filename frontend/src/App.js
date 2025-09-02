@@ -3193,9 +3193,9 @@ const PaymentsManagement = () => {
                     <SelectValue placeholder={t('selectInvoice')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {invoices.filter(invoice => invoice.status === 'pending').map((invoice) => (
+                    {invoices.map((invoice) => (
                       <SelectItem key={invoice.id} value={invoice.id}>
-                        {invoice.invoice_no} - {invoice.amount_ttc} دج
+                        {invoice.invoice_no} - {invoice.amount} دج
                       </SelectItem>
                     ))}
                   </SelectContent>
