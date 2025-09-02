@@ -1367,6 +1367,156 @@ async def get_bookings(
     bookings = await db.bookings.find(query_filter).sort("created_at", -1).to_list(1000)
     return [Booking(**booking) for booking in bookings]
 
+@api_router.put("/bookings/{booking_id}", response_model=Booking)
+async def update_booking(
+    booking_id: str, 
+    booking_data: BookingUpdate, 
+    current_user: User = Depends(get_current_user)
+):
+    """Update booking - allowed for staff if not yet approved, accountants can modify unapproved items"""
+    booking = await db.bookings.find_one({"id": booking_id})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Check agency access
+    can_manage_agency_data(current_user, booking["agency_id"])
+    
+    # Check approval status permissions
+    booking_status = booking.get("status", OperationStatus.DRAFT)
+    
+    if current_user.role == UserRole.AGENCY_STAFF:
+        # Staff can only edit if status is DRAFT, PENDING_APPROVAL, or REJECTED
+        if booking_status == OperationStatus.APPROVED:
+            raise HTTPException(
+                status_code=403, 
+                detail="Cannot modify approved booking. Contact accountant for changes."
+            )
+    elif current_user.role in [UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        # Accountants and Super Admin can modify any unapproved booking
+        if booking_status == OperationStatus.APPROVED:
+            # Log modification history for approved items
+            modification_record = {
+                "modified_by": current_user.id,
+                "modified_at": datetime.now(timezone.utc).isoformat(),
+                "reason": "Post-approval modification by accountant",
+                "fields_changed": list(booking_data.dict(exclude_unset=True).keys())
+            }
+            
+            # Add to modification history
+            current_history = booking.get("modification_history", [])
+            current_history.append(modification_record)
+            booking_data.modification_history = current_history
+    
+    # Update booking
+    update_data = booking_data.dict(exclude_unset=True)
+    if update_data:
+        await db.bookings.update_one(
+            {"id": booking_id}, 
+            {"$set": update_data}
+        )
+    
+    updated_booking = await db.bookings.find_one({"id": booking_id})
+    return Booking(**updated_booking)
+
+@api_router.delete("/bookings/{booking_id}")
+async def delete_booking(booking_id: str, current_user: User = Depends(get_current_user)):
+    """Delete booking - allowed for staff if not yet approved, accountants can delete unapproved items"""
+    booking = await db.bookings.find_one({"id": booking_id})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Check agency access
+    can_manage_agency_data(current_user, booking["agency_id"])
+    
+    # Check approval status permissions
+    booking_status = booking.get("status", OperationStatus.DRAFT)
+    
+    if current_user.role == UserRole.AGENCY_STAFF:
+        # Staff can only delete if status is DRAFT, PENDING_APPROVAL, or REJECTED
+        if booking_status == OperationStatus.APPROVED:
+            raise HTTPException(
+                status_code=403, 
+                detail="Cannot delete approved booking. Contact accountant for deletion."
+            )
+    elif current_user.role in [UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        # Accountants and Super Admin can delete any booking but log the action
+        if booking_status == OperationStatus.APPROVED:
+            # Log the deletion for audit purposes
+            await db.booking_deletions.insert_one({
+                "booking_id": booking_id,
+                "booking_data": booking,
+                "deleted_by": current_user.id,
+                "deleted_at": datetime.now(timezone.utc),
+                "reason": "Post-approval deletion by accountant"
+            })
+    
+    result = await db.bookings.delete_one({"id": booking_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    return {"message": "Booking deleted successfully"}
+
+@api_router.put("/bookings/{booking_id}/approve")
+async def approve_booking(booking_id: str, current_user: User = Depends(get_current_user)):
+    """Approve booking - General Manager and General Accountant only"""
+    require_general_accountant_or_above(current_user)
+    
+    booking = await db.bookings.find_one({"id": booking_id})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Check agency access for General Accountant
+    if current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        if booking["agency_id"] != current_user.agency_id:
+            raise HTTPException(status_code=403, detail="Cannot approve bookings of other agencies")
+    
+    # Update booking status
+    await db.bookings.update_one(
+        {"id": booking_id},
+        {
+            "$set": {
+                "status": OperationStatus.APPROVED,
+                "approved_by": current_user.id,
+                "approved_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {"message": "Booking approved successfully"}
+
+@api_router.put("/bookings/{booking_id}/reject")
+async def reject_booking(
+    booking_id: str, 
+    rejection_reason: str = "",
+    current_user: User = Depends(get_current_user)
+):
+    """Reject booking - General Manager and General Accountant only"""
+    require_general_accountant_or_above(current_user)
+    
+    booking = await db.bookings.find_one({"id": booking_id})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Check agency access for General Accountant
+    if current_user.role == UserRole.GENERAL_ACCOUNTANT:
+        if booking["agency_id"] != current_user.agency_id:
+            raise HTTPException(status_code=403, detail="Cannot reject bookings of other agencies")
+    
+    # Update booking status
+    await db.bookings.update_one(
+        {"id": booking_id},
+        {
+            "$set": {
+                "status": OperationStatus.REJECTED,
+                "approved_by": current_user.id,
+                "approved_at": datetime.now(timezone.utc),
+                "rejected_reason": rejection_reason
+            }
+        }
+    )
+    
+    return {"message": "Booking rejected successfully"}
+
 # Invoice Routes
 @api_router.post("/invoices", response_model=Invoice)
 async def create_invoice(invoice_data: InvoiceCreate, current_user: User = Depends(get_current_user)):
