@@ -550,7 +550,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "NEW Operation-Payment Integration System"
+    - "COMPLETE NEW SYSTEM: Operation-Payment Integration + Agency Management + Updated Permissions"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
