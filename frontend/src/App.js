@@ -4002,7 +4002,11 @@ const DailyReportsManagement = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/daily-reports`);
-      setReports(response.data);
+      // Sort reports by date - newest first
+      const sortedReports = response.data.sort((a, b) => {
+        return new Date(b.date || b.created_at) - new Date(a.date || a.created_at);
+      });
+      setReports(sortedReports);
     } catch (error) {
       console.error('Error fetching reports:', error);
     } finally {
