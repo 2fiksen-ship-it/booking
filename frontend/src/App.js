@@ -5466,11 +5466,11 @@ const DailyOperationsManagement = () => {
   // Clear all filters
   const clearFilters = () => {
     setFilters({
-      agency_id: '',
+      agency_id: 'all',
       client_name: '',
       service_name: '',
-      service_type: '',
-      status: '',
+      service_type: 'all',
+      status: 'all',
       start_date: '',
       end_date: '',
       min_amount: '',
