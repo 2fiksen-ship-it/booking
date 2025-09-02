@@ -4286,20 +4286,35 @@ const InstallmentsManagement = () => {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
 
+  // Reports states
+  const [statusReport, setStatusReport] = useState(null);
+  const [reportFilters, setReportFilters] = useState({
+    start_date: '',
+    end_date: ''
+  });
+
+  // Dialog states
+  const [showPlanDetailsDialog, setShowPlanDetailsDialog] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
-      const [salesRes, plansRes] = await Promise.all([
+      const [salesRes] = await Promise.all([
         axios.get(`${API}/service-sales`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        }),
-        fetchInstallmentPlans()
+        })
       ]);
       
       setServiceSales(salesRes.data);
+      
+      // Fetch installment plans for all sales that have status 'sold' or 'cash_received'
+      await fetchInstallmentPlans(salesRes.data);
     } catch (error) {
       console.error('Error fetching installments data:', error);
       if (error.response?.status === 403) {
@@ -4310,14 +4325,41 @@ const InstallmentsManagement = () => {
     }
   };
 
-  const fetchInstallmentPlans = async () => {
+  const fetchInstallmentPlans = async (sales = serviceSales) => {
     try {
-      // For now, we'll fetch plans through service sales
-      // In a more advanced version, we could have a dedicated endpoint
-      return [];
+      console.log('=== FETCHING INSTALLMENT PLANS ===');
+      const plansData = [];
+      
+      // Check each sale for installment plans
+      for (const sale of sales) {
+        try {
+          const response = await axios.get(`${API}/service-sales/${sale.id}/installment-plan`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          });
+          
+          if (response.data) {
+            // Add sale info to the plan
+            const planWithSaleInfo = {
+              ...response.data,
+              sale_info: {
+                service_name: sale.service_name,
+                client_name: sale.client_name
+              }
+            };
+            plansData.push(planWithSaleInfo);
+          }
+        } catch (error) {
+          // 404 means no installment plan exists for this sale - that's normal
+          if (error.response?.status !== 404) {
+            console.error(`Error fetching plan for sale ${sale.id}:`, error);
+          }
+        }
+      }
+      
+      console.log('Fetched installment plans:', plansData.length);
+      setInstallmentPlans(plansData);
     } catch (error) {
       console.error('Error fetching installment plans:', error);
-      return [];
     }
   };
 
