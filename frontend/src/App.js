@@ -167,6 +167,11 @@ const translations = {
     basePrice: 'السعر الأساسي (دج)',
     minPrice: 'أقل سعر مسموح (دج)',
     isFixedPrice: 'سعر ثابت',
+    isVariablePrice: 'سعر متغير',
+    priceType: 'نوع السعر',
+    fixedPriceService: 'خدمة بسعر ثابت',
+    variablePriceService: 'خدمة بسعر متغير',
+    pricePermissions: 'صلاحيات السعر',
     isActive: 'نشطة',
     serviceDescription: 'وصف الخدمة',
     
