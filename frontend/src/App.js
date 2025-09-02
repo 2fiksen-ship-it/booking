@@ -5042,7 +5042,11 @@ const DailyOperationsManagement = () => {
       const response = await axios.get(`${API}/daily-operations`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setOperations(response.data);
+      // Sort operations by date - newest first
+      const sortedOperations = response.data.sort((a, b) => {
+        return new Date(b.date || b.created_at) - new Date(a.date || a.created_at);
+      });
+      setOperations(sortedOperations);
     } catch (error) {
       console.error('Error fetching operations:', error);
     } finally {
