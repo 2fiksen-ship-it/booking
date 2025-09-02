@@ -5411,21 +5411,71 @@ const DailyOperationsManagement = () => {
     fetchAgencies();
   }, []);
 
-  const fetchOperations = async () => {
+  const fetchOperations = async (filterParams = {}) => {
     try {
-      const response = await axios.get(`${API}/daily-operations`, {
+      // Build query parameters
+      const params = new URLSearchParams();
+      
+      // Add filter parameters
+      Object.entries(filterParams).forEach(([key, value]) => {
+        if (value && value !== '') {
+          params.append(key, value);
+        }
+      });
+
+      const queryString = params.toString();
+      const url = `${API}/daily-operations${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
+      
       // Sort operations by date - newest first
       const sortedOperations = response.data.sort((a, b) => {
         return new Date(b.date || b.created_at) - new Date(a.date || a.created_at);
       });
+      
       setOperations(sortedOperations);
+      setFilteredOperations(sortedOperations);
     } catch (error) {
       console.error('Error fetching operations:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Apply filters to operations
+  const applyFilters = () => {
+    const filterParams = {};
+    
+    // Build filter parameters
+    if (filters.agency_id) filterParams.agency_id = filters.agency_id;
+    if (filters.client_name) filterParams.client_name = filters.client_name;
+    if (filters.service_name) filterParams.service_name = filters.service_name;
+    if (filters.service_type) filterParams.service_type = filters.service_type;
+    if (filters.status) filterParams.status = filters.status;
+    if (filters.start_date) filterParams.start_date = filters.start_date;
+    if (filters.end_date) filterParams.end_date = filters.end_date;
+    if (filters.min_amount) filterParams.min_amount = filters.min_amount;
+    if (filters.max_amount) filterParams.max_amount = filters.max_amount;
+
+    fetchOperations(filterParams);
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilters({
+      agency_id: '',
+      client_name: '',
+      service_name: '',
+      service_type: '',
+      status: '',
+      start_date: '',
+      end_date: '',
+      min_amount: '',
+      max_amount: ''
+    });
+    fetchOperations();
   };
 
   const fetchServices = async () => {
