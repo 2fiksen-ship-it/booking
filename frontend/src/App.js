@@ -6184,25 +6184,6 @@ const DailyOperationsReports = () => {
     setReportData(testData);
     alert('✅ تم إنشاء تقرير اختبار');
   };
-    } catch (error) {
-      console.error('=== REPORT PRINT ERROR ===');
-      console.error('Error printing report:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      
-      // Check if it's a blob error response
-      if (error.response?.data instanceof Blob) {
-        try {
-          const text = await error.response.data.text();
-          console.log('Error blob content:', text);
-        } catch (blobError) {
-          console.log('Could not read error blob');
-        }
-      }
-      
-      alert('خطأ في طباعة التقرير: ' + (error.response?.data?.detail || error.message));
-    }
-  };
 
   return (
     <div className="p-6 space-y-6" dir="rtl">
