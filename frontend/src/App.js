@@ -3209,9 +3209,9 @@ const PaymentsManagement = () => {
                     <SelectValue placeholder={t('paymentMethod')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">{t('cash')}</SelectItem>
-                    <SelectItem value="bank">{t('bank')}</SelectItem>
-                    <SelectItem value="card">{t('card')}</SelectItem>
+                    <SelectItem value="cash">نقداً</SelectItem>
+                    <SelectItem value="bank">تحويل بنكي</SelectItem>
+                    <SelectItem value="card">بطاقة</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
