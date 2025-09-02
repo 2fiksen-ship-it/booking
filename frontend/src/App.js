@@ -30,6 +30,29 @@ console.log('API:', API);
 // Configure axios - Remove global withCredentials to fix CORS issues
 // axios.defaults.withCredentials = true; // This causes CORS issues with JWT auth
 
+// Utility function to format dates with English numerals for Arabic UI
+const formatDateWithEnglishNumerals = (date, options = {}) => {
+  const defaultOptions = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    ...options
+  };
+  
+  // Use 'en-US' locale to get English numerals but keep Arabic text if needed
+  return new Date(date).toLocaleDateString('en-GB', defaultOptions);
+};
+
+const formatTimeWithEnglishNumerals = (date, options = {}) => {
+  const defaultOptions = {
+    hour: '2-digit',
+    minute: '2-digit',
+    ...options
+  };
+  
+  return new Date(date).toLocaleTimeString('en-GB', defaultOptions);
+};
+
 // Auth Context
 const AuthContext = createContext();
 
