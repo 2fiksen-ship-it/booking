@@ -3278,7 +3278,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         spaceAfter=30,
         alignment=TA_CENTER,
         textColor=colors.darkblue,
-        fontName='Helvetica-Bold'
+        fontName=arabic_bold_font
     )
     
     header_style = ParagraphStyle(
@@ -3287,7 +3287,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         fontSize=14,
         spaceAfter=12,
         alignment=TA_RIGHT,
-        fontName='Helvetica-Bold'
+        fontName=arabic_bold_font
     )
     
     normal_style = ParagraphStyle(
@@ -3296,7 +3296,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         fontSize=10,
         spaceAfter=6,
         alignment=TA_RIGHT,
-        fontName='Helvetica'
+        fontName=arabic_font
     )
     
     # Agency Header
