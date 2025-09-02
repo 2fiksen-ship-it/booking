@@ -4498,14 +4498,28 @@ const InstallmentsManagement = () => {
 
   const viewPlanPayments = async (plan) => {
     try {
+      console.log('=== VIEWING PLAN PAYMENTS ===');
+      console.log('Plan ID:', plan.id);
+      
       const response = await axios.get(`${API}/installment-plans/${plan.id}/payments`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
+      
+      console.log('Payments fetched:', response.data);
       setSelectedPlanPayments(response.data);
+      setSelectedPlan(plan);
+      setShowPlanDetailsDialog(true);
     } catch (error) {
       console.error('Error fetching plan payments:', error);
-      alert('فشل في تحميل تفاصيل الأقساط');
+      alert('فشل في تحميل تفاصيل الأقساط: ' + (error.response?.data?.detail || error.message));
     }
+  };
+
+  const openPaymentDialog = (payment) => {
+    setSelectedPayment(payment);
+    setPaymentAmount(payment.remaining_amount?.toString() || '');
+    setPaymentNotes('');
+    setShowPaymentDialog(true);
   };
 
   const handlePayment = async () => {
