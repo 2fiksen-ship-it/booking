@@ -4956,6 +4956,184 @@ const InstallmentsManagement = () => {
           )}
         </div>
       )}
+
+      {/* Plan Details Dialog */}
+      <Dialog open={showPlanDetailsDialog} onOpenChange={setShowPlanDetailsDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>تفاصيل خطة التقسيط</DialogTitle>
+            <DialogDescription>
+              عرض تفاصيل الأقساط وحالة المدفوعات
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPlan && (
+            <div className="space-y-6">
+              {/* Plan Summary */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-bold mb-2">معلومات الخطة:</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>الخدمة:</strong> {selectedPlan.sale_info?.service_name}</div>
+                  <div><strong>العميل:</strong> {selectedPlan.sale_info?.client_name}</div>
+                  <div><strong>المبلغ الإجمالي:</strong> {selectedPlan.total_amount?.toLocaleString()} دج</div>
+                  <div><strong>عدد الأقساط:</strong> {selectedPlan.number_of_installments}</div>
+                  <div><strong>تاريخ البداية:</strong> {formatDateWithEnglishNumerals(selectedPlan.start_date)}</div>
+                  <div><strong>الحالة:</strong> {selectedPlan.status}</div>
+                </div>
+              </div>
+
+              {/* Payments Table */}
+              <div>
+                <h4 className="font-bold mb-4">تفاصيل الأقساط:</h4>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right">رقم القسط</TableHead>
+                        <TableHead className="text-right">تاريخ الاستحقاق</TableHead>
+                        <TableHead className="text-right">المبلغ المطلوب</TableHead>
+                        <TableHead className="text-right">المبلغ المدفوع</TableHead>
+                        <TableHead className="text-right">المبلغ المتبقي</TableHead>
+                        <TableHead className="text-right">حالة الدفع</TableHead>
+                        <TableHead className="text-right">الإجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedPlanPayments.map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell className="font-medium">{payment.installment_number}</TableCell>
+                          <TableCell>
+                            {formatDateWithEnglishNumerals(payment.due_date)}
+                          </TableCell>
+                          <TableCell>{payment.amount?.toLocaleString()} دج</TableCell>
+                          <TableCell className="text-green-600">
+                            {payment.paid_amount?.toLocaleString() || 0} دج
+                          </TableCell>
+                          <TableCell className="text-red-600">
+                            {payment.remaining_amount?.toLocaleString() || 0} دج
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(payment.status)}
+                          </TableCell>
+                          <TableCell>
+                            {payment.status !== 'paid' && selectedPlan.status === 'active' && (
+                              <Button
+                                size="sm"
+                                onClick={() => openPaymentDialog(payment)}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                💰 دفع قسط
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>دفع قسط</DialogTitle>
+            <DialogDescription>
+              تسجيل دفعة للقسط رقم {selectedPayment?.installment_number}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPayment && (
+            <div className="space-y-4">
+              {/* Payment Summary */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div><strong>مبلغ القسط:</strong> {selectedPayment.amount?.toLocaleString()} دج</div>
+                  <div><strong>المدفوع سابقاً:</strong> {selectedPayment.paid_amount?.toLocaleString() || 0} دج</div>
+                  <div><strong>المتبقي:</strong> {selectedPayment.remaining_amount?.toLocaleString()} دج</div>
+                  <div><strong>الحالة:</strong> {getStatusBadge(selectedPayment.status)}</div>
+                </div>
+              </div>
+
+              {/* Payment Form */}
+              <div>
+                <Label>مبلغ الدفعة *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max={selectedPayment.remaining_amount}
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder={`الحد الأقصى: ${selectedPayment.remaining_amount?.toLocaleString()} دج`}
+                />
+              </div>
+
+              <div>
+                <Label>ملاحظات</Label>
+                <Textarea
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  placeholder="ملاحظات حول الدفعة (اختياري)"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 rtl:space-x-reverse">
+                <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>
+                  إلغاء
+                </Button>
+                <Button
+                  onClick={handlePayment}
+                  disabled={!paymentAmount || parseFloat(paymentAmount) <= 0}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  💰 تسجيل الدفعة
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Plan Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إلغاء خطة التقسيط</DialogTitle>
+            <DialogDescription>
+              هل أنت متأكد من إلغاء هذه الخطة؟ لا يمكن التراجع عن هذا الإجراء.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label>سبب الإلغاء *</Label>
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="اذكر سبب إلغاء خطة التقسيط..."
+                required
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 rtl:space-x-reverse">
+              <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                تراجع
+              </Button>
+              <Button
+                onClick={cancelInstallmentPlan}
+                disabled={!cancelReason.trim()}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                ❌ إلغاء الخطة
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
