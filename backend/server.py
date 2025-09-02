@@ -2968,18 +2968,8 @@ def create_operations_report_pdf(report_data: dict, agencies_data: List[dict], c
         return buffer.getvalue()
     except Exception as e:
         print(f"Error building PDF: {e}")
-        # Return basic error response
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4)
-        elements = []
-        styles = getSampleStyleSheet()
-        
-        elements.append(Paragraph("خطأ في إنشاء التقرير", styles['Normal']))
-        elements.append(Paragraph(f"تفاصيل الخطأ: {str(e)}", styles['Normal']))
-        
-        doc.build(elements)
-        buffer.seek(0)
-        return buffer.getvalue()
+        # Return simple text-based PDF as fallback
+        return create_simple_text_pdf(report_data, current_user)
 def create_simple_text_pdf(report_data: dict, current_user: dict):
     """Fallback simple PDF generator"""
     buffer = BytesIO()
