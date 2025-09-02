@@ -1427,17 +1427,33 @@ const Dashboard = ({ setActiveTab }) => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <button className="w-full flex items-center justify-between p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-right">
+            <button 
+              onClick={() => setActiveTab('clients')}
+              className="w-full flex items-center justify-between p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-right"
+            >
               <Users className="h-5 w-5 text-blue-600" />
               <span className="text-sm font-medium">➕ إضافة عميل جديد</span>
             </button>
-            <button className="w-full flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-right">
+            <button 
+              onClick={() => setActiveTab('bookings')}
+              className="w-full flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-right"
+            >
               <Package className="h-5 w-5 text-green-600" />
               <span className="text-sm font-medium">📋 إنشاء حجز جديد</span>
             </button>
-            <button className="w-full flex items-center justify-between p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-right">
+            <button 
+              onClick={() => setActiveTab('invoices')}
+              className="w-full flex items-center justify-between p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-right"
+            >
               <FileText className="h-5 w-5 text-purple-600" />
               <span className="text-sm font-medium">📄 إصدار فاتورة</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('dailyOperations')}
+              className="w-full flex items-center justify-between p-3 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors text-right"
+            >
+              <FileText className="h-5 w-5 text-orange-600" />
+              <span className="text-sm font-medium">📋 عملية يومية جديدة</span>
             </button>
           </CardContent>
         </Card>
