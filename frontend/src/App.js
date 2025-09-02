@@ -3155,7 +3155,7 @@ const PaymentsManagement = () => {
     };
     
     return (
-      <Badge className={methodColors[method] || 'bg-gray-600'}>
+      <Badge className={`${methodColors[method] || 'bg-gray-600'} text-white`}>
         {t(method)}
       </Badge>
     );
