@@ -3243,9 +3243,26 @@ async def generate_daily_operations_report(
 
 # PDF Generation Utilities
 def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict, client_data: dict, service_data: dict):
-    """Generate professional PDF receipt for daily operations"""
+    """Generate professional PDF receipt for daily operations with Arabic support"""
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    
+    # Register Arabic font for PDF generation
+    try:
+        # Try to register Arabic font (DejaVu Sans supports Arabic)
+        pdfmetrics.registerFont(TTFont('Arabic', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+        arabic_font = 'Arabic'
+        arabic_bold_font = 'Arabic'  # Use same font for bold
+    except:
+        try:
+            # Fallback to default system font that might support Arabic
+            pdfmetrics.registerFont(TTFont('Arabic', '/System/Library/Fonts/Arial.ttf'))
+            arabic_font = 'Arabic'
+            arabic_bold_font = 'Arabic'
+        except:
+            # Final fallback to Helvetica (will show garbled Arabic but won't crash)
+            arabic_font = 'Helvetica'
+            arabic_bold_font = 'Helvetica-Bold'
     
     # Container for the 'Flowable' objects
     elements = []
