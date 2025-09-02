@@ -3100,9 +3100,9 @@ const PaymentsManagement = () => {
     try {
       const paymentData = {
         invoice_id: formData.invoice_id,
-        method: formData.method,
+        payment_method: formData.method,
         amount: parseFloat(formData.amount),
-        payment_date: new Date(formData.payment_date).toISOString()
+        payment_date: formData.payment_date
       };
 
       if (editingPayment) {
@@ -3111,15 +3111,10 @@ const PaymentsManagement = () => {
         await axios.post(`${API}/payments`, paymentData);
       }
       
-      setFormData({
-        invoice_id: '',
-        method: '',
-        amount: '',
-        payment_date: ''
-      });
-      setEditingPayment(null);
-      setIsDialogOpen(false);
       fetchData();
+      setIsDialogOpen(false);
+      setEditingPayment(null);
+      setFormData({ invoice_id: '', method: '', amount: '', payment_date: '' });
     } catch (error) {
       console.error('Error saving payment:', error);
     }
