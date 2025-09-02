@@ -4648,94 +4648,66 @@ const DailyOperationsManagement = () => {
   };
 
   const handlePrintReceipt = async (operationId, operationNo) => {
+    // Get full operation details first
+    const operation = operations.find(op => op.id === operationId);
+    if (!operation) {
+      alert('لم يتم العثور على تفاصيل العملية');
+      return;
+    }
+
+    // Set the operation for print preview
+    setSelectedOperationForPrint(operation);
+    
+    // Initialize print details with operation data
+    setPrintDetails({
+      paymentType: 'نقدي',
+      amountPaid: operation.final_price,
+      remainingAmount: 0,
+      paymentStatus: 'مدفوع كاملاً'
+    });
+    
+    // Show preview modal
+    setShowPrintPreview(true);
+  };
+
+  const handleConfirmPrint = async () => {
+    if (!selectedOperationForPrint) return;
+    
     try {
       console.log('=== PRINTING RECEIPT ===');
-      console.log('Operation ID:', operationId);
-      console.log('Operation No:', operationNo);
-      console.log('API endpoint:', `${API}/daily-operations/${operationId}/print`);
-      console.log('Token:', localStorage.getItem('token') ? 'Present' : 'Missing');
+      console.log('Operation ID:', selectedOperationForPrint.id);
+      console.log('Operation No:', selectedOperationForPrint.operation_no);
       
-      const response = await axios.get(`${API}/daily-operations/${operationId}/print`, {
+      const response = await axios.get(`${API}/daily-operations/${selectedOperationForPrint.id}/print`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         responseType: 'blob'
       });
       
-      console.log('Print response received');
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-      console.log('Response data type:', typeof response.data);
-      console.log('Response data size:', response.data.size);
+      console.log('Print response received, size:', response.data.size);
       
-      // Check if response is actually a PDF
-      if (response.data.size === 0) {
-        throw new Error('PDF file is empty');
-      }
-      
-      // Create blob URL and open in new window (alternative to download)
+      // Create blob and download
       const blob = new Blob([response.data], { type: 'application/pdf' });
-      console.log('Blob created, size:', blob.size);
-      
       const url = window.URL.createObjectURL(blob);
-      console.log('Blob URL created:', url);
       
-      // Try both download and opening in new window
-      const userChoice = confirm('اختر طريقة عرض الوصل:\nموافق = فتح في نافذة جديدة\nإلغاء = تحميل الملف');
+      // Auto download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `receipt_${selectedOperationForPrint.operation_no}.pdf`;
+      link.style.display = 'none';
       
-      if (userChoice) {
-        // Open in new window
-        const newWindow = window.open(url, '_blank');
-        if (newWindow) {
-          console.log('PDF opened in new window');
-          alert('✅ تم فتح الوصل في نافذة جديدة!');
-        } else {
-          console.log('New window blocked, trying download');
-          // Fallback to download if popup blocked
-          triggerDownload();
-        }
-      } else {
-        // Download file
-        triggerDownload();
-      }
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
       
-      function triggerDownload() {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `receipt_${operationNo}.pdf`;
-        link.style.display = 'none';
-        
-        // Add to document, click, and remove
-        document.body.appendChild(link);
-        console.log('Link added to document, triggering click...');
-        link.click();
-        
-        // Clean up after a short delay
-        setTimeout(() => {
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-          console.log('Cleanup completed');
-        }, 100);
-        
-        alert('✅ تم تحميل الوصل بنجاح! تحقق من مجلد التحميلات.');
-      }
+      // Close modal
+      setShowPrintPreview(false);
+      setSelectedOperationForPrint(null);
       
-      console.log('=== PRINT SUCCESS ===');
+      alert('✅ تم تحميل الوصل بنجاح!');
       
     } catch (error) {
-      console.error('=== PRINT ERROR ===');
       console.error('Error printing receipt:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      
-      // Check if it's a blob error response
-      if (error.response?.data instanceof Blob) {
-        try {
-          const text = await error.response.data.text();
-          console.log('Error blob content:', text);
-        } catch (blobError) {
-          console.log('Could not read error blob');
-        }
-      }
-      
       alert('خطأ في طباعة الوصل: ' + (error.response?.data?.detail || error.message));
     }
   };
