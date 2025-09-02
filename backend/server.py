@@ -193,7 +193,7 @@ class DiscountRequest(BaseModel):
     discount_percentage: float
     reason: str
     requested_by: str
-    status: DiscountStatus = DiscountStatus.PENDING
+    discount_status: DiscountStatus = DiscountStatus.PENDING
     approved_by: Optional[str] = None
     approved_at: Optional[datetime] = None
     rejection_reason: Optional[str] = None
