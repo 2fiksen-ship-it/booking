@@ -1560,7 +1560,11 @@ const ClientsManagement = () => {
     try {
       const params = selectedAgency ? `?agency_id=${selectedAgency}` : '';
       const response = await axios.get(`${API}/clients${params}`);
-      setClients(response.data);
+      // Sort clients by creation date - newest first
+      const sortedClients = response.data.sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+      setClients(sortedClients);
     } catch (error) {
       console.error('Error fetching clients:', error);
     } finally {
