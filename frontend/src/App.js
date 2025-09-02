@@ -6558,6 +6558,21 @@ const DailyOperationsManagement = () => {
                         🖨️ طباعة
                       </Button>
 
+                      {/* NEW: Add Payment Button */}
+                      {(() => {
+                        const paymentStatus = operationPaymentStatuses[operation.id];
+                        return paymentStatus?.payment_status !== 'fully_paid' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAddPayment(operation)}
+                            className="text-green-600 hover:text-green-700 border-green-600"
+                          >
+                            💰 إضافة دفعة
+                          </Button>
+                        );
+                      })()}
+
                       {/* NEW: Edit Button - Based on approval workflow permissions */}
                       {canEditOperation(operation) && (
                         <Button
