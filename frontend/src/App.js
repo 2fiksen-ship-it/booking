@@ -4438,6 +4438,32 @@ const InstallmentsManagement = () => {
     }
   };
 
+  const cancelInstallmentPlan = async () => {
+    if (!selectedPlan || !cancelReason) return;
+    
+    try {
+      console.log('=== CANCELLING INSTALLMENT PLAN ===');
+      console.log('Plan ID:', selectedPlan.id);
+      console.log('Reason:', cancelReason);
+      
+      await axios.put(`${API}/installment-plans/${selectedPlan.id}/cancel?reason=${encodeURIComponent(cancelReason)}`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      console.log('=== INSTALLMENT PLAN CANCELLED ===');
+      alert('✅ تم إلغاء خطة التقسيط بنجاح');
+      
+      setShowCancelDialog(false);
+      setSelectedPlan(null);
+      setCancelReason('');
+      fetchData();
+    } catch (error) {
+      console.error('=== INSTALLMENT PLAN CANCELLATION ERROR ===');
+      console.error('Error cancelling installment plan:', error);
+      alert('❌ فشل في إلغاء خطة التقسيط: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   const resetCreateForm = () => {
     setSelectedSale(null);
     setPlanFormData({
