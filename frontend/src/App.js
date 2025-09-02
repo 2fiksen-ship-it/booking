@@ -6177,7 +6177,21 @@ const DailyOperationsManagement = () => {
       </Card>
 
       {/* Add Operation Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog open={showAddDialog} onOpenChange={(open) => {
+        setShowAddDialog(open);
+        if (!open) {
+          setEditingOperation(null);
+          setSelectedService(null);
+          setFormData({
+            service_id: '',
+            client_id: '',
+            base_price: '',
+            discount_amount: 0,
+            discount_reason: '',
+            notes: ''
+          });
+        }
+      }}>
         <DialogContent className="sm:max-w-[500px]" dir="rtl">
           <DialogHeader>
             <DialogTitle>
