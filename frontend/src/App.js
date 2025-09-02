@@ -960,7 +960,7 @@ const Layout = ({ children }) => {
                   .find(item => item.id === activeTab)?.label || t('dashboard')}
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                {new Date().toLocaleDateString('ar-SA', {
+                {formatDateWithEnglishNumerals(new Date(), {
                   weekday: 'long',
                   year: 'numeric', 
                   month: 'long',
