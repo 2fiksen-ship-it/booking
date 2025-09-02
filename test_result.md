@@ -369,6 +369,18 @@ backend:
         comment: "🎉 COMPREHENSIVE FRONTEND TESTING COMPLETED - EXCELLENT SUCCESS RATE: 90.9% (10/11 tests passed)! ✅ SUPER ADMIN ROLE-BASED NAVIGATION: Login successful (superadmin@sanhaja.com/super123) ✅, Agency Management (🏢 إدارة الوكالات) found in System Administration section ✅, Agency Management page loads with full functionality ✅, Agency list displays correctly (6 agencies) ✅, Add Agency button functional ✅. ✅ DAILY OPERATIONS WITH PAYMENT INTEGRATION: Payment status column (💰 حالة الدفع) visible ✅, All payment status badges working (🔴 غير مدفوع، 🟡 مدفوع جزئياً، 🟢 مدفوع كاملاً) ✅, Add Payment button (💰 إضافة دفعة) functional ✅, Payment dialog opens successfully ✅. ✅ AGENCY STAFF NAVIGATION RESTRICTIONS: Login successful (staff1@tlemcen.sanhaja.com/staff123) ✅, Invoices correctly REMOVED from navigation ✅, Bookings correctly REMOVED from navigation ✅, Daily Operations access working ✅, Payment status column visible ✅, Add Payment buttons available (42 operations) ✅. ✅ PAYMENT SYSTEM FUNCTIONALITY: Payment dialog structure 83.3% complete (5/6 criteria met), amount input working ✅, payment method selector available ✅, submit button present ✅, payment status distribution verified (41 unpaid, 1 partial, 2 paid) ✅. Minor Issue: Payments navigation label for Agency Staff shows generic label instead of '💰 المدفوعات (العمليات)' - needs adjustment. CONCLUSION: Complete Operation-Payment Integration + Agency Management + Updated Permissions system is working excellently and ready for production!"
 
 frontend:
+  - task: "Receipt Printing Fix for Daily Operations with Real Payment Values"
+    implemented: false
+    working: false
+    file: "frontend/src/App.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ISSUE FOUND: RECEIPT PRINTING FIX NOT WORKING CORRECTLY! Comprehensive testing revealed major bugs in handlePrintReceipt function. ❌ UNPAID OPERATIONS: Show 60,000 DZD paid instead of 0 DZD (CRITICAL BUG). ❌ FULLY PAID OPERATIONS: Show 75,000 DZD remaining instead of 0 DZD (CRITICAL BUG). ✅ PARTIALLY PAID OPERATIONS: Working correctly (60,000 DZD paid, 40,000 DZD remaining). 📊 TEST RESULTS: 41 unpaid, 1 partially paid, 2 fully paid operations tested. The fetchOperationPaymentStatus() function is NOT properly fetching real payment data. Receipt preview modal shows hardcoded/incorrect values instead of actual payment status. BEFORE FIX: Always showed 'مدفوع كاملاً'. CURRENT STATE: Shows incorrect hardcoded values. NEEDS IMMEDIATE FIX: handlePrintReceipt function must properly integrate with real payment data from backend API."
+
   - task: "Agency Settings Management Interface"
     implemented: true
     working: true
