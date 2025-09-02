@@ -5690,6 +5690,99 @@ const DailyOperationsManagement = () => {
       alert('خطأ في طباعة الوصل: ' + (error.response?.data?.detail || error.message));
     }
   };
+  // NEW: Permission functions for enhanced approval workflow
+  const canEditOperation = (operation) => {
+    const userRole = user?.role;
+    const operationStatus = operation.status;
+
+    if (userRole === 'agency_staff') {
+      // Staff can edit if not approved
+      return operationStatus !== 'معتمد';
+    } else if (['general_accountant', 'super_admin'].includes(userRole)) {
+      // Accountants and Super Admin can edit any operation
+      return true;
+    }
+    return false;
+  };
+
+  const canDeleteOperation = (operation) => {
+    const userRole = user?.role;
+    const operationStatus = operation.status;
+
+    if (userRole === 'agency_staff') {
+      // Staff can delete if not approved
+      return operationStatus !== 'معتمد';
+    } else if (['general_accountant', 'super_admin'].includes(userRole)) {
+      // Accountants and Super Admin can delete any operation
+      return true;
+    }
+    return false;
+  };
+
+  // NEW: Edit operation handler
+  const handleEditOperation = (operation) => {
+    // Populate form with operation data
+    setFormData({
+      service_id: operation.service_id,
+      client_id: operation.client_id,
+      base_price: operation.base_price.toString(),
+      discount_amount: operation.discount_amount || 0,
+      discount_reason: operation.discount_reason || '',
+      notes: operation.notes || ''
+    });
+
+    // Set the service for price management
+    const service = services.find(s => s.id === operation.service_id);
+    setSelectedService(service);
+
+    // Set editing mode
+    setEditingOperation(operation);
+    setShowAddDialog(true);
+  };
+
+  // NEW: Delete operation handler  
+  const handleDeleteOperation = async (operationId) => {
+    const operation = operations.find(op => op.id === operationId);
+    
+    if (!operation) {
+      alert('لم يتم العثور على العملية');
+      return;
+    }
+
+    // Show confirmation with status-specific message
+    let confirmMessage = 'هل أنت متأكد من حذف هذه العملية؟';
+    if (operation.status === 'معتمد') {
+      confirmMessage = '⚠️ تحذير: هذه عملية معتمدة! هل أنت متأكد من حذفها؟ سيتم تسجيل هذا الإجراء لأغراض التدقيق.';
+    }
+
+    if (window.confirm(confirmMessage)) {
+      try {
+        console.log('=== DELETING OPERATION ===');
+        console.log('Operation ID:', operationId);
+        console.log('Operation Status:', operation.status);
+        
+        await axios.delete(`${API}/daily-operations/${operationId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        console.log('=== DELETION SUCCESS ===');
+        alert('✅ تم حذف العملية بنجاح');
+        
+        // Refresh operations list
+        fetchOperations();
+      } catch (error) {
+        console.error('=== DELETION ERROR ===');
+        console.error('Error deleting operation:', error);
+        console.error('Error response:', error.response?.data);
+        
+        if (error.response?.status === 403) {
+          alert('❌ ليس لديك صلاحية لحذف هذه العملية. اتصل بالمحاسب للمساعدة.');
+        } else {
+          alert('خطأ في حذف العملية: ' + (error.response?.data?.detail || error.message));
+        }
+      }
+    }
+  };
 
   const getStatusBadge = (status) => {
     const statusMap = {
