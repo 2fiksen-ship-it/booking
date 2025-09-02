@@ -6109,53 +6109,235 @@ const DailyOperationsReports = () => {
       console.log('=== PRINTING REPORT ===');
       alert('بدء طباعة التقرير...');
       
-      const params = new URLSearchParams({
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-        group_by_agency: groupByAgency.toString()
-      });
-
-      // Add agency filter if specific agency is selected
-      if (selectedAgency !== 'all') {
-        params.append('agency_ids', selectedAgency);
-      }
-
-      const apiUrl = `${API}/reports/daily-operations/print?${params}`;
-      console.log('Print API URL:', apiUrl);
-
-      const response = await axios.get(apiUrl, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        responseType: 'blob'
-      });
+      // Create HTML report for better readability
+      const htmlReport = createHTMLReport(reportData);
       
-      console.log('Print response received, size:', response.data.size);
-      
-      // Check if response is actually a PDF
-      if (response.data.size === 0) {
-        throw new Error('PDF report is empty');
-      }
-      
-      // Create blob URL
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      // Create blob and open in new window
+      const blob = new Blob([htmlReport], { type: 'text/html' });
       const url = window.URL.createObjectURL(blob);
       
-      // Always open in new window for now
       const newWindow = window.open(url, '_blank');
       if (newWindow) {
-        alert('✅ تم فتح التقرير في نافذة جديدة');
+        newWindow.onload = function() {
+          setTimeout(() => {
+            newWindow.print();
+          }, 1000);
+        };
+        alert('✅ تم فتح التقرير في نافذة جديدة للطباعة');
       } else {
         alert('❌ لم يتم فتح النافذة. تأكد من السماح للنوافذ المنبثقة');
       }
       
-      // Clean up after 2 seconds
+      // Clean up after 5 seconds
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
-      }, 2000);
+      }, 5000);
       
     } catch (error) {
       console.error('Error printing report:', error);
-      alert('خطأ في طباعة التقرير: ' + (error.response?.data?.detail || error.message));
+      alert('خطأ في طباعة التقرير: ' + error.message);
     }
+  };
+
+  const createHTMLReport = (data) => {
+    const totals = data.grand_totals || data.agencies_data?.[0]?.totals || {};
+    
+    return \`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>تقرير العمليات اليومية</title>
+        <style>
+          body {
+            font-family: 'Arial', 'Tahoma', sans-serif;
+            margin: 20px;
+            direction: rtl;
+            background-color: white;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .title {
+            font-size: 24px;
+            color: #1e40af;
+            font-weight: bold;
+            margin-bottom: 10px;
+          }
+          .subtitle {
+            font-size: 18px;
+            color: #059669;
+            margin-bottom: 15px;
+          }
+          .period {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 5px;
+          }
+          .summary-section {
+            background-color: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+          }
+          .summary-title {
+            font-size: 18px;
+            color: #1e40af;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 8px;
+          }
+          .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+          }
+          .summary-item {
+            background-color: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          }
+          .summary-label {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 5px;
+          }
+          .summary-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1f2937;
+          }
+          .agencies-section {
+            margin-top: 30px;
+          }
+          .agency-card {
+            background-color: #fefefe;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          .agency-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #dc2626;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #fecaca;
+          }
+          .agency-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+          }
+          .agency-stat {
+            text-align: center;
+            padding: 10px;
+            background-color: #f9fafb;
+            border-radius: 4px;
+          }
+          .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 5px;
+          }
+          .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #374151;
+          }
+          .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 12px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 20px;
+          }
+          @media print {
+            body { margin: 0; }
+            .summary-grid { grid-template-columns: 1fr 1fr; }
+            .agency-stats { grid-template-columns: repeat(2, 1fr); }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">🏢 نظام إدارة الوكالات السياحية</div>
+          <div class="subtitle">📊 تقرير العمليات اليومية المفصل</div>
+          <div class="period">📅 فترة التقرير: \${data.period || 'غير محددة'}</div>
+          <div class="period">⏰ تاريخ الإنشاء: \${new Date().toLocaleDateString('ar-SA')} - \${new Date().toLocaleTimeString('ar-SA')}</div>
+        </div>
+
+        <div class="summary-section">
+          <div class="summary-title">📈 ملخص التقرير العام</div>
+          <div class="summary-grid">
+            <div class="summary-item">
+              <div class="summary-label">📊 عدد العمليات الإجمالي</div>
+              <div class="summary-value">\${totals.operations_count || 0}</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">💰 الإيرادات الإجمالية</div>
+              <div class="summary-value">\${(totals.total_revenue || 0).toLocaleString()} دج</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">🏷️ إجمالي التخفيضات</div>
+              <div class="summary-value">\${(totals.total_discounts || 0).toLocaleString()} دج</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-label">✅ صافي الإيرادات</div>
+              <div class="summary-value" style="color: #059669;">\${(totals.net_revenue || 0).toLocaleString()} دج</div>
+            </div>
+          </div>
+        </div>
+
+        \${data.agencies_data && data.agencies_data.length > 0 ? \`
+        <div class="agencies-section">
+          <div class="summary-title">🏢 تفاصيل الوكالات</div>
+          \${data.agencies_data.map(agency => \`
+            <div class="agency-card">
+              <div class="agency-name">▶ \${agency.agency_name || 'وكالة غير محددة'}</div>
+              <div class="agency-stats">
+                <div class="agency-stat">
+                  <div class="stat-label">العمليات</div>
+                  <div class="stat-value">\${agency.totals?.operations_count || 0}</div>
+                </div>
+                <div class="agency-stat">
+                  <div class="stat-label">الإيرادات</div>
+                  <div class="stat-value">\${(agency.totals?.total_revenue || 0).toLocaleString()}</div>
+                </div>
+                <div class="agency-stat">
+                  <div class="stat-label">التخفيضات</div>
+                  <div class="stat-value">\${(agency.totals?.total_discounts || 0).toLocaleString()}</div>
+                </div>
+                <div class="agency-stat">
+                  <div class="stat-label">الصافي</div>
+                  <div class="stat-value" style="color: #059669;">\${(agency.totals?.net_revenue || 0).toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+          \`).join('')}
+        </div>
+        \` : ''}
+
+        <div class="footer">
+          <div>═══════════════════════════════════════════════════════════════</div>
+          <div style="margin-top: 10px;">تم إنشاء هذا التقرير بواسطة نظام إدارة الوكالات السياحية</div>
+          <div>📧 للدعم الفني يرجى التواصل مع قسم تقنية المعلومات</div>
+        </div>
+      </body>
+      </html>
+    \`;
   };
 
   // Test function to create dummy report data
