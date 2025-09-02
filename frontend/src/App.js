@@ -3143,9 +3143,23 @@ const PaymentsManagement = () => {
     }
   };
 
-  const getInvoiceNo = (invoiceId) => {
-    const invoice = invoices.find(i => i.id === invoiceId);
-    return invoice ? invoice.invoice_no : 'غير معروف';
+  const getOperationInfo = (operationId) => {
+    const operation = operations.find(op => op.id === operationId);
+    if (operation) {
+      const client = clients.find(c => c.id === operation.client_id);
+      return {
+        operation_no: operation.operation_no,
+        service_name: operation.service_name,
+        client_name: client?.name || 'غير معروف',
+        final_price: operation.final_price
+      };
+    }
+    return {
+      operation_no: 'غير معروف',
+      service_name: 'غير معروف', 
+      client_name: 'غير معروف',
+      final_price: 0
+    };
   };
 
   const getMethodBadge = (method) => {
