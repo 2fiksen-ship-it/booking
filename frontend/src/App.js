@@ -3062,6 +3062,14 @@ const PaymentsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('all'); // all, today, this_week, this_month
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [formData, setFormData] = useState({
+    invoice_id: '',
+    method: 'cash',
+    amount: '',
+    payment_date: new Date().toISOString().split('T')[0]
+  });
 
   const fetchData = async () => {
     try {
