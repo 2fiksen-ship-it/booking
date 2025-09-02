@@ -3301,22 +3301,28 @@ const PaymentsManagement = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('paymentNo')}</TableHead>
-                <TableHead>{t('invoice')}</TableHead>
-                <TableHead>{t('paymentMethod')}</TableHead>
-                <TableHead>{t('amount')}</TableHead>
-                <TableHead>{t('paymentDate')}</TableHead>
-                <TableHead>{t('actions')}</TableHead>
+                <TableHead className="text-right">رقم المدفوعة</TableHead>
+                <TableHead className="text-right">رقم العملية</TableHead>
+                <TableHead className="text-right">اسم العميل</TableHead>
+                <TableHead className="text-right">الخدمة</TableHead>
+                <TableHead className="text-right">طريقة الدفع</TableHead>
+                <TableHead className="text-right">المبلغ المدفوع</TableHead>
+                <TableHead className="text-right">تاريخ الدفع</TableHead>
+                <TableHead className="text-right">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPayments.map((payment) => (
-                <TableRow key={payment.id}>
-                  <TableCell>{payment.payment_no}</TableCell>
-                    <TableCell>{getInvoiceNo(payment.invoice_id)}</TableCell>
-                    <TableCell>{getMethodBadge(payment.payment_method)}</TableCell>
-                    <TableCell className="font-medium">{payment.amount} دج</TableCell>
-                    <TableCell>{formatDateWithEnglishNumerals(payment.payment_date)}</TableCell>
+              {filteredPayments.map((payment) => {
+                const operationInfo = getOperationInfo(payment.daily_operation_id);
+                return (
+                  <TableRow key={payment.id}>
+                    <TableCell className="text-right font-medium text-blue-700">{payment.payment_no}</TableCell>
+                    <TableCell className="text-right">{operationInfo.operation_no}</TableCell>
+                    <TableCell className="text-right">{operationInfo.client_name}</TableCell>
+                    <TableCell className="text-right">{operationInfo.service_name}</TableCell>
+                    <TableCell className="text-right">{getMethodBadge(payment.method)}</TableCell>
+                    <TableCell className="text-right font-bold text-green-700">{payment.amount.toLocaleString()} دج</TableCell>
+                    <TableCell className="text-right">{formatDateWithEnglishNumerals(payment.payment_date)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button
