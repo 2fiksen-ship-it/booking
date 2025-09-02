@@ -6942,7 +6942,7 @@ const DailyOperationsManagement = () => {
 
       {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-        <DialogContentClassName="sm:max-w-[500px]" dir="rtl">
+        <DialogContent className="sm:max-w-[500px]" dir="rtl">
           <DialogHeader>
             <DialogTitle>💰 إضافة دفعة للعملية</DialogTitle>
           </DialogHeader>
