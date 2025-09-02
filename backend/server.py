@@ -2980,69 +2980,43 @@ def create_operations_report_pdf(report_data: dict, agencies_data: List[dict], c
         doc.build(elements)
         buffer.seek(0)
         return buffer.getvalue()
-    elements.append(Paragraph(f"تاريخ الإنشاء: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
-    elements.append(Spacer(1, 20))
+def create_simple_text_pdf(report_data: dict, current_user: dict):
+    """Fallback simple PDF generator"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
     
-    # Grand totals summary
-    if report_data.get('grand_totals'):
-        elements.append(Paragraph("<b>الملخص العام</b>", header_style))
-        
-        totals_data = [
-            ['إجمالي العمليات', f"{report_data['grand_totals']['operations_count']:,}"],
-            ['إجمالي الإيرادات', f"{report_data['grand_totals']['total_revenue']:,.0f} دج"],
-            ['إجمالي التخفيضات', f"{report_data['grand_totals']['total_discounts']:,.0f} دج"],
-            ['صافي الإيرادات', f"{report_data['grand_totals']['net_revenue']:,.0f} دج"],
-        ]
-        
-        totals_table = Table(totals_data, colWidths=[2.5*inch, 2*inch])
-        totals_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        
-        elements.append(totals_table)
-        elements.append(Spacer(1, 30))
+    normal_style = styles['Normal']
+    normal_style.alignment = TA_RIGHT
     
-    # Agency-wise breakdown
-    if report_data.get('agencies_data'):
-        elements.append(Paragraph("<b>تفصيل حسب الوكالة</b>", header_style))
-        
-        for agency in report_data['agencies_data']:
-            elements.append(Paragraph(f"<b>{agency['agency_name']}</b>", header_style))
-            
-            agency_data = [
-                ['العمليات', f"{agency['totals']['operations_count']:,}"],
-                ['الإيرادات', f"{agency['totals']['total_revenue']:,.0f} دج"],
-                ['التخفيضات', f"{agency['totals']['total_discounts']:,.0f} دج"],
-                ['الصافي', f"{agency['totals']['net_revenue']:,.0f} دج"],
-            ]
-            
-            agency_table = Table(agency_data, colWidths=[2*inch, 2*inch])
-            agency_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
-                ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
-            
-            elements.append(agency_table)
-            elements.append(Spacer(1, 15))
+    # Simple content
+    content = f"""
+    نظام إدارة الوكالات السياحية
     
-    # Build PDF
+    تقرير العمليات اليومية
+    
+    فترة التقرير: {report_data.get('period', '')}
+    تم إنشاء التقرير بواسطة: {current_user.get('name', '')}
+    تاريخ الإنشاء: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+    
+    ملخص النتائج:
+    """
+    
+    if 'grand_totals' in report_data:
+        totals = report_data['grand_totals']
+        content += f"""
+        عدد العمليات الإجمالي: {totals.get('operations_count', 0)}
+        الإيرادات الإجمالية: {totals.get('total_revenue', 0):,.0f} دج
+        إجمالي التخفيضات: {totals.get('total_discounts', 0):,.0f} دج
+        صافي الإيرادات: {totals.get('net_revenue', 0):,.0f} دج
+        """
+    
+    elements.append(Paragraph(content, normal_style))
+    
     doc.build(elements)
-    
-    pdf_data = buffer.getvalue()
-    buffer.close()
-    
-    return pdf_data
+    buffer.seek(0)
+    return buffer.getvalue()
 
 # PDF Generation Endpoints
 @api_router.get("/daily-operations/{operation_id}/print")
