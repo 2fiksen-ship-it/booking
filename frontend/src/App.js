@@ -5545,11 +5545,34 @@ const DailyOperationsManagement = () => {
         base_price: formData.base_price ? parseFloat(formData.base_price) : null
       };
       
-      await axios.post(`${API}/daily-operations`, submitData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      if (editingOperation) {
+        // UPDATE existing operation
+        console.log('=== UPDATING OPERATION ===');
+        console.log('Operation ID:', editingOperation.id);
+        console.log('Update data:', submitData);
+        
+        await axios.put(`${API}/daily-operations/${editingOperation.id}`, submitData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        console.log('=== UPDATE SUCCESS ===');
+        alert('✅ تم تحديث العملية بنجاح');
+      } else {
+        // CREATE new operation
+        console.log('=== CREATING OPERATION ===');
+        console.log('Create data:', submitData);
+        
+        await axios.post(`${API}/daily-operations`, submitData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        console.log('=== CREATE SUCCESS ===');
+        alert('✅ تم إنشاء العملية بنجاح');
+      }
       
+      // Reset form and close dialog
       setShowAddDialog(false);
+      setEditingOperation(null);
       setSelectedService(null);
       setFormData({
         service_id: '',
@@ -5561,8 +5584,16 @@ const DailyOperationsManagement = () => {
       });
       fetchOperations();
     } catch (error) {
-      console.error('Error creating operation:', error);
-      alert('خطأ في إنشاء العملية');
+      console.error('=== OPERATION SUBMIT ERROR ===');
+      console.error('Error submitting operation:', error);
+      console.error('Error response:', error.response?.data);
+      
+      if (error.response?.status === 403) {
+        alert('❌ ليس لديك صلاحية لتعديل هذه العملية. اتصل بالمحاسب للمساعدة.');
+      } else {
+        const action = editingOperation ? 'تحديث' : 'إنشاء';
+        alert(`خطأ في ${action} العملية: ` + (error.response?.data?.detail || error.message));
+      }
     }
   };
 
