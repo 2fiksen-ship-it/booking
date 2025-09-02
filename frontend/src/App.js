@@ -2250,56 +2250,54 @@ const SuppliersManagement = () => {
                 {t('addSupplier')}
               </Button>
             </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingSupplier ? t('edit') : t('addSupplier')}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">{t('name')}</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="type">{t('supplierType')}</Label>
+                  <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('supplierType')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="طيران">طيران</SelectItem>
+                      <SelectItem value="فنادق">فنادق</SelectItem>
+                      <SelectItem value="نقل">نقل</SelectItem>
+                      <SelectItem value="تأشيرات">تأشيرات</SelectItem>
+                      <SelectItem value="تأمين">تأمين</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="contact">{t('contact')}</Label>
+                  <Input
+                    id="contact"
+                    value={formData.contact}
+                    onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    {t('cancel')}
+                  </Button>
+                  <Button type="submit">{t('save')}</Button>
+                </div>
+              </form>
+            </DialogContent>
           </Dialog>
         </div>
-      </div>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingSupplier ? t('edit') : t('addSupplier')}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">{t('name')}</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="type">{t('supplierType')}</Label>
-                <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('supplierType')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="طيران">طيران</SelectItem>
-                    <SelectItem value="فنادق">فنادق</SelectItem>
-                    <SelectItem value="نقل">نقل</SelectItem>
-                    <SelectItem value="تأشيرات">تأشيرات</SelectItem>
-                    <SelectItem value="تأمين">تأمين</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="contact">{t('contact')}</Label>
-                <Input
-                  id="contact"
-                  value={formData.contact}
-                  onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  {t('cancel')}
-                </Button>
-                <Button type="submit">{t('save')}</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
       </div>
 
       <div className="flex items-center space-x-4">
