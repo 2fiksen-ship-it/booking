@@ -91,6 +91,17 @@ class ServiceSaleStatus(str, Enum):
     PENDING_CASH = "pending_cash"
     CASH_RECEIVED = "cash_received"
 
+class InstallmentStatus(str, Enum):
+    PENDING = "pending"
+    PARTIAL = "partial"  # NEW: for partial payments
+    PAID = "paid"
+    OVERDUE = "overdue"
+
+class InstallmentPlanStatus(str, Enum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
 # Service Types
 class ServiceType(str, Enum):
     UMRAH = "عمرة"
