@@ -5737,6 +5737,13 @@ const DailyOperationsManagement = () => {
     fetchAgencies();
   }, []);
 
+  // Update payment statuses when operations change
+  useEffect(() => {
+    if (operations.length > 0) {
+      updatePaymentStatuses();
+    }
+  }, [operations]);
+
   const fetchOperations = async (filterParams = {}) => {
     try {
       // Build query parameters
