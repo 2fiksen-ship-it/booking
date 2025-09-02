@@ -1370,7 +1370,7 @@ const Dashboard = () => {
               })}
             </p>
             <p className="text-blue-200">
-              {new Date().toLocaleTimeString('ar-SA', {
+              {formatTimeWithEnglishNumerals(new Date(), {
                 hour: '2-digit',
                 minute: '2-digit'
               })}
