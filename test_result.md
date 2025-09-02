@@ -462,9 +462,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Enhanced Approval Workflow for Operations and Bookings"
-    - "Advanced Filtering System for Operations and Bookings"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
