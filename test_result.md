@@ -462,8 +462,10 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
-  stuck_tasks: []
+  current_focus:
+    - "Report Creation Fix - Database Migration"
+  stuck_tasks:
+    - "Report Creation Fix - Database Migration"
   test_all: false
   test_priority: "high_first"
 
