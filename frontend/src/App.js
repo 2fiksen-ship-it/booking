@@ -2639,7 +2639,7 @@ const BookingsManagement = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                  <Label htmlFor="ref">{t('reference')}</Label>
+                    <Label htmlFor="ref">{t('reference')}</Label>
                   <Input
                     id="ref"
                     value={formData.ref}
