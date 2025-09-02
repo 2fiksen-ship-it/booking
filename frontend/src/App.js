@@ -2250,8 +2250,9 @@ const SuppliersManagement = () => {
                 {t('addSupplier')}
               </Button>
             </DialogTrigger>
-            </Button>
-          </DialogTrigger>
+          </Dialog>
+        </div>
+      </div>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingSupplier ? t('edit') : t('addSupplier')}</DialogTitle>
