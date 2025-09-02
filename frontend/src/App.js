@@ -2633,10 +2633,10 @@ const BookingsManagement = () => {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{editingBooking ? t('edit') : t('addBooking')}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>{editingBooking ? t('edit') : t('addBooking')}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="ref">{t('reference')}</Label>
