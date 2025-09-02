@@ -6142,7 +6142,7 @@ const DailyOperationsReports = () => {
   const createHTMLReport = (data) => {
     const totals = data.grand_totals || data.agencies_data?.[0]?.totals || {};
     
-    return \`
+    return `
       <!DOCTYPE html>
       <html dir="rtl" lang="ar">
       <head>
@@ -6275,8 +6275,8 @@ const DailyOperationsReports = () => {
         <div class="header">
           <div class="title">🏢 نظام إدارة الوكالات السياحية</div>
           <div class="subtitle">📊 تقرير العمليات اليومية المفصل</div>
-          <div class="period">📅 فترة التقرير: \${data.period || 'غير محددة'}</div>
-          <div class="period">⏰ تاريخ الإنشاء: \${new Date().toLocaleDateString('ar-SA')} - \${new Date().toLocaleTimeString('ar-SA')}</div>
+          <div class="period">📅 فترة التقرير: ${data.period || 'غير محددة'}</div>
+          <div class="period">⏰ تاريخ الإنشاء: ${new Date().toLocaleDateString('ar-SA')} - ${new Date().toLocaleTimeString('ar-SA')}</div>
         </div>
 
         <div class="summary-section">
@@ -6284,51 +6284,51 @@ const DailyOperationsReports = () => {
           <div class="summary-grid">
             <div class="summary-item">
               <div class="summary-label">📊 عدد العمليات الإجمالي</div>
-              <div class="summary-value">\${totals.operations_count || 0}</div>
+              <div class="summary-value">${totals.operations_count || 0}</div>
             </div>
             <div class="summary-item">
               <div class="summary-label">💰 الإيرادات الإجمالية</div>
-              <div class="summary-value">\${(totals.total_revenue || 0).toLocaleString()} دج</div>
+              <div class="summary-value">${(totals.total_revenue || 0).toLocaleString()} دج</div>
             </div>
             <div class="summary-item">
               <div class="summary-label">🏷️ إجمالي التخفيضات</div>
-              <div class="summary-value">\${(totals.total_discounts || 0).toLocaleString()} دج</div>
+              <div class="summary-value">${(totals.total_discounts || 0).toLocaleString()} دج</div>
             </div>
             <div class="summary-item">
               <div class="summary-label">✅ صافي الإيرادات</div>
-              <div class="summary-value" style="color: #059669;">\${(totals.net_revenue || 0).toLocaleString()} دج</div>
+              <div class="summary-value" style="color: #059669;">${(totals.net_revenue || 0).toLocaleString()} دج</div>
             </div>
           </div>
         </div>
 
-        \${data.agencies_data && data.agencies_data.length > 0 ? \`
+        ${data.agencies_data && data.agencies_data.length > 0 ? `
         <div class="agencies-section">
           <div class="summary-title">🏢 تفاصيل الوكالات</div>
-          \${data.agencies_data.map(agency => \`
+          ${data.agencies_data.map(agency => `
             <div class="agency-card">
-              <div class="agency-name">▶ \${agency.agency_name || 'وكالة غير محددة'}</div>
+              <div class="agency-name">▶ ${agency.agency_name || 'وكالة غير محددة'}</div>
               <div class="agency-stats">
                 <div class="agency-stat">
                   <div class="stat-label">العمليات</div>
-                  <div class="stat-value">\${agency.totals?.operations_count || 0}</div>
+                  <div class="stat-value">${agency.totals?.operations_count || 0}</div>
                 </div>
                 <div class="agency-stat">
                   <div class="stat-label">الإيرادات</div>
-                  <div class="stat-value">\${(agency.totals?.total_revenue || 0).toLocaleString()}</div>
+                  <div class="stat-value">${(agency.totals?.total_revenue || 0).toLocaleString()}</div>
                 </div>
                 <div class="agency-stat">
                   <div class="stat-label">التخفيضات</div>
-                  <div class="stat-value">\${(agency.totals?.total_discounts || 0).toLocaleString()}</div>
+                  <div class="stat-value">${(agency.totals?.total_discounts || 0).toLocaleString()}</div>
                 </div>
                 <div class="agency-stat">
                   <div class="stat-label">الصافي</div>
-                  <div class="stat-value" style="color: #059669;">\${(agency.totals?.net_revenue || 0).toLocaleString()}</div>
+                  <div class="stat-value" style="color: #059669;">${(agency.totals?.net_revenue || 0).toLocaleString()}</div>
                 </div>
               </div>
             </div>
-          \`).join('')}
+          `).join('')}
         </div>
-        \` : ''}
+        ` : ''}
 
         <div class="footer">
           <div>═══════════════════════════════════════════════════════════════</div>
@@ -6337,7 +6337,7 @@ const DailyOperationsReports = () => {
         </div>
       </body>
       </html>
-    \`;
+    `;
   };
 
   // Test function to create dummy report data
