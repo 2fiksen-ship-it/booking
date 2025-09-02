@@ -3054,17 +3054,11 @@ const InvoicesManagement = () => {
 const PaymentsManagement = () => {
   const { t } = useContext(LanguageContext);
   const [payments, setPayments] = useState([]);
-  const [invoices, setInvoices] = useState([]);
+  const [operations, setOperations] = useState([]);
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPayment, setEditingPayment] = useState(null);
-  const [formData, setFormData] = useState({
-    invoice_id: '',
-    method: '',
-    amount: '',
-    payment_date: ''
-  });
+  const [paymentFilter, setPaymentFilter] = useState('all'); // all, today, this_week, this_month
 
   const fetchData = async () => {
     try {
