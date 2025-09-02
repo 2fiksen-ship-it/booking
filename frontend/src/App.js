@@ -3124,9 +3124,9 @@ const PaymentsManagement = () => {
     setEditingPayment(payment);
     setFormData({
       invoice_id: payment.invoice_id,
-      method: payment.method,
+      method: payment.payment_method,
       amount: payment.amount.toString(),
-      payment_date: payment.payment_date.split('T')[0]
+      payment_date: payment.payment_date
     });
     setIsDialogOpen(true);
   };
