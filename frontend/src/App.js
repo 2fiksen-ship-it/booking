@@ -768,7 +768,8 @@ const Layout = ({ children }) => {
           label: t('financialManagement'),
           items: [
             { id: 'invoices', label: t('invoices'), icon: FileText },
-            { id: 'payments', label: t('payments'), icon: CreditCard },  
+            { id: 'payments', label: t('payments'), icon: CreditCard },
+            { id: 'installments', label: '📅 إدارة التقسيط', icon: Calendar },
             { id: 'reports', label: t('reports'), icon: BarChart3 },
             { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 }
           ]
