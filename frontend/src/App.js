@@ -6177,9 +6177,9 @@ const DailyOperationsReports = () => {
 };
 
 // Main App Component
-const MainApp = ({ activeTab }) => {
+const MainApp = ({ activeTab, setActiveTab }) => {
   const components = {
-    dashboard: Dashboard,
+    dashboard: (props) => <Dashboard {...props} setActiveTab={setActiveTab} />,
     clients: ClientsManagement,
     suppliers: SuppliersManagement,
     bookings: BookingsManagement,
