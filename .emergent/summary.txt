@@ -1,81 +1,76 @@
 <analysis>
-The AI engineer successfully transitioned the multi-agency travel accounting system from MVP to a more robust application. Initial work involved implementing a comprehensive Agency Settings feature, including new backend models, CRUD APIs, and a detailed frontend UI with role-based access. This was followed by crucial bug fixes: correcting date displays from Arabic to English numerals and rectifying non-functional dashboard quick actions and pending invoice alerts. Extensive effort was dedicated to developing a universal printing system, adding print buttons across various modules (Clients, Suppliers, Bookings, Payments, Reports). This phase involved significant debugging of recurring frontend parsing errors, which were eventually resolved by meticulous JSX structure corrections and a complete rewrite of the  component. Finally, the AI addressed issues with report printing, identifying and fixing Arabic font support in PDF generation and ensuring report data visibility. The work demonstrates proficiency in full-stack development, debugging, and iterative feature delivery while closely adhering to user feedback.
+The AI engineer successfully enhanced a multi-agency travel accounting system through several complex feature implementations and critical bug fixes. Key achievements include a comprehensive Agency Settings feature, advanced filtering for operations and bookings, and a robust approval workflow. A significant effort was dedicated to improving PDF generation for reports and receipts, particularly for Arabic language support and accurate display of payment data. The engineer also redesigned the payment system to link directly to daily operations, removing invoice dependencies, and implemented a flexible installment plan module. Throughout the process, the AI effectively diagnosed and resolved frontend JSX parsing errors, backend data validation issues, and React component state errors, demonstrating strong full-stack capabilities and a meticulous approach to user feedback and bug reports.
 </analysis>
 
 <product_requirements>
-The Sanhaja Travel Agencies application is a multi-agency accounting system for Algeria, offering bilingual UI (Arabic/French).
+The Sanhaja Travel Agencies application is a multi-agency accounting system for Algeria, offering a bilingual UI (Arabic/French).
 **Initial Core Requirements:** Role-based authentication, agency-isolated database, CRUD interfaces for entities, key screens (dashboard, invoicing, payments, reports), multi-agency views for managers, notifications, and user/system management.
+
 **New Requirements & Enhancements Implemented during this Trajectory:**
-1.  **Daily Operations Management**: Manage services, sales, revenues with totals and filters. Support fixed-price services (modifiable with justification) and variable services where staff define prices. Implement accountant approval, preventing staff changes post-approval.
-2.  **Professional PDF Printing**: Generate branded PDFs (invoices, receipts, daily reports) with agency logo, address, and electronic staff signature.
-3.  **Receipt Preview Modal**: A modal to preview receipts with agency details, service type, payment, amounts, and electronic signature.
-4.  **Agency-specific Settings**: Allow input and modification of detailed agency information (contact numbers, addresses, registration details).
+1.  **Daily Operations Management**: Enhanced with advanced filtering (agency, service type, client name, date range, amount, status) and an approval workflow allowing modifications based on status and user roles.
+2.  **Professional PDF Printing**: Generated branded PDFs (invoices, receipts, daily reports) with agency logo, address, and electronic staff signature, with added support for Arabic fonts and accurate partial payment details.
+3.  **Receipt Preview Modal**: A modal to preview receipts with agency details, service type, payment, amounts, and electronic signature, updated to display correct payment values.
+4.  **Agency-specific Settings**: Allow input and modification of detailed agency information (contact numbers, addresses, registration details), with role-based access.
+5.  **Service Cash Flow Module**: Independent module for tracking service sales, cash delivery to accountants, confirmation of cash receipt, and reconciliation reports.
+6.  **Redesigned Payment System**: Payments are now directly linked to daily operations, replacing the previous invoice-based system. It includes an intuitive UI for partial payments, automatic remaining amount calculation, and clear payment status indicators.
+7.  **Service Installments Module**: A new module to create flexible installment plans for service sales, supporting custom due dates, partial payments, plan modification/cancellation (without penalties for overdue), and status reports.
+8.  **Role-Based Access Control Refinement**: Implemented stricter permissions, restricting Agency Staff from viewing invoices and bookings, focusing their access on daily operations and associated payments. Super Admins gained control over agency management.
 </product_requirements>
 
 <key_technical_concepts>
--   **Full-stack**: FastAPI (Python backend), React 19 (JavaScript frontend), MongoDB (NoSQL database).
--   **Authentication**: JWT, RBAC, Google OAuth.
+-   **Full-stack**: FastAPI (Python backend), React 19 (JavaScript frontend), MongoDB (NoSQL).
+-   **Authentication/Authorization**: JWT, RBAC, Google OAuth.
 -   **UI/UX**: Shadcn UI, Tailwind CSS (RTL/Arabic support).
 -   **Data Handling**: Pydantic models, UUIDs, datetime utilities.
 -   **PDF Generation**: ,  (with Arabic font support).
--   **Development Utilities**: , yarn install v1.22.22
-[1/4] Resolving packages...
-success Already up-to-date.
-Done in 0.04s., backend                          RUNNING   pid 27, uptime 0:00:03
-code-server                      RUNNING   pid 29, uptime 0:00:03
-frontend                         STOPPED   Sep 02 04:06 PM
-mongodb                          RUNNING   pid 35, uptime 0:00:03
-supervisor> , .
--   **Debugging**: , , , .
--   **CORS**: Cross-Origin Resource Sharing management.
+-   **Database Migration**: Script for backfilling missing data ().
 </key_technical_concepts>
 
 <code_architecture>
 
--   **/app/backend/server.py**: Core FastAPI application.
-    -   **Importance**: Defines DB models, authentication, CRUD APIs, and PDF generation.
+-   **/app/backend/server.py**: Core FastAPI application, handling all backend logic, API endpoints, and database interactions.
+    -   **Importance**: Defines DB models, authentication, CRUD APIs, PDF generation, and business logic.
     -   **Changes**:
-        -   Expanded  model with , , , .
-        -   Added  Pydantic model for partial updates.
-        -   Implemented  and  endpoints for agency settings, with RBAC.
-        -   Updated  model to correctly handle .
-        -   Modified  to use Arabic-compatible fonts () with  for clearer reports.
--   **/app/frontend/src/App.js**: Main React application.
-    -   **Importance**: Handles routing, state, components, and API calls.
+        -   **Models**: Expanded  model (added , , , ,  as optional),  model (replaced  with ), added , ,  models and their respective Create/Update Pydantic models, new enums (, ).
+        -   **Endpoints**:
+            -   **Daily Operations**: Enhanced  with advanced filtering, added , , and  (for linking payments).
+            -   **Bookings/Invoices**:  and  restricted for  (403 forbidden).
+            -   **Payments**:  updated to fetch payments based on  or  (role-based).
+            -   **Service Cash Flow**: Added CRUD for , , , and  endpoints.
+            -   **Service Installments**: Added CRUD for  and , , and  endpoints.
+            -   **Migration**: Added  to backfill  field in old booking records. This endpoint was moved to be registered correctly.
+        -   **PDF Generation**:  updated to register and use Arabic-compatible fonts (), accept and display actual payment data (paid amount, remaining, method), and show Arabic text correctly.
+        -   **Error Handling**: Fixed JWT error from  to .
+-   **/app/frontend/src/App.js**: Main React application, managing UI, routing, state, and API calls.
+    -   **Importance**: Renders all main application components and orchestrates frontend interactions.
     -   **Changes**:
-        -   Added Arabic translations for Agency Settings, Fixed Price, Variable Price.
-        -   Modified  to include Agency Settings for Super Admin (full), General Accountant (full), and Agency Staff (read-only).
-        -   Created  component for agency details form and integrated it into .
-        -   Implemented  utility function and replaced  calls to display English numerals.
-        -   Updated  to include a UI control for  and display 🔒 Fixed / 🔄 Variable in the table.
-        -   Modified all  functions (e.g., , , , , , , , , ) to sort data by date/creation time in descending order (latest first).
-        -   Enhanced  component by passing  and adding  handlers to quick actions, recent activities, and pending invoice alerts for navigation.
-        -   Added , , ,  functions to generate HTML lists for printing.
-        -   Integrated print buttons into respective management components' UIs.
-        -   Completely rewrote the  component to resolve persistent JSX parsing errors.
-        -   Added temporary Create Test Report button and logging to  component for debugging report generation and printing.
-        -   Fixed multiple JSX parsing errors related to  and  nesting throughout the file.
+        -   **Navigation ()**: Restricted  and  visibility for . Added Agency Management for Super Admin and Installments for Super Admin/General Accountant.
+        -   ****:
+            -   Added comprehensive filtering UI (agency, service type, client, date range, amount, status).
+            -   Added states and logic for managing payments (, , , , , , ).
+            -   Implemented automatic calculation of  in the payment dialog.
+            -   Added Payment Status column and Add Payment buttons to the operations table.
+            -   Created and integrated an  for operations.
+            -   Updated  to fetch and display real payment data in the print preview modal, resolving a race condition.
+        -   ****: Rewritten to focus exclusively on payments linked to , removing all references to . Updated title, description, and table columns. Removed an old, unused Dialog component and  state variable.
+        -   ****: New component added for Super Admins to manage agencies (create, view, edit).
+        -   ****: Component initiated but not fully implemented (added to navigation and a basic component stub).
+        -   **Date Formatting**: Fixed date display in  to use English numerals via .
+        -   **UI Bug Fixes**: Resolved  error by replacing  with  in filter dropdowns and updating filter logic.
 -   **/app/backend/requirements.txt**: Python dependencies.
-    -   **Importance**: Ensures  and  are installed.
-    -   **Changes**: Used to ensure  and  are properly versioned for PDF generation with custom fonts.
+    -   **Importance**: Ensures all required Python libraries (e.g., ,  for PDF) are installed.
 </code_architecture>
 
 <pending_tasks>
--   Implement an enhanced approval workflow: Allow accountants to modify or delete operations/bookings if not yet approved. Staff should also be able to modify if approval is pending or rejected.
+-   Complete the frontend implementation for the  module. This includes developing the UI for creating, viewing, and managing installment plans and payments, as well as integrating any necessary reporting UIs.
 </pending_tasks>
 
 <current_work>
-Immediately prior to this summary, the AI engineer was addressing a bug report regarding the Report Printing functionality, where the user stated the information displayed in the report was unclear.
+Immediately prior to this summary, the AI engineer was implementing the frontend for the newly introduced  module. The backend implementation for  (models, CRUD endpoints, payment logic, overdue job, and reports) was successfully completed and tested, achieving a 100% success rate.
 
-The AI engineer successfully diagnosed that the PDF reports generated by the backend were using standard fonts that did not properly support Arabic characters, making the content unreadable. To fix this, the  function in  was modified to register and use an Arabic-compatible font (e.g., ) from  and .
-
-The testing process involved navigating to the Daily Operations Reports page in the frontend, generating a report, and then attempting to print it. A temporary Create Test Report button was added to the frontend () to facilitate debugging the report generation and printing flow without needing real data.
-
-After applying the font fix, the report printing functionality was confirmed to be working, with the system responding (albeit with a timeout during the screenshot phase). An attempt was also made to add a simple HTML report as an alternative, but this introduced a  error which was subsequently resolved.
-
-The current state is that the PDF report printing is functional and displays Arabic correctly after the font fix. The AI agent acknowledged a new user request regarding an enhanced approval workflow for operations and bookings.
+The current work started with integrating the  feature into the frontend navigation. The AI engineer successfully added Installments to the sidebar menu for Super Admin and General Accountant roles in  by modifying the  function. Following this, the AI began the process of creating the  React component, which will house the UI for managing installment plans and payments. A basic stub for this component has been added, and the next step is to add this component to the main application's component mapping.
 </current_work>
 
 <optional_next_step>
-The next step is to implement the enhanced approval workflow for operations and bookings, allowing modifications/deletions based on approval status.
+Integrate the new  component into the 's component mapping in .
 </optional_next_step>

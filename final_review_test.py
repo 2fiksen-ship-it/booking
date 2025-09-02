@@ -10,7 +10,7 @@ from datetime import datetime
 
 class FinalReviewTester:
     def __init__(self):
-        self.base_url = "https://agency-billing-pro.preview.emergentagent.com"
+        self.base_url = "https://travel-agency-hub-4.preview.emergentagent.com"
         self.api_url = f"{self.base_url}/api"
         self.token = None
         self.current_user = None
