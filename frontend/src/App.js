@@ -3176,10 +3176,19 @@ const PaymentsManagement = () => {
     );
   };
 
-  const filteredPayments = payments.filter(payment =>
-    payment.payment_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getInvoiceNo(payment.invoice_id).toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPayments = payments.filter(payment => {
+    if (!payment.daily_operation_id) return false; // Only show operation payments
+    
+    const operationInfo = getOperationInfo(payment.daily_operation_id);
+    const searchLower = searchTerm.toLowerCase();
+    
+    return (
+      payment.payment_no.toLowerCase().includes(searchLower) ||
+      operationInfo.operation_no.toLowerCase().includes(searchLower) ||
+      operationInfo.client_name.toLowerCase().includes(searchLower) ||
+      operationInfo.service_name.toLowerCase().includes(searchLower)
+    );
+  });
 
   if (loading) {
     return <div className="text-center py-8">{t('loading')}</div>;
