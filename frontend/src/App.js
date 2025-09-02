@@ -745,6 +745,7 @@ const Layout = ({ children }) => {
           label: t('systemAdministration'),
           items: [
             { id: 'userManagement', label: t('userManagement'), icon: Settings },
+            { id: 'agencyManagement', label: '🏢 إدارة الوكالات', icon: Building2 },
             { id: 'dailyReports', label: t('dailyReports'), icon: BarChart3 },
             { id: 'servicesManagement', label: t('servicesManagement'), icon: Package },
             { id: 'agencySettings', label: t('agencySettings'), icon: Building2 }
