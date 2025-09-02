@@ -117,15 +117,18 @@ user_problem_statement: |
 backend:
   - task: "Agency Settings Management API"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added comprehensive agency settings API endpoints including GET /api/agencies/{agency_id} for retrieving agency details and PUT /api/agencies/{agency_id} for updating agency settings. Enhanced Agency and AgencyUpdate models with additional fields: multiple phone numbers, fax, postal code, website, national register, business license, established date, and description. Implemented role-based access control - GM/GA can modify all agencies, Agency Staff can only view their own agency."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Agency Settings Management API working perfectly! All requested endpoints and role-based access control functioning correctly. ✅ Super Admin Access: Can GET and PUT any agency (superadmin@sanhaja.com/super123) - all 17 test scenarios passed. ✅ General Accountant Access: Can GET and PUT any agency (generalaccountant@sanhaja.com/acc123) - full access confirmed. ✅ Agency Staff Access: Can only VIEW their own agency, correctly denied modification permissions (staff1@tlemcen.sanhaja.com/staff123) - proper isolation verified. ✅ Enhanced Agency Model: All 21 enhanced fields working correctly (phone_2, phone_3, fax, postal_code, website, tax_number, commercial_register, national_register, business_license, manager_name, established_date, description, etc.). ✅ Error Handling: Invalid agency IDs return 404, empty payloads return 400, partial updates work correctly. ✅ Data Persistence: All updates verified and persisting correctly. Role-based access control working exactly as specified in review request - Super Admin and General Accountant can modify any agency, Agency Staff can only view their own agency."
 
 backend:
   - task: "Authentication System"
