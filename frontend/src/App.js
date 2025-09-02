@@ -5449,12 +5449,12 @@ const DailyOperationsManagement = () => {
   const applyFilters = () => {
     const filterParams = {};
     
-    // Build filter parameters
-    if (filters.agency_id) filterParams.agency_id = filters.agency_id;
+    // Build filter parameters (exclude "all" values)
+    if (filters.agency_id && filters.agency_id !== 'all') filterParams.agency_id = filters.agency_id;
     if (filters.client_name) filterParams.client_name = filters.client_name;
     if (filters.service_name) filterParams.service_name = filters.service_name;
-    if (filters.service_type) filterParams.service_type = filters.service_type;
-    if (filters.status) filterParams.status = filters.status;
+    if (filters.service_type && filters.service_type !== 'all') filterParams.service_type = filters.service_type;
+    if (filters.status && filters.status !== 'all') filterParams.status = filters.status;
     if (filters.start_date) filterParams.start_date = filters.start_date;
     if (filters.end_date) filterParams.end_date = filters.end_date;
     if (filters.min_amount) filterParams.min_amount = filters.min_amount;
