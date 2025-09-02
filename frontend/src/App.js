@@ -6256,6 +6256,11 @@ const DailyOperationsReports = () => {
             {loading ? 'جاري الإنتاج...' : t('generateReport')}
           </Button>
 
+          {/* Test Button - temporary */}
+          <Button onClick={createTestReport} className="bg-yellow-600 hover:bg-yellow-700">
+            🧪 إنشاء تقرير اختبار
+          </Button>
+
           {/* Print Report Button */}
           {reportData && (
             <Button 
