@@ -305,7 +305,8 @@ class OperationPaymentTester:
                             "Add Invalid Payment (Exceeds Remaining)",
                             "POST",
                             f"daily-operations/{operation_id}/payments",
-                            400
+                            400,
+                            data=invalid_payment_data
                         )
                         results['payment_validation'] = success
                         if success:
