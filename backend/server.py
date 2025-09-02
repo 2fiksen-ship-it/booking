@@ -3626,17 +3626,6 @@ async def get_discount_requests(
     
     return result
 
-# Include the router in the main app
-app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Database Migration Endpoint for Booking Model Update
 @api_router.post("/admin/migrate-bookings")
 async def migrate_bookings_data(current_user: User = Depends(get_current_user)):
@@ -3661,7 +3650,7 @@ async def migrate_bookings_data(current_user: User = Depends(get_current_user)):
             {
                 "$or": [
                     {"created_by": {"$exists": False}},
-                    {"status": {"$exists": False}},
+                    {"status": {"$exists": False}}, 
                     {"modification_history": {"$exists": False}}
                 ]
             },
@@ -3686,6 +3675,17 @@ async def migrate_bookings_data(current_user: User = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error migrating booking data: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+
+# Include the router in the main app
+app.include_router(api_router)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Configure logging
 logging.basicConfig(
