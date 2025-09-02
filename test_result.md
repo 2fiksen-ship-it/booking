@@ -583,7 +583,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "PDF Receipt Generation Fix for Daily Operations - Arabic Font Support + Real Payment Data"
+    - "Enhanced Payment System Improvements"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
