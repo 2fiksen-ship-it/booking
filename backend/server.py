@@ -17,7 +17,7 @@ from enum import Enum
 import requests  # For calling Emergent Auth API
 import aiohttp  # For async HTTP calls
 
-# NEW: PDF generation imports
+# NEW: PDF generation imports with Arabic support
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -27,6 +27,25 @@ from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from io import BytesIO
+
+# Arabic text processing
+try:
+    from arabic_reshaper import reshape
+    from bidi.algorithm import get_display
+    ARABIC_SUPPORT = True
+except ImportError:
+    ARABIC_SUPPORT = False
+    print("Arabic reshaper not available. Installing...")
+    import subprocess
+    try:
+        subprocess.check_call(["pip", "install", "arabic-reshaper", "python-bidi"])
+        from arabic_reshaper import reshape
+        from bidi.algorithm import get_display
+        ARABIC_SUPPORT = True
+        print("Arabic support libraries installed successfully")
+    except Exception as e:
+        print(f"Failed to install Arabic support: {e}")
+        ARABIC_SUPPORT = False
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
