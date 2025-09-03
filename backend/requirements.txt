@@ -28,3 +28,5 @@ pyjwt>=2.8.0
 emergentintegrations
 reportlab==4.0.7
 pillow==10.1.0
+arabic-reshaper==3.0.0
+python-bidi==0.4.2
