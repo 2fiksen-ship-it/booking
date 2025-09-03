@@ -28,6 +28,12 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from io import BytesIO
 
+# NEW: File upload imports
+from fastapi import UploadFile, File
+import os
+import uuid
+from pathlib import Path
+
 # Arabic text processing
 try:
     from arabic_reshaper import reshape
