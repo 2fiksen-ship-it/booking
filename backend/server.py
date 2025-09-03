@@ -3530,33 +3530,35 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         # Service Information Section
         elements.append(Paragraph(f"<b>{fix_arabic_text('تفاصيل الخدمة')}</b>", client_section_title))
         
-        # Service details table with enhanced styling
+        # Service details table with enhanced styling - RTL format
         service_name = fix_arabic_text(operation_data.get('service_name', 'غير محدد'))
         base_price = operation_data.get('base_price', 0)
         discount_amount = operation_data.get('discount_amount', 0)
         final_price = operation_data.get('final_price', 0)
         status = fix_arabic_text(operation_data.get('status', 'غير محدد'))
         
+        # RTL table - Arabic labels on RIGHT, values on LEFT
         service_data_table = [
-            [fix_arabic_text('اسم الخدمة:'), service_name],
-            [fix_arabic_text('السعر الأساسي:'), f"{base_price:,.0f} {fix_arabic_text('دج')}"],
+            [service_name, fix_arabic_text('اسم الخدمة:')],
+            [f"{base_price:,.0f} {fix_arabic_text('دج')}", fix_arabic_text('السعر الأساسي:')],
         ]
         
         if discount_amount > 0:
-            service_data_table.append([fix_arabic_text('مبلغ التخفيض:'), f"-{discount_amount:,.0f} {fix_arabic_text('دج')}"])
+            service_data_table.append([f"-{discount_amount:,.0f} {fix_arabic_text('دج')}", fix_arabic_text('مبلغ التخفيض:')])
         
         service_data_table.extend([
-            [fix_arabic_text('المبلغ النهائي:'), f"<b>{final_price:,.0f} {fix_arabic_text('دج')}</b>"],
-            [fix_arabic_text('حالة العملية:'), status],
+            [f"<b>{final_price:,.0f} {fix_arabic_text('دج')}</b>", fix_arabic_text('المبلغ النهائي:')],
+            [status, fix_arabic_text('حالة العملية:')],
         ])
         
-        service_table = Table(service_data_table, colWidths=[2*inch, 4*inch])
+        service_table = Table(service_data_table, colWidths=[4*inch, 2*inch])
         service_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgreen),
-            ('BACKGROUND', (0, -2), (0, -2), colors.gold),  # Highlight final amount row
-            ('BACKGROUND', (1, -2), (1, -2), colors.lightyellow),
+            ('BACKGROUND', (1, 0), (1, -1), colors.lightgreen),  # Right column (Arabic labels) background
+            ('BACKGROUND', (1, -2), (1, -2), colors.gold),  # Highlight final amount label row
+            ('BACKGROUND', (0, -2), (0, -2), colors.lightyellow),  # Highlight final amount value
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),   # Left column (values) align left
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Right column (labels) align right
             ('FONTNAME', (0, 0), (-1, -1), arabic_font),
             ('FONTSIZE', (0, 0), (-1, -1), 11),
             ('LEFTPADDING', (0, 0), (-1, -1), 8),
