@@ -5500,6 +5500,12 @@ async def get_cash_transfers(current_user: User = Depends(get_current_user)):
         # Super Admin and General Accountant can see all
         
         transfers = await db.cash_transfers.find(query).sort("transfer_date", -1).to_list(None)
+        
+        # Convert ObjectId to string for JSON serialization
+        for transfer in transfers:
+            if "_id" in transfer:
+                transfer["_id"] = str(transfer["_id"])
+        
         return transfers
         
     except Exception as e:
