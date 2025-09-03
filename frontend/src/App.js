@@ -5152,7 +5152,7 @@ const InstallmentsManagement = memo(() => {
       </Dialog>
     </div>
   );
-};
+});
 
 // Agency Management Component (Super Admin Only)
 const AgencyManagement = () => {
