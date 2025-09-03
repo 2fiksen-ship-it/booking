@@ -5459,7 +5459,7 @@ async def create_cash_transfer(
 ):
     """Create cash transfer to general management"""
     # Only agency staff and managers can create transfers
-    if current_user.role not in [UserRole.AGENCY_STAFF, UserRole.GENERAL_MANAGER]:
+    if current_user.role not in [UserRole.AGENCY_STAFF, UserRole.SUPER_ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized to create cash transfers")
     
     if current_user.agency_id != agency_id:
