@@ -1601,6 +1601,14 @@ const ClientsManagement = () => {
     phone: '',
     cin_passport: ''
   });
+  const [showAddClientDialog, setShowAddClientDialog] = useState(false);
+  const [clientFormData, setClientFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    cin_passport: '',
+    address: ''
+  });
 
   const fetchClients = async () => {
     try {
