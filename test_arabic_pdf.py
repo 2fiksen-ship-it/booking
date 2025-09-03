@@ -158,7 +158,7 @@ class ArabicPDFTester:
             pdf_test_count += 1
             
             # Generate PDF receipt using direct HTTP request to handle binary response
-            url = f"{self.api_url}/daily-operations/{operation_id}/receipt-pdf"
+            url = f"{self.api_url}/daily-operations/{operation_id}/print"
             headers = {'Authorization': f'Bearer {self.token}'}
             
             try:
