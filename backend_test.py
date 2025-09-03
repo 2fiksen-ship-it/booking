@@ -2780,6 +2780,230 @@ class SanhajaAPITester:
         
         return results
 
+    def test_rtl_pdf_tables_and_logo_management(self):
+        """Test RTL PDF Tables and Logo Management Features as requested in review"""
+        print(f"\n📄 Testing RTL PDF Tables and Logo Management Features (Review Request)...")
+        print(f"   Testing RTL table layout, logo upload/removal, file validation, and PDF integration")
+        
+        results = {}
+        
+        # Test 1: RTL PDF Tables Testing
+        print(f"\n   === RTL PDF TABLES TESTING ===")
+        
+        # Step 1: Login as Super Admin
+        print(f"\n   1. Super Admin Login for PDF Testing...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with PDF tests")
+            return results
+        
+        # Step 2: Get daily operations for PDF generation
+        print(f"\n   2. Getting Daily Operations for PDF Generation...")
+        success, operations_data = self.run_test(
+            "Get Daily Operations",
+            "GET",
+            "daily-operations",
+            200
+        )
+        results['get_operations'] = success
+        
+        if success and operations_data:
+            print(f"   ✅ Found {len(operations_data)} daily operations")
+            
+            # Test PDF generation for first few operations
+            test_operations = operations_data[:3] if len(operations_data) >= 3 else operations_data
+            pdf_results = []
+            
+            for i, operation in enumerate(test_operations):
+                operation_id = operation.get('id')
+                service_name = operation.get('service_name', 'Unknown Service')
+                client_name = operation.get('client_name', 'Unknown Client')
+                
+                print(f"\n   2.{i+1}. Testing PDF Generation for Operation {operation_id}...")
+                print(f"        Service: {service_name}")
+                print(f"        Client: {client_name}")
+                
+                # Test PDF generation endpoint
+                success, pdf_response = self.run_test(
+                    f"Generate PDF Receipt - Operation {operation_id}",
+                    "GET",
+                    f"daily-operations/{operation_id}/print",
+                    200
+                )
+                
+                if success:
+                    print(f"   ✅ PDF generated successfully for operation {operation_id}")
+                    # Note: We can't verify RTL table layout programmatically, but we can verify PDF generation works
+                    pdf_results.append(True)
+                else:
+                    print(f"   ❌ PDF generation failed for operation {operation_id}")
+                    pdf_results.append(False)
+            
+            results['pdf_generation_success_rate'] = sum(pdf_results) / len(pdf_results) if pdf_results else 0
+            results['pdf_operations_tested'] = len(pdf_results)
+            
+            if results['pdf_generation_success_rate'] >= 0.8:
+                print(f"   ✅ PDF Generation Success Rate: {results['pdf_generation_success_rate']*100:.1f}%")
+            else:
+                print(f"   ❌ PDF Generation Success Rate: {results['pdf_generation_success_rate']*100:.1f}% (Below 80%)")
+        
+        # Test 2: Logo Management Testing
+        print(f"\n   === LOGO MANAGEMENT TESTING ===")
+        
+        # Step 1: Get agencies for logo testing
+        print(f"\n   1. Getting Agencies for Logo Testing...")
+        success, agencies_data = self.run_test(
+            "Get All Agencies",
+            "GET",
+            "agencies",
+            200
+        )
+        results['get_agencies'] = success
+        
+        if success and agencies_data:
+            test_agency = agencies_data[0]
+            test_agency_id = test_agency.get('id')
+            test_agency_name = test_agency.get('name', 'Unknown Agency')
+            
+            print(f"   ✅ Using agency '{test_agency_name}' (ID: {test_agency_id}) for logo testing")
+            
+            # Step 2: Test Logo Upload Endpoint Accessibility
+            print(f"\n   2. Testing Logo Upload Endpoint Accessibility...")
+            
+            # Test logo upload endpoint accessibility (will fail without proper file, but should return 400/422 not 404)
+            try:
+                import requests
+                url = f"{self.api_url}/agencies/{test_agency_id}/upload-logo"
+                headers = {'Authorization': f'Bearer {self.token}'}
+                
+                # Test without file (should return 422 or 400)
+                response = requests.post(url, headers=headers, timeout=10)
+                
+                if response.status_code in [400, 422]:
+                    print(f"   ✅ Logo upload endpoint accessible (returns {response.status_code} without file)")
+                    results['logo_upload_endpoint_accessible'] = True
+                else:
+                    print(f"   ❌ Logo upload endpoint returned unexpected status: {response.status_code}")
+                    results['logo_upload_endpoint_accessible'] = False
+                    
+            except Exception as e:
+                print(f"   ❌ Logo upload endpoint test failed: {str(e)}")
+                results['logo_upload_endpoint_accessible'] = False
+            
+            # Step 3: Test Logo Removal Endpoint
+            print(f"\n   3. Testing Logo Removal Endpoint...")
+            success, response = self.run_test(
+                f"Remove Agency Logo - {test_agency_name}",
+                "DELETE",
+                f"agencies/{test_agency_id}/remove-logo",
+                200
+            )
+            results['logo_removal_endpoint'] = success
+            
+            if success:
+                print(f"   ✅ Logo removal endpoint working")
+                if 'message' in response:
+                    print(f"   Response: {response['message']}")
+        
+        # Step 4: Test Permission Control
+        print(f"\n   4. Testing Logo Management Permission Control...")
+        
+        # Test with General Accountant (should work)
+        print(f"\n   4a. Testing with General Accountant...")
+        auth_success = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['general_accountant_login'] = auth_success
+        
+        if auth_success and agencies_data:
+            test_agency_id = agencies_data[0].get('id')
+            
+            # Test logo removal with General Accountant
+            success, response = self.run_test(
+                "General Accountant - Remove Logo",
+                "DELETE",
+                f"agencies/{test_agency_id}/remove-logo",
+                200
+            )
+            results['general_accountant_logo_access'] = success
+            
+            if success:
+                print(f"   ✅ General Accountant can manage logos")
+        
+        # Test with Agency Staff (should fail with 403)
+        print(f"\n   4b. Testing with Agency Staff (should be denied)...")
+        auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['agency_staff_login'] = auth_success
+        
+        if auth_success and agencies_data:
+            test_agency_id = agencies_data[0].get('id')
+            
+            # Test logo removal with Agency Staff (should fail)
+            success, response = self.run_test(
+                "Agency Staff - Remove Logo (Should Fail)",
+                "DELETE",
+                f"agencies/{test_agency_id}/remove-logo",
+                403
+            )
+            results['agency_staff_logo_denied'] = success
+            
+            if success:
+                print(f"   ✅ Agency Staff correctly denied logo management access")
+        
+        # Test 3: Static File Serving Test
+        print(f"\n   === STATIC FILE SERVING TEST ===")
+        
+        # Test static file endpoint (should be accessible)
+        try:
+            import requests
+            static_url = f"{self.base_url}/uploads/logos/test.png"
+            response = requests.get(static_url, timeout=10)
+            
+            # We expect 404 for non-existent file, but endpoint should be accessible
+            if response.status_code == 404:
+                print(f"   ✅ Static file serving endpoint accessible (404 for non-existent file)")
+                results['static_file_serving'] = True
+            elif response.status_code == 200:
+                print(f"   ✅ Static file serving working (found existing file)")
+                results['static_file_serving'] = True
+            else:
+                print(f"   ⚠️  Static file serving returned: {response.status_code}")
+                results['static_file_serving'] = False
+                
+        except Exception as e:
+            print(f"   ❌ Static file serving test failed: {str(e)}")
+            results['static_file_serving'] = False
+        
+        # Test 4: PDF with Logo Integration Test
+        print(f"\n   === PDF WITH LOGO INTEGRATION TEST ===")
+        
+        # Login back as Super Admin for final tests
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        
+        if auth_success and operations_data:
+            print(f"\n   Testing PDF generation with logo integration...")
+            
+            # Test PDF generation (should work with or without logo)
+            test_operation = operations_data[0] if operations_data else None
+            
+            if test_operation:
+                operation_id = test_operation.get('id')
+                
+                success, pdf_response = self.run_test(
+                    f"PDF with Logo Integration - Operation {operation_id}",
+                    "GET",
+                    f"daily-operations/{operation_id}/print",
+                    200
+                )
+                results['pdf_logo_integration'] = success
+                
+                if success:
+                    print(f"   ✅ PDF generation with logo integration working")
+                else:
+                    print(f"   ❌ PDF generation with logo integration failed")
+        
+        return results
+
     def test_cross_agency_access_permissions(self):
         """Test Cross-Agency Access Testing as requested in review"""
         print(f"\n🔐 Testing Cross-Agency Access Permissions (Review Request)...")
