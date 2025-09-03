@@ -3488,35 +3488,63 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         logo_added = False
         if agency_data.get('logo_url'):
             try:
-                # Create path for logo
                 logo_url = agency_data['logo_url']
-                logo_path = f".{logo_url}" if logo_url.startswith('/') else logo_url
+                print(f"Trying to load logo from: {logo_url}")  # Debug log
                 
-                print(f"Trying to load logo from: {logo_path}")  # Debug log
-                
-                if os.path.exists(logo_path):
-                    from reportlab.platypus.flowables import Image as ReportLabImage
-                    
-                    # Centered logo
-                    logo_img = ReportLabImage(logo_path, width=70, height=70)
-                    logo_table = Table([[logo_img]], colWidths=[7*inch])
-                    logo_table.setStyle(TableStyle([
-                        ('ALIGN', (0, 0), (0, 0), 'CENTER'),
-                        ('VALIGN', (0, 0), (0, 0), 'MIDDLE'),
-                    ]))
-                    elements.append(logo_table)
-                    elements.append(Spacer(1, 12))
-                    logo_added = True
-                    print("Logo added successfully to PDF!")
+                # Handle different logo URL formats
+                if logo_url.startswith('http'):
+                    # External URL - try to download and use
+                    try:
+                        import requests
+                        response = requests.get(logo_url, timeout=10)
+                        if response.status_code == 200:
+                            from reportlab.platypus.flowables import Image as ReportLabImage
+                            from io import BytesIO
+                            
+                            # Create image from downloaded content
+                            logo_img = ReportLabImage(BytesIO(response.content), width=70, height=70)
+                            logo_table = Table([[logo_img]], colWidths=[7*inch])
+                            logo_table.setStyle(TableStyle([
+                                ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+                                ('VALIGN', (0, 0), (0, 0), 'MIDDLE'),
+                            ]))
+                            elements.append(logo_table)
+                            elements.append(Spacer(1, 12))
+                            logo_added = True
+                            print("External logo loaded and added successfully to PDF!")
+                        else:
+                            print(f"Failed to download external logo: HTTP {response.status_code}")
+                    except Exception as e:
+                        print(f"Error downloading external logo: {e}")
                 else:
-                    print(f"Logo file does not exist at: {logo_path}")
+                    # Local file path
+                    logo_path = f".{logo_url}" if logo_url.startswith('/') else logo_url
                     
+                    if os.path.exists(logo_path):
+                        from reportlab.platypus.flowables import Image as ReportLabImage
+                        
+                        # Centered logo
+                        logo_img = ReportLabImage(logo_path, width=70, height=70)
+                        logo_table = Table([[logo_img]], colWidths=[7*inch])
+                        logo_table.setStyle(TableStyle([
+                            ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+                            ('VALIGN', (0, 0), (0, 0), 'MIDDLE'),
+                        ]))
+                        elements.append(logo_table)
+                        elements.append(Spacer(1, 12))
+                        logo_added = True
+                        print("Local logo file loaded and added successfully to PDF!")
+                    else:
+                        print(f"Local logo file does not exist at: {logo_path}")
+                        
             except Exception as e:
                 print(f"Error adding logo to PDF: {e}")
+                import traceback
+                traceback.print_exc()
         
-        # If no logo was added, add a placeholder space or logo text
+        # If no logo was added, add a placeholder
         if not logo_added:
-            # Add a logo placeholder
+            # Add a professional logo placeholder
             logo_placeholder = Table([["🏢"]], colWidths=[7*inch])
             logo_placeholder.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (0, 0), 'CENTER'),
@@ -3525,7 +3553,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
             ]))
             elements.append(logo_placeholder)
             elements.append(Spacer(1, 12))
-            print("Added logo placeholder (no logo file available)")
+            print("Added logo placeholder (no logo available or failed to load)")
         
         # Agency info (always centered, no duplication)
         agency_title = f"""
