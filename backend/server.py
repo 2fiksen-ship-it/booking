@@ -3499,7 +3499,6 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
                         response = requests.get(logo_url, timeout=10)
                         if response.status_code == 200:
                             from reportlab.platypus.flowables import Image as ReportLabImage
-                            from io import BytesIO
                             
                             # Create image from downloaded content
                             logo_img = ReportLabImage(BytesIO(response.content), width=70, height=70)
