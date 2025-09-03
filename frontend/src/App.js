@@ -9488,6 +9488,7 @@ const MainApp = ({ activeTab, setActiveTab }) => {
     invoices: InvoicesManagement,
     payments: PaymentsManagement,
     installments: InstallmentsManagement,
+    'enhanced-installments': EnhancedInstallmentsManagement,
     reports: ReportsManagement,
     userManagement: UserManagement,
     agencyManagement: AgencyManagement,
