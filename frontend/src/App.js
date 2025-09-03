@@ -1668,6 +1668,30 @@ const ClientsManagement = () => {
     }
   };
 
+  const handleAddClient = async () => {
+    try {
+      if (!clientFormData.name || !clientFormData.phone) {
+        alert('يرجى إدخال الاسم ورقم الهاتف على الأقل');
+        return;
+      }
+      
+      await axios.post(`${API}/clients`, clientFormData);
+      setClientFormData({
+        name: '',
+        phone: '',
+        email: '',
+        cin_passport: '',
+        address: ''
+      });
+      setShowAddClientDialog(false);
+      fetchClients();
+      alert('✅ تم إضافة العميل بنجاح');
+    } catch (error) {
+      console.error('Error adding client:', error);
+      alert('❌ حدث خطأ في إضافة العميل');
+    }
+  };
+
   const handlePrintClients = async () => {
     try {
       console.log('=== PRINTING CLIENTS LIST ===');
