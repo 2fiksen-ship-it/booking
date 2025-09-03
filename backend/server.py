@@ -3425,38 +3425,38 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
     
     # Create receipt details table with payment information
     receipt_data = [
-        ['رقم الوصل:', operation_data['operation_no']],
-        ['التاريخ:', operation_data['date'][:10] if isinstance(operation_data['date'], str) else operation_data['date'].strftime('%Y-%m-%d')],
-        ['اسم العميل:', client_data.get('name', 'غير محدد')],
-        ['الخدمة:', operation_data['service_name']],
-        ['السعر الأساسي:', f"{operation_data['base_price']:,.0f} دج"],
-        ['مبلغ التخفيض:', f"{operation_data.get('discount_amount', 0):,.0f} دج"],
-        ['المبلغ النهائي:', f"{operation_data['final_price']:,.0f} دج"],
-        ['الحالة:', operation_data['status']],
+        [fix_arabic_text('رقم الوصل:'), operation_data['operation_no']],
+        [fix_arabic_text('التاريخ:'), operation_data['date'][:10] if isinstance(operation_data['date'], str) else operation_data['date'].strftime('%Y-%m-%d')],
+        [fix_arabic_text('اسم العميل:'), fix_arabic_text(client_data.get('name', 'غير محدد'))],
+        [fix_arabic_text('الخدمة:'), fix_arabic_text(operation_data['service_name'])],
+        [fix_arabic_text('السعر الأساسي:'), f"{operation_data['base_price']:,.0f} {fix_arabic_text('دج')}"],
+        [fix_arabic_text('مبلغ التخفيض:'), f"{operation_data.get('discount_amount', 0):,.0f} {fix_arabic_text('دج')}"],
+        [fix_arabic_text('المبلغ النهائي:'), f"{operation_data['final_price']:,.0f} {fix_arabic_text('دج')}"],
+        [fix_arabic_text('الحالة:'), fix_arabic_text(operation_data['status'])],
     ]
     
     # Add payment information if available
     if payment_info:
         receipt_data.extend([
-            ['═══ معلومات الدفع ═══', ''],
-            ['طريقة الدفع:', payment_info.get('payment_method', 'نقدي')],
-            ['المبلغ المدفوع:', f"{payment_info.get('total_paid', 0):,.0f} دج"],
-            ['المبلغ المتبقي:', f"{payment_info.get('remaining_amount', 0):,.0f} دج"],
-            ['حالة الدفع:', payment_info.get('payment_status', 'غير محدد')],
-            ['عدد الدفعات:', str(payment_info.get('payments_count', 0))],
+            [fix_arabic_text('═══ معلومات الدفع ═══'), ''],
+            [fix_arabic_text('طريقة الدفع:'), fix_arabic_text(payment_info.get('payment_method', 'نقدي'))],
+            [fix_arabic_text('المبلغ المدفوع:'), f"{payment_info.get('total_paid', 0):,.0f} {fix_arabic_text('دج')}"],
+            [fix_arabic_text('المبلغ المتبقي:'), f"{payment_info.get('remaining_amount', 0):,.0f} {fix_arabic_text('دج')}"],
+            [fix_arabic_text('حالة الدفع:'), fix_arabic_text(payment_info.get('payment_status', 'غير محدد'))],
+            [fix_arabic_text('عدد الدفعات:'), str(payment_info.get('payments_count', 0))],
         ])
     else:
         # Fallback to default payment info
         receipt_data.extend([
-            ['═══ معلومات الدفع ═══', ''],
-            ['طريقة الدفع:', 'نقدي'],
-            ['المبلغ المدفوع:', '0 دج'],
-            ['المبلغ المتبقي:', f"{operation_data['final_price']:,.0f} دج"],
-            ['حالة الدفع:', 'غير مدفوع'],
+            [fix_arabic_text('═══ معلومات الدفع ═══'), ''],
+            [fix_arabic_text('طريقة الدفع:'), fix_arabic_text('نقدي')],
+            [fix_arabic_text('المبلغ المدفوع:'), f"0 {fix_arabic_text('دج')}"],
+            [fix_arabic_text('المبلغ المتبقي:'), f"{operation_data['final_price']:,.0f} {fix_arabic_text('دج')}"],
+            [fix_arabic_text('حالة الدفع:'), fix_arabic_text('غير مدفوع')],
         ])
     
     if operation_data.get('notes'):
-        receipt_data.append(['ملاحظات:', operation_data['notes']])
+        receipt_data.append([fix_arabic_text('ملاحظات:'), fix_arabic_text(operation_data['notes'])])
     
     # Create table
     receipt_table = Table(receipt_data, colWidths=[3*inch, 3*inch])
