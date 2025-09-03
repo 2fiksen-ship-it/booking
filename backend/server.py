@@ -3484,25 +3484,48 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         agency_phone = agency_data.get('phone', '')
         agency_email = agency_data.get('email', '')
         
+        # Always try to show logo if available
+        logo_added = False
         if agency_data.get('logo_url'):
             try:
-                # Create table with centered logo and agency info below
-                logo_path = f".{agency_data['logo_url']}" if agency_data['logo_url'].startswith('/') else agency_data['logo_url']
+                # Create path for logo
+                logo_url = agency_data['logo_url']
+                logo_path = f".{logo_url}" if logo_url.startswith('/') else logo_url
+                
+                print(f"Trying to load logo from: {logo_path}")  # Debug log
+                
                 if os.path.exists(logo_path):
                     from reportlab.platypus.flowables import Image as ReportLabImage
                     
                     # Centered logo
-                    logo_img = ReportLabImage(logo_path, width=60, height=60)
+                    logo_img = ReportLabImage(logo_path, width=70, height=70)
                     logo_table = Table([[logo_img]], colWidths=[7*inch])
                     logo_table.setStyle(TableStyle([
                         ('ALIGN', (0, 0), (0, 0), 'CENTER'),
                         ('VALIGN', (0, 0), (0, 0), 'MIDDLE'),
                     ]))
                     elements.append(logo_table)
-                    elements.append(Spacer(1, 10))
+                    elements.append(Spacer(1, 12))
+                    logo_added = True
+                    print("Logo added successfully to PDF!")
+                else:
+                    print(f"Logo file does not exist at: {logo_path}")
                     
             except Exception as e:
                 print(f"Error adding logo to PDF: {e}")
+        
+        # If no logo was added, add a placeholder space or logo text
+        if not logo_added:
+            # Add a logo placeholder
+            logo_placeholder = Table([["🏢"]], colWidths=[7*inch])
+            logo_placeholder.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+                ('FONTSIZE', (0, 0), (0, 0), 24),
+                ('TEXTCOLOR', (0, 0), (0, 0), colors.darkblue),
+            ]))
+            elements.append(logo_placeholder)
+            elements.append(Spacer(1, 12))
+            print("Added logo placeholder (no logo file available)")
         
         # Agency info (always centered, no duplication)
         agency_title = f"""
