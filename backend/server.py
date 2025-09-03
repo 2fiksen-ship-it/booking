@@ -5563,7 +5563,7 @@ async def create_agency_expense(
 async def get_agency_expenses(agency_id: str, current_user: User = Depends(get_current_user)):
     """Get agency expenses"""
     # Check permissions
-    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT, UserRole.GENERAL_MANAGER]:
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
         if current_user.agency_id != agency_id:
             raise HTTPException(status_code=403, detail="Not authorized to view expenses")
     
