@@ -10535,6 +10535,266 @@ def main():
         
         return results
 
+    def test_logo_display_fix_in_pdf_receipts(self):
+        """Test Logo Display Fix in PDF Receipts - Comprehensive Testing"""
+        print(f"\n🖼️ TESTING LOGO DISPLAY FIX IN PDF RECEIPTS (Review Request)...")
+        print(f"   Testing external URL support, local file support, error handling, and performance")
+        
+        results = {}
+        
+        # Step 1: Super Admin Login
+        print(f"\n   1. Super Admin Authentication (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with logo tests")
+            return results
+            
+        print(f"   ✅ Super Admin authenticated successfully")
+        
+        # Step 2: Get Daily Operations for PDF Testing
+        print(f"\n   2. Retrieving Daily Operations for PDF Generation Testing...")
+        success, operations_data = self.run_test(
+            "Get Daily Operations for PDF Testing",
+            "GET",
+            "daily-operations",
+            200
+        )
+        results['get_operations'] = success
+        
+        if not success or not operations_data:
+            print("   ❌ No daily operations found - cannot test PDF generation")
+            return results
+            
+        print(f"   ✅ Found {len(operations_data)} daily operations for testing")
+        
+        # Step 3: Test PDF Generation with Logo for Multiple Operations
+        print(f"\n   3. Testing PDF Generation with Logo for Multiple Operations...")
+        
+        pdf_test_results = []
+        operations_to_test = operations_data[:5]  # Test first 5 operations
+        
+        for i, operation in enumerate(operations_to_test, 1):
+            operation_id = operation.get('id')
+            operation_no = operation.get('operation_no', 'Unknown')
+            
+            print(f"\n   3.{i}. Testing PDF Generation for Operation {operation_no} (ID: {operation_id})...")
+            
+            import time
+            start_time = time.time()
+            
+            success, response = self.run_test(
+                f"Generate PDF Receipt - Operation {operation_no}",
+                "GET",
+                f"daily-operations/{operation_id}/print",
+                200
+            )
+            
+            end_time = time.time()
+            generation_time = end_time - start_time
+            
+            test_result = {
+                'operation_id': operation_id,
+                'operation_no': operation_no,
+                'success': success,
+                'generation_time': generation_time
+            }
+            
+            if success:
+                # Check if response is PDF content
+                if hasattr(response, 'content'):
+                    pdf_size = len(response.content) if response.content else 0
+                elif isinstance(response, bytes):
+                    pdf_size = len(response)
+                else:
+                    pdf_size = 0
+                
+                test_result['pdf_size'] = pdf_size
+                
+                print(f"   ✅ PDF generated successfully")
+                print(f"   Generation time: {generation_time:.2f} seconds")
+                print(f"   PDF size: {pdf_size} bytes")
+                
+                # Check for logo success indicators in logs (we can't directly check PDF content)
+                if pdf_size > 50000:  # PDFs with logos are typically larger
+                    print(f"   ✅ PDF size indicates logo likely included (>50KB)")
+                    test_result['logo_likely_included'] = True
+                else:
+                    print(f"   ⚠️  PDF size suggests logo may not be included (<50KB)")
+                    test_result['logo_likely_included'] = False
+                    
+            else:
+                print(f"   ❌ PDF generation failed")
+                test_result['pdf_size'] = 0
+                test_result['logo_likely_included'] = False
+            
+            pdf_test_results.append(test_result)
+        
+        results['pdf_generation_tests'] = pdf_test_results
+        
+        # Step 4: Agency Staff Testing (with external logo URL)
+        print(f"\n   4. Testing Agency Staff with External Logo URL (staff1@tlemcen.sanhaja.com / staff123)...")
+        
+        staff_auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['agency_staff_login'] = staff_auth_success
+        
+        if staff_auth_success:
+            print(f"   ✅ Agency Staff authenticated successfully")
+            print(f"   Staff User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+            print(f"   Staff Agency: {self.current_user.get('agency_id')}")
+            
+            # Get operations for this agency staff
+            success, staff_operations = self.run_test(
+                "Agency Staff - Get Daily Operations",
+                "GET",
+                "daily-operations",
+                200
+            )
+            results['staff_get_operations'] = success
+            
+            if success and staff_operations:
+                print(f"   ✅ Found {len(staff_operations)} operations for agency staff")
+                
+                # Test PDF generation for agency with external logo URL
+                test_operation = staff_operations[0]
+                operation_id = test_operation.get('id')
+                operation_no = test_operation.get('operation_no', 'Unknown')
+                
+                print(f"\n   4.1. Testing PDF with External Logo URL - Operation {operation_no}...")
+                
+                start_time = time.time()
+                success, response = self.run_test(
+                    f"Agency Staff - Generate PDF with External Logo",
+                    "GET",
+                    f"daily-operations/{operation_id}/print",
+                    200
+                )
+                end_time = time.time()
+                generation_time = end_time - start_time
+                
+                results['external_logo_pdf_test'] = success
+                
+                if success:
+                    pdf_size = len(response.content) if hasattr(response, 'content') and response.content else 0
+                    print(f"   ✅ PDF with external logo generated successfully")
+                    print(f"   Generation time: {generation_time:.2f} seconds")
+                    print(f"   PDF size: {pdf_size} bytes")
+                    
+                    if pdf_size > 50000:
+                        print(f"   ✅ External logo URL appears to be working (PDF size >50KB)")
+                        results['external_logo_working'] = True
+                    else:
+                        print(f"   ⚠️  External logo may not be loading (PDF size <50KB)")
+                        results['external_logo_working'] = False
+                else:
+                    print(f"   ❌ PDF generation with external logo failed")
+                    results['external_logo_working'] = False
+        
+        # Step 5: Performance Analysis
+        print(f"\n   5. Performance Analysis...")
+        
+        successful_tests = [t for t in pdf_test_results if t['success']]
+        if successful_tests:
+            avg_generation_time = sum(t['generation_time'] for t in successful_tests) / len(successful_tests)
+            max_generation_time = max(t['generation_time'] for t in successful_tests)
+            min_generation_time = min(t['generation_time'] for t in successful_tests)
+            avg_pdf_size = sum(t['pdf_size'] for t in successful_tests) / len(successful_tests)
+            
+            print(f"   ✅ Performance Analysis Results:")
+            print(f"   Average generation time: {avg_generation_time:.2f} seconds")
+            print(f"   Max generation time: {max_generation_time:.2f} seconds")
+            print(f"   Min generation time: {min_generation_time:.2f} seconds")
+            print(f"   Average PDF size: {avg_pdf_size:.0f} bytes")
+            
+            results['performance'] = {
+                'avg_generation_time': avg_generation_time,
+                'max_generation_time': max_generation_time,
+                'min_generation_time': min_generation_time,
+                'avg_pdf_size': avg_pdf_size
+            }
+            
+            # Performance criteria
+            if avg_generation_time < 3.0:
+                print(f"   ✅ Performance EXCELLENT: Average generation time under 3 seconds")
+                results['performance_rating'] = 'excellent'
+            elif avg_generation_time < 5.0:
+                print(f"   ✅ Performance GOOD: Average generation time under 5 seconds")
+                results['performance_rating'] = 'good'
+            else:
+                print(f"   ⚠️  Performance SLOW: Average generation time over 5 seconds")
+                results['performance_rating'] = 'slow'
+        
+        # Step 6: Logo Quality Analysis
+        print(f"\n   6. Logo Quality Analysis...")
+        
+        logos_working = sum(1 for t in pdf_test_results if t.get('logo_likely_included', False))
+        total_tests = len(pdf_test_results)
+        logo_success_rate = (logos_working / total_tests * 100) if total_tests > 0 else 0
+        
+        print(f"   Logo Success Rate: {logo_success_rate:.1f}% ({logos_working}/{total_tests} tests)")
+        
+        if logo_success_rate >= 90:
+            print(f"   ✅ EXCELLENT: Logo display working in 90%+ of tests")
+            results['logo_quality_rating'] = 'excellent'
+        elif logo_success_rate >= 70:
+            print(f"   ✅ GOOD: Logo display working in 70%+ of tests")
+            results['logo_quality_rating'] = 'good'
+        elif logo_success_rate >= 50:
+            print(f"   ⚠️  FAIR: Logo display working in 50%+ of tests")
+            results['logo_quality_rating'] = 'fair'
+        else:
+            print(f"   ❌ POOR: Logo display working in less than 50% of tests")
+            results['logo_quality_rating'] = 'poor'
+        
+        results['logo_success_rate'] = logo_success_rate
+        
+        # Step 7: Error Handling Test
+        print(f"\n   7. Testing Error Handling for Non-existent Operations...")
+        
+        success, response = self.run_test(
+            "PDF Generation - Non-existent Operation",
+            "GET",
+            "daily-operations/non-existent-id/print",
+            400  # Expecting 400 or 404
+        )
+        results['error_handling_test'] = success
+        
+        if success:
+            print(f"   ✅ Error handling working correctly for non-existent operations")
+        else:
+            print(f"   ⚠️  Error handling may need improvement")
+        
+        # Step 8: Test Summary
+        print(f"\n   8. Logo Display Fix Test Summary...")
+        
+        total_pdf_tests = len(pdf_test_results)
+        successful_pdf_tests = sum(1 for t in pdf_test_results if t['success'])
+        pdf_success_rate = (successful_pdf_tests / total_pdf_tests * 100) if total_pdf_tests > 0 else 0
+        
+        print(f"\n   📊 COMPREHENSIVE TEST RESULTS:")
+        print(f"   PDF Generation Success Rate: {pdf_success_rate:.1f}% ({successful_pdf_tests}/{total_pdf_tests})")
+        print(f"   Logo Success Rate: {logo_success_rate:.1f}% ({logos_working}/{total_tests})")
+        print(f"   External Logo Test: {'✅ PASS' if results.get('external_logo_working', False) else '❌ FAIL'}")
+        print(f"   Performance Rating: {results.get('performance_rating', 'unknown').upper()}")
+        print(f"   Logo Quality Rating: {results.get('logo_quality_rating', 'unknown').upper()}")
+        print(f"   Error Handling: {'✅ PASS' if results.get('error_handling_test', False) else '❌ FAIL'}")
+        
+        # Overall assessment
+        if (pdf_success_rate >= 90 and logo_success_rate >= 70 and 
+            results.get('external_logo_working', False) and 
+            results.get('performance_rating') in ['excellent', 'good']):
+            print(f"\n   🎉 OVERALL ASSESSMENT: LOGO DISPLAY FIX WORKING EXCELLENTLY!")
+            results['overall_assessment'] = 'excellent'
+        elif (pdf_success_rate >= 70 and logo_success_rate >= 50):
+            print(f"\n   ✅ OVERALL ASSESSMENT: LOGO DISPLAY FIX WORKING WELL")
+            results['overall_assessment'] = 'good'
+        else:
+            print(f"\n   ❌ OVERALL ASSESSMENT: LOGO DISPLAY FIX NEEDS IMPROVEMENT")
+            results['overall_assessment'] = 'needs_improvement'
+        
+        return results
+
 if __name__ == "__main__":
     # Check if specific test is requested
     if len(sys.argv) > 1:
