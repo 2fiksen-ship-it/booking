@@ -5575,6 +5575,12 @@ async def get_agency_expenses(agency_id: str, current_user: User = Depends(get_c
     
     try:
         expenses = await db.agency_expenses.find({"agency_id": agency_id}).sort("expense_date", -1).to_list(None)
+        
+        # Convert ObjectId to string for JSON serialization
+        for expense in expenses:
+            if "_id" in expense:
+                expense["_id"] = str(expense["_id"])
+        
         return expenses
         
     except Exception as e:
