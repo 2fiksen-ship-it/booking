@@ -3324,18 +3324,23 @@ async def generate_daily_operations_report(
 
 def fix_arabic_text(text):
     """Fix Arabic text for proper PDF display"""
-    if not text or not ARABIC_SUPPORT:
-        return text
+    if not text:
+        return ""
+    
+    if not ARABIC_SUPPORT:
+        return str(text)
     
     try:
+        # Convert to string if not already
+        text_str = str(text)
         # Reshape Arabic text to connect letters properly
-        reshaped_text = reshape(text)
+        reshaped_text = reshape(text_str)
         # Apply bidirectional algorithm for proper RTL display
         bidi_text = get_display(reshaped_text)
         return bidi_text
     except Exception as e:
-        print(f"Arabic text processing error: {e}")
-        return text
+        print(f"Arabic text processing error for '{text}': {e}")
+        return str(text)  # Return original text if processing fails
 
 def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict, client_data: dict, service_data: dict, payment_info: dict = None):
     """Generate professional and elegant PDF receipt for daily operations with Arabic support"""
