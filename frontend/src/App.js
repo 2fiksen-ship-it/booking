@@ -6987,6 +6987,102 @@ const AgencySettingsManagement = () => {
     }));
   };
 
+  // Handle logo file selection and preview
+  const handleLogoFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        alert('يرجى اختيار ملف صورة صالح (JPEG, PNG, GIF)');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('حجم الملف كبير جداً. يرجى اختيار صورة أقل من 5 ميجابايت');
+        return;
+      }
+
+      setLogoFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload logo file
+  const handleLogoUpload = async () => {
+    if (!logoFile || !selectedAgency) return;
+
+    try {
+      setUploadingLogo(true);
+      
+      const formDataUpload = new FormData();
+      formDataUpload.append('logo', logoFile);
+      
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/agencies/${selectedAgency.id}/upload-logo`, formDataUpload, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Update form data with new logo URL
+      const logoUrl = response.data.logo_url;
+      setFormData(prev => ({
+        ...prev,
+        logo_url: logoUrl
+      }));
+      
+      // Clear upload state
+      setLogoFile(null);
+      setLogoPreview(null);
+      
+      showToast('✅ تم رفع اللوجو بنجاح');
+      
+      // Reset file input
+      const fileInput = document.getElementById('logo-upload');
+      if (fileInput) fileInput.value = '';
+      
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      showToast('❌ فشل في رفع اللوجو: ' + (error.response?.data?.detail || error.message), 'error');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  // Remove current logo
+  const handleLogoRemove = async () => {
+    if (!selectedAgency || !formData.logo_url) return;
+    
+    if (!confirm('هل أنت متأكد من حذف اللوجو الحالي؟')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API}/agencies/${selectedAgency.id}/remove-logo`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setFormData(prev => ({
+        ...prev,
+        logo_url: ''
+      }));
+      
+      showToast('✅ تم حذف اللوجو بنجاح');
+      
+    } catch (error) {
+      console.error('Error removing logo:', error);
+      showToast('❌ فشل في حذف اللوجو', 'error');
+    }
+  };
+
   const handleSave = async () => {
     if (!selectedAgency) return;
     
