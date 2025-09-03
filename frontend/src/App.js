@@ -8177,6 +8177,43 @@ const DailyOperationsManagement = () => {
     }
   };
 
+  // Add client function
+  const handleAddClient = async () => {
+    if (!clientFormData.name || !clientFormData.phone) {
+      alert('يرجى إدخال الاسم ورقم الهاتف على الأقل');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/clients`, clientFormData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      alert('✅ تم إضافة العميل بنجاح');
+      
+      // Update clients list
+      setClients([...clients, response.data]);
+      
+      // Set the new client as selected
+      setFormData({...formData, client_id: response.data.id});
+      
+      // Reset form and close dialog
+      setClientFormData({
+        name: '',
+        phone: '',
+        cin_passport: '',
+        email: '',
+        address: ''
+      });
+      setShowAddClientDialog(false);
+      
+    } catch (error) {
+      console.error('Error adding client:', error);
+      alert('❌ فشل في إضافة العميل: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   // Apply filters to operations
   const applyFilters = () => {
     const filterParams = {};
