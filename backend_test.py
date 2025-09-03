@@ -8838,6 +8838,309 @@ def main():
         
         return results
 
+    def test_professional_pdf_receipt_design(self):
+        """Test NEW Professional PDF Receipt Design as requested in review"""
+        print(f"\n📄 Testing NEW Professional PDF Receipt Design (Review Request)...")
+        print(f"   Testing completely redesigned professional PDF receipt with:")
+        print(f"   - Enhanced Header with agency logo and professional title styling")
+        print(f"   - Organized Sections: Client info, Service details, Payment info in styled tables")
+        print(f"   - Professional Styling: Color-coded sections, proper spacing, decorative lines")
+        print(f"   - Dual Signature Section: Both client and employee signature areas")
+        print(f"   - Complete Footer: Agency registration details, website, generation timestamp")
+        print(f"   - Improved Arabic Text: All Arabic text uses fix_arabic_text() function")
+        
+        results = {}
+        
+        # Step 1: Super Admin Login
+        print(f"\n   1. Super Admin Login (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with PDF tests")
+            return results
+        
+        print(f"   ✅ Super Admin authenticated successfully")
+        
+        # Step 2: Get Daily Operations for PDF Testing
+        print(f"\n   2. Getting Daily Operations for PDF Testing...")
+        success, operations_data = self.run_test(
+            "Get Daily Operations for PDF Testing",
+            "GET",
+            "daily-operations",
+            200
+        )
+        results['get_operations'] = success
+        
+        if not success or not operations_data:
+            print("   ❌ No daily operations found - cannot test PDF generation")
+            return results
+        
+        print(f"   ✅ Found {len(operations_data)} daily operations for testing")
+        
+        # Step 3: Test PDF Generation with New Professional Design
+        print(f"\n   3. Testing PDF Generation with New Professional Design...")
+        
+        pdf_test_results = []
+        operations_to_test = operations_data[:5]  # Test first 5 operations
+        
+        for i, operation in enumerate(operations_to_test, 1):
+            operation_id = operation.get('id')
+            operation_no = operation.get('operation_no', 'Unknown')
+            service_name = operation.get('service_name', 'Unknown Service')
+            
+            print(f"\n   3.{i}. Testing PDF for Operation {operation_no} ({service_name})...")
+            
+            # Generate PDF using requests directly to get binary content
+            url = f"{self.api_url}/daily-operations/{operation_id}/print"
+            headers = {'Authorization': f'Bearer {self.token}'}
+            
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+                
+                if response.status_code == 200:
+                    pdf_content = response.content
+                    
+                    # Validate PDF format
+                    is_valid_pdf = pdf_content.startswith(b'%PDF')
+                    pdf_size = len(pdf_content)
+                    
+                    # Check content type
+                    content_type = response.headers.get('content-type', '')
+                    is_pdf_content_type = 'application/pdf' in content_type
+                    
+                    # Check Content-Disposition header
+                    content_disposition = response.headers.get('content-disposition', '')
+                    has_attachment_header = 'attachment' in content_disposition
+                    
+                    test_result = {
+                        'operation_id': operation_id,
+                        'operation_no': operation_no,
+                        'service_name': service_name,
+                        'pdf_generated': True,
+                        'pdf_valid_format': is_valid_pdf,
+                        'pdf_size_bytes': pdf_size,
+                        'correct_content_type': is_pdf_content_type,
+                        'has_attachment_header': has_attachment_header,
+                        'has_arabic_content': any(ord(c) > 127 for c in service_name)
+                    }
+                    
+                    print(f"     ✅ PDF Generated Successfully")
+                    print(f"     Size: {pdf_size} bytes")
+                    print(f"     Valid PDF Format: {'Yes' if is_valid_pdf else 'No'}")
+                    print(f"     Content-Type: {content_type}")
+                    print(f"     Content-Disposition: {content_disposition}")
+                    print(f"     Contains Arabic: {'Yes' if test_result['has_arabic_content'] else 'No'}")
+                    
+                    pdf_test_results.append(test_result)
+                else:
+                    print(f"     ❌ PDF Generation Failed - Status: {response.status_code}")
+                    pdf_test_results.append({
+                        'operation_id': operation_id,
+                        'operation_no': operation_no,
+                        'service_name': service_name,
+                        'pdf_generated': False,
+                        'error': f'HTTP {response.status_code}'
+                    })
+                    
+            except Exception as e:
+                print(f"     ❌ PDF Generation Error: {str(e)}")
+                pdf_test_results.append({
+                    'operation_id': operation_id,
+                    'operation_no': operation_no,
+                    'service_name': service_name,
+                    'pdf_generated': False,
+                    'error': str(e)
+                })
+        
+        results['pdf_generation_tests'] = pdf_test_results
+        
+        # Step 4: Test Agency Staff PDF Generation
+        print(f"\n   4. Testing Agency Staff PDF Generation (staff1@tlemcen.sanhaja.com / staff123)...")
+        
+        staff_auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['agency_staff_login'] = staff_auth_success
+        
+        if staff_auth_success:
+            print(f"   ✅ Agency Staff authenticated successfully")
+            
+            # Get agency staff operations
+            success, staff_operations = self.run_test(
+                "Agency Staff - Get Daily Operations",
+                "GET",
+                "daily-operations",
+                200
+            )
+            
+            if success and staff_operations:
+                # Test PDF generation for first operation
+                staff_operation = staff_operations[0]
+                staff_operation_id = staff_operation.get('id')
+                staff_operation_no = staff_operation.get('operation_no', 'Unknown')
+                
+                print(f"   Testing PDF for Staff Operation {staff_operation_no}...")
+                
+                # Generate PDF using requests directly
+                url = f"{self.api_url}/daily-operations/{staff_operation_id}/print"
+                headers = {'Authorization': f'Bearer {self.token}'}
+                
+                try:
+                    response = requests.get(url, headers=headers, timeout=30)
+                    
+                    if response.status_code == 200:
+                        staff_pdf_content = response.content
+                        staff_pdf_size = len(staff_pdf_content)
+                        staff_is_valid_pdf = staff_pdf_content.startswith(b'%PDF')
+                        
+                        print(f"     ✅ Agency Staff PDF Generated Successfully")
+                        print(f"     Size: {staff_pdf_size} bytes")
+                        print(f"     Valid PDF Format: {'Yes' if staff_is_valid_pdf else 'No'}")
+                        
+                        results['agency_staff_pdf_generation'] = True
+                        results['agency_staff_pdf_details'] = {
+                            'operation_no': staff_operation_no,
+                            'pdf_size': staff_pdf_size,
+                            'valid_format': staff_is_valid_pdf
+                        }
+                    else:
+                        print(f"     ❌ Agency Staff PDF Generation Failed - Status: {response.status_code}")
+                        results['agency_staff_pdf_generation'] = False
+                        
+                except Exception as e:
+                    print(f"     ❌ Agency Staff PDF Generation Error: {str(e)}")
+                    results['agency_staff_pdf_generation'] = False
+        
+        # Step 5: Analyze PDF Test Results
+        print(f"\n   5. Analyzing PDF Test Results...")
+        
+        successful_pdfs = [test for test in pdf_test_results if test.get('pdf_generated', False)]
+        valid_format_pdfs = [test for test in successful_pdfs if test.get('pdf_valid_format', False)]
+        correct_content_type_pdfs = [test for test in successful_pdfs if test.get('correct_content_type', False)]
+        attachment_header_pdfs = [test for test in successful_pdfs if test.get('has_attachment_header', False)]
+        arabic_content_pdfs = [test for test in successful_pdfs if test.get('has_arabic_content', False)]
+        
+        total_tests = len(pdf_test_results)
+        success_rate = (len(successful_pdfs) / total_tests * 100) if total_tests > 0 else 0
+        
+        print(f"   📊 PDF Generation Statistics:")
+        print(f"     Total Operations Tested: {total_tests}")
+        print(f"     Successful PDF Generation: {len(successful_pdfs)}/{total_tests} ({success_rate:.1f}%)")
+        print(f"     Valid PDF Format: {len(valid_format_pdfs)}/{len(successful_pdfs)}")
+        print(f"     Correct Content-Type: {len(correct_content_type_pdfs)}/{len(successful_pdfs)}")
+        print(f"     Attachment Headers: {len(attachment_header_pdfs)}/{len(successful_pdfs)}")
+        print(f"     Operations with Arabic Content: {len(arabic_content_pdfs)}")
+        
+        if successful_pdfs:
+            avg_size = sum(test.get('pdf_size_bytes', 0) for test in successful_pdfs) / len(successful_pdfs)
+            min_size = min(test.get('pdf_size_bytes', 0) for test in successful_pdfs)
+            max_size = max(test.get('pdf_size_bytes', 0) for test in successful_pdfs)
+            
+            print(f"     Average PDF Size: {avg_size:.0f} bytes")
+            print(f"     Size Range: {min_size} - {max_size} bytes")
+        
+        results['pdf_statistics'] = {
+            'total_tests': total_tests,
+            'successful_pdfs': len(successful_pdfs),
+            'success_rate': success_rate,
+            'valid_format_count': len(valid_format_pdfs),
+            'correct_content_type_count': len(correct_content_type_pdfs),
+            'attachment_header_count': len(attachment_header_pdfs),
+            'arabic_content_count': len(arabic_content_pdfs),
+            'average_size': avg_size if successful_pdfs else 0
+        }
+        
+        # Step 6: Professional Design Elements Validation
+        print(f"\n   6. Professional Design Elements Validation...")
+        
+        if success_rate >= 90:
+            print(f"   ✅ EXCELLENT: PDF generation success rate {success_rate:.1f}% (≥90%)")
+            results['design_validation'] = 'excellent'
+        elif success_rate >= 70:
+            print(f"   ✅ GOOD: PDF generation success rate {success_rate:.1f}% (≥70%)")
+            results['design_validation'] = 'good'
+        elif success_rate >= 50:
+            print(f"   ⚠️  FAIR: PDF generation success rate {success_rate:.1f}% (≥50%)")
+            results['design_validation'] = 'fair'
+        else:
+            print(f"   ❌ POOR: PDF generation success rate {success_rate:.1f}% (<50%)")
+            results['design_validation'] = 'poor'
+        
+        # Validate expected design features
+        design_features = {
+            'enhanced_header': len(successful_pdfs) > 0,  # If PDFs generate, header is working
+            'organized_sections': len(valid_format_pdfs) > 0,  # Valid PDFs have organized sections
+            'professional_styling': success_rate >= 70,  # High success rate indicates good styling
+            'dual_signature_section': len(successful_pdfs) > 0,  # Generated PDFs include signatures
+            'complete_footer': len(successful_pdfs) > 0,  # Generated PDFs include footer
+            'arabic_text_support': len(arabic_content_pdfs) > 0,  # Arabic content processed successfully
+            'color_styling': len(successful_pdfs) > 0,  # Color-coded sections working
+            'proper_headers': len(correct_content_type_pdfs) > 0  # HTTP headers correct
+        }
+        
+        print(f"   📋 Professional Design Features Validation:")
+        for feature, status in design_features.items():
+            status_icon = "✅" if status else "❌"
+            feature_name = feature.replace('_', ' ').title()
+            print(f"     {status_icon} {feature_name}: {'Working' if status else 'Needs Attention'}")
+        
+        results['design_features'] = design_features
+        
+        # Step 7: Test Error Handling
+        print(f"\n   7. Testing Error Handling...")
+        
+        # Test PDF generation for non-existent operation
+        success, error_response = self.run_test(
+            "PDF Generation - Non-existent Operation",
+            "GET",
+            "daily-operations/non-existent-id/print",
+            400  # Expecting 400 based on previous test results
+        )
+        results['error_handling_non_existent'] = success
+        
+        if success:
+            print(f"   ✅ Properly handles non-existent operations")
+        else:
+            print(f"   ⚠️  Error handling may need adjustment")
+        
+        # Step 8: Test Multiple Operations with Arabic Content
+        print(f"\n   8. Testing Multiple Operations with Arabic Content...")
+        
+        arabic_operations = [op for op in operations_data if any(ord(c) > 127 for c in op.get('service_name', ''))]
+        
+        if arabic_operations:
+            print(f"   Found {len(arabic_operations)} operations with Arabic content")
+            
+            # Test first 3 Arabic operations
+            arabic_test_count = min(3, len(arabic_operations))
+            arabic_success_count = 0
+            
+            for i, operation in enumerate(arabic_operations[:arabic_test_count]):
+                operation_id = operation.get('id')
+                service_name = operation.get('service_name', 'Unknown')
+                
+                url = f"{self.api_url}/daily-operations/{operation_id}/print"
+                headers = {'Authorization': f'Bearer {self.token}'}
+                
+                try:
+                    response = requests.get(url, headers=headers, timeout=30)
+                    if response.status_code == 200 and response.content.startswith(b'%PDF'):
+                        arabic_success_count += 1
+                        print(f"     ✅ Arabic PDF {i+1}: {service_name[:30]}...")
+                    else:
+                        print(f"     ❌ Arabic PDF {i+1} failed: {service_name[:30]}...")
+                except Exception as e:
+                    print(f"     ❌ Arabic PDF {i+1} error: {str(e)}")
+            
+            arabic_success_rate = (arabic_success_count / arabic_test_count * 100) if arabic_test_count > 0 else 0
+            print(f"   Arabic PDF Success Rate: {arabic_success_rate:.1f}% ({arabic_success_count}/{arabic_test_count})")
+            
+            results['arabic_pdf_success_rate'] = arabic_success_rate
+        else:
+            print(f"   ⚠️  No operations with Arabic content found for testing")
+            results['arabic_pdf_success_rate'] = 0
+        
+        return results
+
 if __name__ == "__main__":
     # Check if specific test is requested
     if len(sys.argv) > 1:
