@@ -3500,19 +3500,21 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         client_name = fix_arabic_text(client_data.get('name', 'غير محدد'))
         client_phone = client_data.get('phone', 'غير محدد')
         
+        # RTL table - Arabic labels on RIGHT, values on LEFT
         client_data_table = [
-            [fix_arabic_text('اسم العميل:'), client_name],
-            [fix_arabic_text('رقم الهاتف:'), client_phone],
+            [client_name, fix_arabic_text('اسم العميل:')],
+            [client_phone, fix_arabic_text('رقم الهاتف:')],
         ]
         
         if client_data.get('email'):
-            client_data_table.append([fix_arabic_text('البريد الإلكتروني:'), client_data.get('email')])
+            client_data_table.append([client_data.get('email'), fix_arabic_text('البريد الإلكتروني:')])
         
-        client_table = Table(client_data_table, colWidths=[2*inch, 4*inch])
+        client_table = Table(client_data_table, colWidths=[4*inch, 2*inch])
         client_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightblue),
+            ('BACKGROUND', (1, 0), (1, -1), colors.lightblue),  # Right column (Arabic labels) background
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),   # Left column (values) align left
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Right column (labels) align right
             ('FONTNAME', (0, 0), (-1, -1), arabic_font),
             ('FONTSIZE', (0, 0), (-1, -1), 11),
             ('LEFTPADDING', (0, 0), (-1, -1), 8),
