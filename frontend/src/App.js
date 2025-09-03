@@ -9122,18 +9122,61 @@ const DailyOperationsManagement = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="client_id">{t('clientName')}</Label>
-              <Select value={formData.client_id} onValueChange={(value) => setFormData({...formData, client_id: value})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر العميل" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
+              <div className="flex gap-2">
+                <Select 
+                  value={formData.client_id} 
+                  onValueChange={(value) => {
+                    if (value === 'ADD_NEW_CLIENT') {
+                      setShowAddClientDialog(true);
+                    } else {
+                      setFormData({...formData, client_id: value});
+                    }
+                  }}
+                  className="flex-1"
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={clients.length === 0 ? "لا توجد عملاء - أضف عميل جديد أولاً" : "اختر العميل"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.length === 0 ? (
+                      <SelectItem value="no_clients" disabled>
+                        لا توجد عملاء مسجلين
+                      </SelectItem>
+                    ) : (
+                      clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name} - {client.phone}
+                        </SelectItem>
+                      ))
+                    )}
+                    <SelectItem value="ADD_NEW_CLIENT" className="bg-blue-50 text-blue-700 font-medium">
+                      ➕ إضافة عميل جديد
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+                
+                {/* Quick Add Client Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAddClientDialog(true)}
+                  className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
+                >
+                  ➕ عميل جديد
+                </Button>
+              </div>
+              
+              {clients.length === 0 && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center text-blue-700">
+                    <div className="ml-2">💡</div>
+                    <div>
+                      <p className="font-medium">مرحباً بك في الوكالة الجديدة!</p>
+                      <p className="text-sm">تحتاج لإضافة عملاء أولاً قبل تسجيل العمليات. اضغط "➕ عميل جديد" لإضافة أول عميل.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
