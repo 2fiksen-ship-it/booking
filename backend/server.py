@@ -3371,7 +3371,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
     header_table_data = []
     
     # Create header with logo (left) and agency info (right)
-    if agency_data.get('logo_url'):
+    if agency_data.get('logo_url') and False:  # Disable logo for now until we have actual logo files
         # If logo exists, create a two-column header
         agency_info_text = f"""
         <font size="18" color="darkblue"><b>{fix_arabic_text(agency_data['name'])}</b></font><br/>
@@ -3383,8 +3383,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         header_table_data = [
             [Paragraph(agency_info_text, ParagraphStyle('HeaderInfo', 
                 parent=styles['Normal'], alignment=TA_RIGHT, fontName=arabic_font)),
-             Paragraph('<img src="logo_placeholder.png" width="80" height="80" valign="middle"/>', 
-                styles['Normal']) if agency_data.get('logo_url') else Spacer(1, 80)]
+             Paragraph('LOGO', styles['Normal'])]  # Simple text placeholder instead of image
         ]
     else:
         # No logo - centered agency info
