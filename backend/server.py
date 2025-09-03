@@ -3338,16 +3338,17 @@ def fix_arabic_text(text):
         return text
 
 def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict, client_data: dict, service_data: dict, payment_info: dict = None):
-    """Generate professional PDF receipt for daily operations with Arabic support"""
+    """Generate professional and elegant PDF receipt for daily operations with Arabic support"""
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=40, bottomMargin=40)
     
     # Register Arabic font for PDF generation
     try:
         # Try to register Arabic font (DejaVu Sans supports Arabic)
         pdfmetrics.registerFont(TTFont('Arabic', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+        pdfmetrics.registerFont(TTFont('ArabicBold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
         arabic_font = 'Arabic'
-        arabic_bold_font = 'Arabic'  # Use same font for bold
+        arabic_bold_font = 'ArabicBold'
     except:
         try:
             # Fallback to default system font that might support Arabic
@@ -3362,144 +3363,315 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
     # Container for the 'Flowable' objects
     elements = []
     
-    # Define styles
+    # Define professional styles
     styles = getSampleStyleSheet()
     
-    # Create custom styles for Arabic text
-    title_style = ParagraphStyle(
-        'CustomTitle',
+    # ========== HEADER SECTION ==========
+    # Agency Logo and Header
+    header_table_data = []
+    
+    # Create header with logo (left) and agency info (right)
+    if agency_data.get('logo_url'):
+        # If logo exists, create a two-column header
+        agency_info_text = f"""
+        <font size="18" color="darkblue"><b>{fix_arabic_text(agency_data['name'])}</b></font><br/>
+        <font size="12" color="gray">{fix_arabic_text('وكالة الأسفار والسياحة')}</font><br/>
+        <font size="10">{fix_arabic_text(agency_data.get('address', ''))}, {fix_arabic_text(agency_data.get('city', ''))}</font><br/>
+        <font size="10">{fix_arabic_text('هاتف')}: {agency_data.get('phone', '')}</font>
+        """
+        
+        header_table_data = [
+            [Paragraph(agency_info_text, ParagraphStyle('HeaderInfo', 
+                parent=styles['Normal'], alignment=TA_RIGHT, fontName=arabic_font)),
+             Paragraph('<img src="logo_placeholder.png" width="80" height="80" valign="middle"/>', 
+                styles['Normal']) if agency_data.get('logo_url') else Spacer(1, 80)]
+        ]
+    else:
+        # No logo - centered agency info
+        agency_title = f"""
+        <font size="20" color="darkblue"><b>{fix_arabic_text(agency_data['name'])}</b></font><br/>
+        <font size="14" color="gray">{fix_arabic_text('وكالة الأسفار والسياحة')}</font><br/>
+        <font size="11">{fix_arabic_text(agency_data.get('address', ''))}, {fix_arabic_text(agency_data.get('city', ''))}</font><br/>
+        <font size="11">{fix_arabic_text('هاتف')}: {agency_data.get('phone', '')} | {fix_arabic_text('إيميل')}: {agency_data.get('email', '')}</font>
+        """
+        
+        title_style = ParagraphStyle(
+            'AgencyTitle',
+            parent=styles['Normal'],
+            fontSize=16,
+            spaceAfter=20,
+            alignment=TA_CENTER,
+            fontName=arabic_font
+        )
+        
+        elements.append(Paragraph(agency_title, title_style))
+    
+    if header_table_data:
+        header_table = Table(header_table_data, colWidths=[4*inch, 2*inch])
+        header_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, 0), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        elements.append(header_table)
+    
+    # Decorative line
+    elements.append(Spacer(1, 10))
+    line_table = Table([['', '']], colWidths=[7*inch])
+    line_table.setStyle(TableStyle([
+        ('LINEBELOW', (0, 0), (-1, -1), 3, colors.darkblue),
+    ]))
+    elements.append(line_table)
+    elements.append(Spacer(1, 20))
+    
+    # Receipt Title
+    receipt_title_style = ParagraphStyle(
+        'ReceiptTitle',
         parent=styles['Normal'],
         fontSize=18,
-        spaceAfter=30,
+        spaceAfter=15,
         alignment=TA_CENTER,
-        textColor=colors.darkblue,
+        textColor=colors.darkred,
         fontName=arabic_bold_font
     )
     
-    header_style = ParagraphStyle(
-        'CustomHeader',
-        parent=styles['Normal'],
-        fontSize=14,
-        spaceAfter=12,
-        alignment=TA_RIGHT,
-        fontName=arabic_bold_font
-    )
+    elements.append(Paragraph(f"<b>{fix_arabic_text('وصل استلام')}</b>", receipt_title_style))
     
-    normal_style = ParagraphStyle(
-        'CustomNormal',
+    # Receipt number and date box
+    receipt_info_style = ParagraphStyle(
+        'ReceiptInfo',
         parent=styles['Normal'],
-        fontSize=10,
-        spaceAfter=6,
-        alignment=TA_RIGHT,
+        fontSize=12,
+        alignment=TA_CENTER,
         fontName=arabic_font
     )
     
-    # Agency Header
-    if agency_data.get('logo_url'):
-        # If logo exists, add it (placeholder for now)
-        elements.append(Spacer(1, 12))
+    receipt_date = operation_data['date'][:10] if isinstance(operation_data['date'], str) else operation_data['date'].strftime('%Y-%m-%d')
+    receipt_info = f"{fix_arabic_text('رقم الوصل')}: <b>{operation_data['operation_no']}</b> | {fix_arabic_text('التاريخ')}: <b>{receipt_date}</b>"
     
-    # Agency name and title
-    agency_name = fix_arabic_text(agency_data['name'])
-    header_text = fix_arabic_text(agency_data.get('header_text', 'وصل استلام'))
-    agency_title = f"<b>{agency_name}</b><br/>{header_text}"
-    elements.append(Paragraph(agency_title, title_style))
-    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(receipt_info, receipt_info_style))
+    elements.append(Spacer(1, 25))
     
-    # Agency details
-    agency_info = f"""
-    {fix_arabic_text('العنوان')}: {fix_arabic_text(agency_data['address'])}, {fix_arabic_text(agency_data['city'])}<br/>
-    {fix_arabic_text('الهاتف')}: {agency_data.get('phone', 'غير محدد')}<br/>
-    {fix_arabic_text('البريد')}: {agency_data.get('email', 'غير محدد')}<br/>
-    """
-    if agency_data.get('tax_number'):
-        agency_info += f"{fix_arabic_text('رقم التسجيل الضريبي')}: {agency_data['tax_number']}<br/>"
-    if agency_data.get('commercial_register'):
-        agency_info += f"{fix_arabic_text('السجل التجاري')}: {agency_data['commercial_register']}<br/>"
+    # ========== CLIENT AND SERVICE INFORMATION ==========
+    # Client Information Section
+    client_section_title = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Normal'],
+        fontSize=14,
+        spaceAfter=8,
+        alignment=TA_RIGHT,
+        textColor=colors.darkblue,
+        fontName=arabic_bold_font,
+        backColor=colors.lightgrey,
+        borderPadding=(5, 10, 5, 10)
+    )
     
-    elements.append(Paragraph(agency_info, normal_style))
-    elements.append(Spacer(1, 20))
+    elements.append(Paragraph(f"<b>{fix_arabic_text('معلومات العميل')}</b>", client_section_title))
     
-    # Receipt details
-    elements.append(Paragraph(f"<b>{fix_arabic_text('تفاصيل الوصل')}</b>", header_style))
-    
-    # Create receipt details table with payment information
-    receipt_data = [
-        [fix_arabic_text('رقم الوصل:'), operation_data['operation_no']],
-        [fix_arabic_text('التاريخ:'), operation_data['date'][:10] if isinstance(operation_data['date'], str) else operation_data['date'].strftime('%Y-%m-%d')],
+    # Client details table
+    client_data_table = [
         [fix_arabic_text('اسم العميل:'), fix_arabic_text(client_data.get('name', 'غير محدد'))],
-        [fix_arabic_text('الخدمة:'), fix_arabic_text(operation_data['service_name'])],
-        [fix_arabic_text('السعر الأساسي:'), f"{operation_data['base_price']:,.0f} {fix_arabic_text('دج')}"],
-        [fix_arabic_text('مبلغ التخفيض:'), f"{operation_data.get('discount_amount', 0):,.0f} {fix_arabic_text('دج')}"],
-        [fix_arabic_text('المبلغ النهائي:'), f"{operation_data['final_price']:,.0f} {fix_arabic_text('دج')}"],
-        [fix_arabic_text('الحالة:'), fix_arabic_text(operation_data['status'])],
+        [fix_arabic_text('رقم الهاتف:'), client_data.get('phone', 'غير محدد')],
     ]
     
-    # Add payment information if available
+    if client_data.get('email'):
+        client_data_table.append([fix_arabic_text('البريد الإلكتروني:'), client_data.get('email')])
+    
+    client_table = Table(client_data_table, colWidths=[2*inch, 4*inch])
+    client_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightblue),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 1, colors.darkblue)
+    ]))
+    
+    elements.append(client_table)
+    elements.append(Spacer(1, 20))
+    
+    # Service Information Section
+    elements.append(Paragraph(f"<b>{fix_arabic_text('تفاصيل الخدمة')}</b>", client_section_title))
+    
+    # Service details table with enhanced styling
+    service_data_table = [
+        [fix_arabic_text('اسم الخدمة:'), fix_arabic_text(operation_data['service_name'])],
+        [fix_arabic_text('السعر الأساسي:'), f"{operation_data['base_price']:,.0f} {fix_arabic_text('دج')}"],
+    ]
+    
+    if operation_data.get('discount_amount', 0) > 0:
+        service_data_table.append([fix_arabic_text('مبلغ التخفيض:'), f"-{operation_data.get('discount_amount', 0):,.0f} {fix_arabic_text('دج')}"])
+    
+    service_data_table.extend([
+        [fix_arabic_text('المبلغ النهائي:'), f"<b>{operation_data['final_price']:,.0f} {fix_arabic_text('دج')}</b>"],
+        [fix_arabic_text('حالة العملية:'), fix_arabic_text(operation_data.get('status', 'غير محدد'))],
+    ])
+    
+    service_table = Table(service_data_table, colWidths=[2*inch, 4*inch])
+    service_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightgreen),
+        ('BACKGROUND', (0, -2), (0, -2), colors.gold),  # Highlight final amount row
+        ('BACKGROUND', (1, -2), (1, -2), colors.lightyellow),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 1, colors.darkblue)
+    ]))
+    
+    elements.append(service_table)
+    elements.append(Spacer(1, 20))
+    
+    # ========== PAYMENT INFORMATION ==========
+    elements.append(Paragraph(f"<b>{fix_arabic_text('معلومات الدفع')}</b>", client_section_title))
+    
+    # Payment details with enhanced styling
+    payment_data_table = []
+    
     if payment_info:
-        receipt_data.extend([
-            [fix_arabic_text('═══ معلومات الدفع ═══'), ''],
-            [fix_arabic_text('طريقة الدفع:'), fix_arabic_text(payment_info.get('payment_method', 'نقدي'))],
+        payment_method_ar = fix_arabic_text('نقدي') if payment_info.get('payment_method') == 'cash' else fix_arabic_text('بنكي')
+        payment_status_ar = fix_arabic_text(payment_info.get('payment_status', 'غير محدد'))
+        
+        payment_data_table = [
+            [fix_arabic_text('طريقة الدفع:'), payment_method_ar],
             [fix_arabic_text('المبلغ المدفوع:'), f"{payment_info.get('total_paid', 0):,.0f} {fix_arabic_text('دج')}"],
             [fix_arabic_text('المبلغ المتبقي:'), f"{payment_info.get('remaining_amount', 0):,.0f} {fix_arabic_text('دج')}"],
-            [fix_arabic_text('حالة الدفع:'), fix_arabic_text(payment_info.get('payment_status', 'غير محدد'))],
+            [fix_arabic_text('حالة الدفع:'), payment_status_ar],
             [fix_arabic_text('عدد الدفعات:'), str(payment_info.get('payments_count', 0))],
-        ])
+        ]
     else:
-        # Fallback to default payment info
-        receipt_data.extend([
-            [fix_arabic_text('═══ معلومات الدفع ═══'), ''],
+        # Default payment info
+        payment_data_table = [
             [fix_arabic_text('طريقة الدفع:'), fix_arabic_text('نقدي')],
             [fix_arabic_text('المبلغ المدفوع:'), f"0 {fix_arabic_text('دج')}"],
             [fix_arabic_text('المبلغ المتبقي:'), f"{operation_data['final_price']:,.0f} {fix_arabic_text('دج')}"],
             [fix_arabic_text('حالة الدفع:'), fix_arabic_text('غير مدفوع')],
-        ])
+        ]
     
+    payment_table = Table(payment_data_table, colWidths=[2*inch, 4*inch])
+    payment_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.lightyellow),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 1, colors.darkblue)
+    ]))
+    
+    elements.append(payment_table)
+    
+    # Notes section (if any)
     if operation_data.get('notes'):
-        receipt_data.append([fix_arabic_text('ملاحظات:'), fix_arabic_text(operation_data['notes'])])
+        elements.append(Spacer(1, 15))
+        elements.append(Paragraph(f"<b>{fix_arabic_text('ملاحظات')}</b>", client_section_title))
+        
+        notes_style = ParagraphStyle(
+            'Notes',
+            parent=styles['Normal'],
+            fontSize=10,
+            alignment=TA_RIGHT,
+            fontName=arabic_font,
+            backColor=colors.lightgrey,
+            borderPadding=(8, 8, 8, 8)
+        )
+        
+        elements.append(Paragraph(fix_arabic_text(operation_data['notes']), notes_style))
     
-    # Create table
-    receipt_table = Table(receipt_data, colWidths=[3*inch, 3*inch])
-    receipt_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+    elements.append(Spacer(1, 30))
+    
+    # ========== SIGNATURE SECTION ==========
+    # Create signature section with two columns
+    signature_data = [
+        [
+            f"""<b>{fix_arabic_text('توقيع العميل')}</b><br/><br/>
+            {fix_arabic_text('الاسم')}: ________________<br/>
+            {fix_arabic_text('التوقيع')}: ________________<br/>
+            {fix_arabic_text('التاريخ')}: ________________""",
+            
+            f"""<b>{fix_arabic_text('توقيع الموظف')}</b><br/><br/>
+            {fix_arabic_text('الاسم')}: {fix_arabic_text(user_data['name'])}<br/>
+            {fix_arabic_text('المنصب')}: {fix_arabic_text(user_data.get('job_title', 'موظف'))}<br/>
+            {fix_arabic_text('التاريخ')}: {datetime.now().strftime('%Y-%m-%d %H:%M')}"""
+        ]
+    ]
+    
+    signature_table = Table(signature_data, colWidths=[3*inch, 3*inch])
+    signature_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
         ('FONTNAME', (0, 0), (-1, -1), arabic_font),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-        ('BACKGROUND', (1, 0), (1, -1), colors.white),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, colors.darkblue)
     ]))
     
-    elements.append(receipt_table)
-    elements.append(Spacer(1, 30))
+    elements.append(signature_table)
+    elements.append(Spacer(1, 20))
     
-    # Employee signature section
-    elements.append(Paragraph(f"<b>{fix_arabic_text('توقيع الموظف')}</b>", header_style))
+    # ========== FOOTER SECTION ==========
+    # Agency footer with registration details
+    footer_info = ""
+    if agency_data.get('tax_number'):
+        footer_info += f"{fix_arabic_text('رقم التسجيل الضريبي')}: {agency_data['tax_number']} | "
+    if agency_data.get('commercial_register'):
+        footer_info += f"{fix_arabic_text('السجل التجاري')}: {agency_data['commercial_register']} | "
+    if agency_data.get('website'):
+        footer_info += f"{fix_arabic_text('الموقع الإلكتروني')}: {agency_data['website']}"
     
-    employee_info = f"""
-    {fix_arabic_text('الاسم')}: {fix_arabic_text(user_data['name'])}<br/>
-    {fix_arabic_text('المنصب')}: {fix_arabic_text(user_data.get('job_title', 'موظف'))}<br/>
-    {fix_arabic_text('التاريخ')}: {datetime.now().strftime('%Y-%m-%d %H:%M')}<br/>
-    """
+    if footer_info:
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=8,
+            alignment=TA_CENTER,
+            fontName=arabic_font,
+            textColor=colors.grey
+        )
+        elements.append(Paragraph(footer_info, footer_style))
+        elements.append(Spacer(1, 5))
     
-    elements.append(Paragraph(employee_info, normal_style))
-    
-    if user_data.get('signature_url'):
-        # Placeholder for digital signature
-        elements.append(Spacer(1, 20))
-        elements.append(Paragraph(fix_arabic_text("التوقيع الإلكتروني"), normal_style))
-    else:
-        elements.append(Spacer(1, 40))
-        elements.append(Paragraph(f"{fix_arabic_text('التوقيع')}: ________________", normal_style))
-    
-    elements.append(Spacer(1, 30))
-    
-    # Footer
+    # Custom footer message
     if agency_data.get('footer_text'):
-        elements.append(Paragraph(fix_arabic_text(agency_data['footer_text']), normal_style))
+        elements.append(Paragraph(fix_arabic_text(agency_data['footer_text']), footer_style))
+        elements.append(Spacer(1, 5))
     
-    elements.append(Paragraph(f"{fix_arabic_text('تم إنشاء هذا الوصل بتاريخ')}: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
+    # Generation timestamp
+    timestamp_style = ParagraphStyle(
+        'Timestamp',
+        parent=styles['Normal'],
+        fontSize=8,
+        alignment=TA_CENTER,
+        fontName=arabic_font,
+        textColor=colors.grey
+    )
+    
+    elements.append(Paragraph(f"{fix_arabic_text('تم إنشاء هذا الوصل بتاريخ')}: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", timestamp_style))
+    
+    # Decorative bottom line
+    elements.append(Spacer(1, 10))
+    bottom_line_table = Table([['', '']], colWidths=[7*inch])
+    bottom_line_table.setStyle(TableStyle([
+        ('LINEBELOW', (0, 0), (-1, -1), 2, colors.darkblue),
+    ]))
+    elements.append(bottom_line_table)
     
     # Build PDF
     doc.build(elements)
