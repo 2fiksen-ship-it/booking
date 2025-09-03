@@ -3459,7 +3459,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         
         elements.append(Paragraph(f"<b>{fix_arabic_text('وصل استلام')}</b>", receipt_title_style))
         
-        # Receipt number and date box
+        # Receipt number and date box - RTL format
         receipt_info_style = ParagraphStyle(
             'ReceiptInfo',
             parent=styles['Normal'],
@@ -3475,9 +3475,30 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         else:
             receipt_date = operation_date.strftime('%Y-%m-%d')
         
-        receipt_info = f"{fix_arabic_text('رقم الوصل')}: <b>{operation_no}</b> | {fix_arabic_text('التاريخ')}: <b>{receipt_date}</b>"
+        # Create a simple table for receipt info
+        receipt_info_table = [
+            [receipt_date, fix_arabic_text('التاريخ:'), operation_no, fix_arabic_text('رقم الوصل:')]
+        ]
         
-        elements.append(Paragraph(receipt_info, receipt_info_style))
+        receipt_info_table_element = Table(receipt_info_table, colWidths=[1.5*inch, 1*inch, 1.5*inch, 1*inch])
+        receipt_info_table_element.setStyle(TableStyle([
+            ('BACKGROUND', (1, 0), (1, 0), colors.lightblue),
+            ('BACKGROUND', (3, 0), (3, 0), colors.lightblue),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),   # Date value - left align
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),  # Date label - right align
+            ('ALIGN', (2, 0), (2, 0), 'LEFT'),   # Receipt number value - left align
+            ('ALIGN', (3, 0), (3, 0), 'RIGHT'),  # Receipt number label - right align
+            ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 1, colors.darkblue)
+        ]))
+        
+        elements.append(receipt_info_table_element)
         elements.append(Spacer(1, 25))
         
         # ========== CLIENT AND SERVICE INFORMATION ==========
