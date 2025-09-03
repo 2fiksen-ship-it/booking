@@ -5410,6 +5410,234 @@ async def migrate_bookings_data(current_user: User = Depends(get_current_user)):
         logger.error(f"Error migrating booking data: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
 
+# Agency Financial Management Endpoints
+
+@api_router.get("/agencies/{agency_id}/balance")
+async def get_agency_balance(agency_id: str, current_user: User = Depends(get_current_user)):
+    """Get current financial balance for agency"""
+    # Check permissions
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        if current_user.agency_id != agency_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this agency's balance")
+    
+    try:
+        # Calculate balance from operations, transfers, and expenses
+        
+        # 1. Total revenue from daily operations
+        operations = await db.daily_operations.find({"agency_id": agency_id}).to_list(None)
+        total_revenue = sum(op.get('final_price', 0) for op in operations)
+        
+        # 2. Total transferred to management
+        transfers = await db.cash_transfers.find({"agency_id": agency_id, "status": "confirmed"}).to_list(None)
+        total_transferred = sum(t.get('amount', 0) for t in transfers)
+        
+        # 3. Total expenses
+        expenses = await db.agency_expenses.find({"agency_id": agency_id}).to_list(None)
+        total_expenses = sum(e.get('amount', 0) for e in expenses)
+        
+        # 4. Calculate current balance
+        current_balance = total_revenue - total_transferred - total_expenses
+        
+        balance = AgencyBalance(
+            agency_id=agency_id,
+            total_revenue=total_revenue,
+            total_transferred=total_transferred,
+            total_expenses=total_expenses,
+            current_balance=current_balance
+        )
+        
+        return balance
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating balance: {str(e)}")
+
+@api_router.post("/agencies/{agency_id}/cash-transfer")
+async def create_cash_transfer(
+    agency_id: str, 
+    transfer_data: CashTransferCreate, 
+    current_user: User = Depends(get_current_user)
+):
+    """Create cash transfer to general management"""
+    # Only agency staff and managers can create transfers
+    if current_user.role not in [UserRole.AGENCY_STAFF, UserRole.GENERAL_MANAGER]:
+        raise HTTPException(status_code=403, detail="Not authorized to create cash transfers")
+    
+    if current_user.agency_id != agency_id:
+        raise HTTPException(status_code=403, detail="Not authorized for this agency")
+    
+    try:
+        # Check if agency has enough balance
+        balance_response = await get_agency_balance(agency_id, current_user)
+        if balance_response.current_balance < transfer_data.amount:
+            raise HTTPException(status_code=400, detail="Insufficient balance for transfer")
+        
+        # Create transfer record
+        transfer = CashTransfer(
+            agency_id=agency_id,
+            transferred_by=current_user.id,
+            amount=transfer_data.amount,
+            notes=transfer_data.notes
+        )
+        
+        await db.cash_transfers.insert_one(transfer.dict())
+        return {"message": "Cash transfer created successfully", "transfer_id": transfer.id}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating cash transfer: {str(e)}")
+
+@api_router.get("/cash-transfers")
+async def get_cash_transfers(current_user: User = Depends(get_current_user)):
+    """Get cash transfers (role-based access)"""
+    try:
+        query = {}
+        
+        # Role-based filtering
+        if current_user.role == UserRole.AGENCY_STAFF:
+            query["agency_id"] = current_user.agency_id
+        elif current_user.role == UserRole.GENERAL_MANAGER:
+            # Can see all transfers for their managed agencies
+            query["agency_id"] = current_user.agency_id
+        # Super Admin and General Accountant can see all
+        
+        transfers = await db.cash_transfers.find(query).sort("transfer_date", -1).to_list(None)
+        return transfers
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching cash transfers: {str(e)}")
+
+@api_router.put("/cash-transfers/{transfer_id}/confirm")
+async def confirm_cash_transfer(transfer_id: str, current_user: User = Depends(get_current_user)):
+    """Confirm cash transfer (General Accountant/Super Admin only)"""
+    if current_user.role not in [UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized to confirm transfers")
+    
+    try:
+        result = await db.cash_transfers.update_one(
+            {"id": transfer_id},
+            {"$set": {
+                "status": "confirmed",
+                "confirmation_by": current_user.id,
+                "confirmation_date": datetime.now()
+            }}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Transfer not found")
+        
+        return {"message": "Cash transfer confirmed successfully"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error confirming transfer: {str(e)}")
+
+@api_router.post("/agencies/{agency_id}/expenses")
+async def create_agency_expense(
+    agency_id: str, 
+    expense_data: AgencyExpenseCreate, 
+    current_user: User = Depends(get_current_user)
+):
+    """Create agency expense"""
+    # Check permissions
+    if current_user.role not in [UserRole.AGENCY_STAFF, UserRole.GENERAL_MANAGER]:
+        raise HTTPException(status_code=403, detail="Not authorized to create expenses")
+    
+    if current_user.agency_id != agency_id:
+        raise HTTPException(status_code=403, detail="Not authorized for this agency")
+    
+    try:
+        # Create expense record
+        expense = AgencyExpense(
+            agency_id=agency_id,
+            employee_id=current_user.id,
+            amount=expense_data.amount,
+            description=expense_data.description,
+            category=expense_data.category
+        )
+        
+        await db.agency_expenses.insert_one(expense.dict())
+        return {"message": "Expense created successfully", "expense_id": expense.id}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating expense: {str(e)}")
+
+@api_router.get("/agencies/{agency_id}/expenses")
+async def get_agency_expenses(agency_id: str, current_user: User = Depends(get_current_user)):
+    """Get agency expenses"""
+    # Check permissions
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT, UserRole.GENERAL_MANAGER]:
+        if current_user.agency_id != agency_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view expenses")
+    
+    try:
+        expenses = await db.agency_expenses.find({"agency_id": agency_id}).sort("expense_date", -1).to_list(None)
+        return expenses
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching expenses: {str(e)}")
+
+@api_router.get("/reports/daily-financial/{agency_id}")
+async def get_daily_financial_report(
+    agency_id: str, 
+    date: str = None,  # YYYY-MM-DD format
+    current_user: User = Depends(get_current_user)
+):
+    """Get detailed daily financial report for agency"""
+    # Check permissions
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT, UserRole.GENERAL_MANAGER]:
+        if current_user.agency_id != agency_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this report")
+    
+    try:
+        # Use today if no date specified
+        target_date = date or datetime.now().strftime('%Y-%m-%d')
+        start_date = datetime.strptime(target_date, '%Y-%m-%d')
+        end_date = start_date + timedelta(days=1)
+        
+        # Get daily operations
+        operations = await db.daily_operations.find({
+            "agency_id": agency_id,
+            "date": {"$gte": start_date, "$lt": end_date}
+        }).to_list(None)
+        
+        # Get daily cash transfers
+        transfers = await db.cash_transfers.find({
+            "agency_id": agency_id,
+            "transfer_date": {"$gte": start_date, "$lt": end_date}
+        }).to_list(None)
+        
+        # Get daily expenses
+        expenses = await db.agency_expenses.find({
+            "agency_id": agency_id,
+            "expense_date": {"$gte": start_date, "$lt": end_date}
+        }).to_list(None)
+        
+        # Calculate totals
+        daily_revenue = sum(op.get('final_price', 0) for op in operations)
+        daily_transfers = sum(t.get('amount', 0) for t in transfers if t.get('status') == 'confirmed')
+        daily_expenses = sum(e.get('amount', 0) for e in expenses)
+        
+        # Get current balance
+        balance_response = await get_agency_balance(agency_id, current_user)
+        
+        report = {
+            "date": target_date,
+            "agency_id": agency_id,
+            "operations": operations,
+            "transfers": transfers,
+            "expenses": expenses,
+            "summary": {
+                "daily_revenue": daily_revenue,
+                "daily_transfers": daily_transfers,
+                "daily_expenses": daily_expenses,
+                "net_daily_change": daily_revenue - daily_transfers - daily_expenses,
+                "current_balance": balance_response.current_balance
+            }
+        }
+        
+        return report
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating financial report: {str(e)}")
+
 # Include the router in the main app
 app.include_router(api_router)
 
