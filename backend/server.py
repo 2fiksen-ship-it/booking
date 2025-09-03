@@ -3440,7 +3440,8 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
     """Generate professional and elegant PDF receipt for daily operations with Arabic support"""
     try:
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=40, bottomMargin=40)
+        # Use more compact page settings for single page
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
         
         # Validate input data
         if not operation_data or not agency_data or not user_data:
@@ -3475,129 +3476,68 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         # Define professional styles
         styles = getSampleStyleSheet()
         
-        # ========== HEADER SECTION ==========
-        # Agency Logo and Header
-        header_table_data = []
+        # ========== SINGLE HEADER SECTION (CENTERED WITH LOGO) ==========
+        # Create centered header with logo and agency info
+        agency_name = fix_arabic_text(agency_data.get('name', 'اسم الوكالة'))
+        agency_address = fix_arabic_text(agency_data.get('address', ''))
+        agency_city = fix_arabic_text(agency_data.get('city', ''))
+        agency_phone = agency_data.get('phone', '')
+        agency_email = agency_data.get('email', '')
         
-        # Create header with logo (left) and agency info (right)
         if agency_data.get('logo_url'):
-            # If logo exists, create a two-column header
-            agency_info_text = f"""
-            <font size="18" color="darkblue"><b>{fix_arabic_text(agency_data['name'])}</b></font><br/>
-            <font size="12" color="gray">{fix_arabic_text('وكالة الأسفار والسياحة')}</font><br/>
-            <font size="10">{fix_arabic_text(agency_data.get('address', ''))}, {fix_arabic_text(agency_data.get('city', ''))}</font><br/>
-            <font size="10">{fix_arabic_text('هاتف')}: {agency_data.get('phone', '')}</font>
-            """
-            
             try:
-                # Create table with logo and agency info
-                header_table_data = [
-                    [
-                        Paragraph(agency_info_text, ParagraphStyle('HeaderInfo', 
-                            parent=styles['Normal'], alignment=TA_RIGHT, fontName=arabic_font)),
-                        # Logo will be added as an image
-                        ""  # Placeholder for logo
-                    ]
-                ]
-                
-                header_table = Table(header_table_data, colWidths=[4*inch, 2*inch])
-                
-                # Try to add logo image
+                # Create table with centered logo and agency info below
                 logo_path = f".{agency_data['logo_url']}" if agency_data['logo_url'].startswith('/') else agency_data['logo_url']
                 if os.path.exists(logo_path):
                     from reportlab.platypus.flowables import Image as ReportLabImage
                     
-                    # Add logo to the table
-                    logo_img = ReportLabImage(logo_path, width=80, height=80)
-                    header_table_data[0][1] = logo_img
-                    header_table = Table(header_table_data, colWidths=[4*inch, 2*inch])
-                else:
-                    # If logo file doesn't exist, use text placeholder
-                    header_table_data[0][1] = Paragraph('<font color="gray">LOGO</font>', styles['Normal'])
-                    header_table = Table(header_table_data, colWidths=[4*inch, 2*inch])
-                
-                header_table.setStyle(TableStyle([
-                    ('ALIGN', (0, 0), (0, 0), 'RIGHT'),
-                    ('ALIGN', (1, 0), (1, 0), 'CENTER'),
-                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                    ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                    ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                ]))
-                
-                elements.append(header_table)
-                
+                    # Centered logo
+                    logo_img = ReportLabImage(logo_path, width=60, height=60)
+                    logo_table = Table([[logo_img]], colWidths=[7*inch])
+                    logo_table.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+                        ('VALIGN', (0, 0), (0, 0), 'MIDDLE'),
+                    ]))
+                    elements.append(logo_table)
+                    elements.append(Spacer(1, 10))
+                    
             except Exception as e:
                 print(f"Error adding logo to PDF: {e}")
-                # Fallback to text-only header
-                agency_title = f"""
-                <font size="20" color="darkblue"><b>{fix_arabic_text(agency_data.get('name', 'اسم الوكالة'))}</b></font><br/>
-                <font size="14" color="gray">{fix_arabic_text('وكالة الأسفار والسياحة')}</font><br/>
-                <font size="11">{fix_arabic_text(agency_data.get('address', ''))}, {fix_arabic_text(agency_data.get('city', ''))}</font><br/>
-                <font size="11">{fix_arabic_text('هاتف')}: {agency_data.get('phone', '')} | {fix_arabic_text('إيميل')}: {agency_data.get('email', '')}</font>
-                """
-                
-                title_style = ParagraphStyle(
-                    'AgencyTitle',
-                    parent=styles['Normal'],
-                    fontSize=16,
-                    spaceAfter=20,
-                    alignment=TA_CENTER,
-                    fontName=arabic_font
-                )
-                
-                elements.append(Paragraph(agency_title, title_style))
-        else:
-            # No logo - centered agency info
-            agency_name = fix_arabic_text(agency_data.get('name', 'اسم الوكالة'))
-            agency_address = fix_arabic_text(agency_data.get('address', ''))
-            agency_city = fix_arabic_text(agency_data.get('city', ''))
-            agency_phone = agency_data.get('phone', '')
-            agency_email = agency_data.get('email', '')
-            
-            agency_title = f"""
-            <font size="20" color="darkblue"><b>{agency_name}</b></font><br/>
-            <font size="14" color="gray">{fix_arabic_text('وكالة الأسفار والسياحة')}</font><br/>
-            <font size="11">{agency_address}, {agency_city}</font><br/>
-            <font size="11">{fix_arabic_text('هاتف')}: {agency_phone} | {fix_arabic_text('إيميل')}: {agency_email}</font>
-            """
-            
-            title_style = ParagraphStyle(
-                'AgencyTitle',
-                parent=styles['Normal'],
-                fontSize=16,
-                spaceAfter=20,
-                alignment=TA_CENTER,
-                fontName=arabic_font
-            )
-            
-            elements.append(Paragraph(agency_title, title_style))
         
-        if header_table_data:
-            header_table = Table(header_table_data, colWidths=[4*inch, 2*inch])
-            header_table.setStyle(TableStyle([
-                ('ALIGN', (0, 0), (0, 0), 'RIGHT'),
-                ('ALIGN', (1, 0), (1, 0), 'LEFT'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-            ]))
-            elements.append(header_table)
+        # Agency info (always centered, no duplication)
+        agency_title = f"""
+        <font size="18" color="darkblue"><b>{agency_name}</b></font><br/>
+        <font size="12" color="gray">{fix_arabic_text('وكالة الأسفار والسياحة')}</font><br/>
+        <font size="10">{agency_address}, {agency_city}</font><br/>
+        <font size="10">{fix_arabic_text('هاتف')}: {agency_phone} | {fix_arabic_text('إيميل')}: {agency_email}</font>
+        """
+        
+        title_style = ParagraphStyle(
+            'AgencyTitle',
+            parent=styles['Normal'],
+            fontSize=14,
+            spaceAfter=15,
+            alignment=TA_CENTER,
+            fontName=arabic_font
+        )
+        
+        elements.append(Paragraph(agency_title, title_style))
         
         # Decorative line
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 8))
         line_table = Table([['', '']], colWidths=[7*inch])
         line_table.setStyle(TableStyle([
-            ('LINEBELOW', (0, 0), (-1, -1), 3, colors.darkblue),
+            ('LINEBELOW', (0, 0), (-1, -1), 2, colors.darkblue),
         ]))
         elements.append(line_table)
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 12))
         
         # Receipt Title
         receipt_title_style = ParagraphStyle(
             'ReceiptTitle',
             parent=styles['Normal'],
-            fontSize=18,
-            spaceAfter=15,
+            fontSize=16,
+            spaceAfter=10,
             alignment=TA_CENTER,
             textColor=colors.darkred,
             fontName=arabic_bold_font
@@ -3605,15 +3545,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         
         elements.append(Paragraph(f"<b>{fix_arabic_text('وصل استلام')}</b>", receipt_title_style))
         
-        # Receipt number and date box - RTL format
-        receipt_info_style = ParagraphStyle(
-            'ReceiptInfo',
-            parent=styles['Normal'],
-            fontSize=12,
-            alignment=TA_CENTER,
-            fontName=arabic_font
-        )
-        
+        # Receipt number and date (compact)
         operation_no = operation_data.get('operation_no', 'غير محدد')
         operation_date = operation_data.get('date', datetime.now())
         if isinstance(operation_date, str):
@@ -3621,7 +3553,6 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         else:
             receipt_date = operation_date.strftime('%Y-%m-%d')
         
-        # Create a simple table for receipt info
         receipt_info_table = [
             [receipt_date, fix_arabic_text('التاريخ:'), operation_no, fix_arabic_text('رقم الوصل:')]
         ]
@@ -3636,38 +3567,38 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
             ('ALIGN', (2, 0), (2, 0), 'LEFT'),   # Receipt number value - left align
             ('ALIGN', (3, 0), (3, 0), 'RIGHT'),  # Receipt number label - right align
             ('FONTNAME', (0, 0), (-1, -1), arabic_font),
-            ('FONTSIZE', (0, 0), (-1, -1), 12),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ('GRID', (0, 0), (-1, -1), 1, colors.darkblue)
         ]))
         
         elements.append(receipt_info_table_element)
-        elements.append(Spacer(1, 25))
+        elements.append(Spacer(1, 15))
         
-        # ========== CLIENT AND SERVICE INFORMATION ==========
-        # Client Information Section
+        # ========== COMPACT INFORMATION SECTIONS ==========
+        # Section title style (more compact)
         client_section_title = ParagraphStyle(
             'SectionTitle',
             parent=styles['Normal'],
-            fontSize=14,
-            spaceAfter=8,
+            fontSize=12,
+            spaceAfter=6,
             alignment=TA_RIGHT,
             textColor=colors.darkblue,
             fontName=arabic_bold_font,
             backColor=colors.lightgrey,
-            borderPadding=(5, 10, 5, 10)
+            borderPadding=(3, 8, 3, 8)
         )
         
+        # Client Information Section (more compact)
         elements.append(Paragraph(f"<b>{fix_arabic_text('معلومات العميل')}</b>", client_section_title))
         
-        # Client details table
         client_name = fix_arabic_text(client_data.get('name', 'غير محدد'))
         client_phone = client_data.get('phone', 'غير محدد')
         
-        # RTL table - Arabic labels on RIGHT, values on LEFT
+        # RTL table - Arabic labels on RIGHT, values on LEFT, CURRENCY ON LEFT
         client_data_table = [
             [client_name, fix_arabic_text('اسم العميل:')],
             [client_phone, fix_arabic_text('رقم الهاتف:')],
@@ -3683,38 +3614,37 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),   # Left column (values) align left
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Right column (labels) align right
             ('FONTNAME', (0, 0), (-1, -1), arabic_font),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ('GRID', (0, 0), (-1, -1), 1, colors.darkblue)
         ]))
         
         elements.append(client_table)
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 12))
         
-        # Service Information Section
+        # Service Information Section (compact)
         elements.append(Paragraph(f"<b>{fix_arabic_text('تفاصيل الخدمة')}</b>", client_section_title))
         
-        # Service details table with enhanced styling - RTL format
         service_name = fix_arabic_text(operation_data.get('service_name', 'غير محدد'))
         base_price = operation_data.get('base_price', 0)
         discount_amount = operation_data.get('discount_amount', 0)
         final_price = operation_data.get('final_price', 0)
         status = fix_arabic_text(operation_data.get('status', 'غير محدد'))
         
-        # RTL table - Arabic labels on RIGHT, values on LEFT
+        # RTL table - Currency on LEFT side of values
         service_data_table = [
             [service_name, fix_arabic_text('اسم الخدمة:')],
-            [f"{base_price:,.0f} {fix_arabic_text('دج')}", fix_arabic_text('السعر الأساسي:')],
+            [f"{base_price:,.0f} {fix_arabic_text('دينار جزائري')}", fix_arabic_text('السعر الأساسي:')],
         ]
         
         if discount_amount > 0:
-            service_data_table.append([f"-{discount_amount:,.0f} {fix_arabic_text('دج')}", fix_arabic_text('مبلغ التخفيض:')])
+            service_data_table.append([f"{discount_amount:,.0f} {fix_arabic_text('دينار جزائري')}", fix_arabic_text('مبلغ التخفيض:')])
         
         service_data_table.extend([
-            [f"<b>{final_price:,.0f} {fix_arabic_text('دج')}</b>", fix_arabic_text('المبلغ النهائي:')],
+            [f"<b>{final_price:,.0f} {fix_arabic_text('دينار جزائري')}</b>", fix_arabic_text('المبلغ النهائي:')],
             [status, fix_arabic_text('حالة العملية:')],
         ])
         
@@ -3727,21 +3657,21 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),   # Left column (values) align left
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Right column (labels) align right
             ('FONTNAME', (0, 0), (-1, -1), arabic_font),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ('GRID', (0, 0), (-1, -1), 1, colors.darkblue)
         ]))
         
         elements.append(service_table)
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 12))
         
-        # ========== PAYMENT INFORMATION ==========
+        # ========== PAYMENT INFORMATION (COMPACT) ==========
         elements.append(Paragraph(f"<b>{fix_arabic_text('معلومات الدفع')}</b>", client_section_title))
         
-        # Payment details with enhanced styling - RTL format
+        # Payment details with enhanced styling - RTL format, currency on left
         payment_data_table = []
         
         if payment_info and payment_info.get('total_paid'):
@@ -3749,20 +3679,20 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
             payment_method_ar = fix_arabic_text('نقدي') if payment_method == 'cash' else fix_arabic_text('بنكي')
             payment_status_ar = fix_arabic_text(payment_info.get('payment_status', 'غير محدد'))
             
-            # RTL table - Arabic labels on RIGHT, values on LEFT
+            # RTL table - Arabic labels on RIGHT, values on LEFT, currency on LEFT
             payment_data_table = [
                 [payment_method_ar, fix_arabic_text('طريقة الدفع:')],
-                [f"{payment_info.get('total_paid', 0):,.0f} {fix_arabic_text('دج')}", fix_arabic_text('المبلغ المدفوع:')],
-                [f"{payment_info.get('remaining_amount', 0):,.0f} {fix_arabic_text('دج')}", fix_arabic_text('المبلغ المتبقي:')],
+                [f"{payment_info.get('total_paid', 0):,.0f} {fix_arabic_text('دينار جزائري')}", fix_arabic_text('المبلغ المدفوع:')],
+                [f"{payment_info.get('remaining_amount', 0):,.0f} {fix_arabic_text('دينار جزائري')}", fix_arabic_text('المبلغ المتبقي:')],
                 [payment_status_ar, fix_arabic_text('حالة الدفع:')],
                 [str(payment_info.get('payments_count', 0)), fix_arabic_text('عدد الدفعات:')],
             ]
         else:
-            # Default payment info - RTL format
+            # Default payment info - RTL format, currency on left
             payment_data_table = [
                 [fix_arabic_text('نقدي'), fix_arabic_text('طريقة الدفع:')],
-                [f"0 {fix_arabic_text('دج')}", fix_arabic_text('المبلغ المدفوع:')],
-                [f"{final_price:,.0f} {fix_arabic_text('دج')}", fix_arabic_text('المبلغ المتبقي:')],
+                [f"0 {fix_arabic_text('دينار جزائري')}", fix_arabic_text('المبلغ المدفوع:')],
+                [f"{final_price:,.0f} {fix_arabic_text('دينار جزائري')}", fix_arabic_text('المبلغ المتبقي:')],
                 [fix_arabic_text('غير مدفوع'), fix_arabic_text('حالة الدفع:')],
             ]
         
@@ -3773,52 +3703,55 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),   # Left column (values) align left
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Right column (labels) align right
             ('FONTNAME', (0, 0), (-1, -1), arabic_font),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ('GRID', (0, 0), (-1, -1), 1, colors.darkblue)
         ]))
         
         elements.append(payment_table)
         
-        # Notes section (if any)
+        # Notes section (compact if any)
         if operation_data.get('notes'):
-            elements.append(Spacer(1, 15))
+            elements.append(Spacer(1, 8))
             elements.append(Paragraph(f"<b>{fix_arabic_text('ملاحظات')}</b>", client_section_title))
             
             notes_style = ParagraphStyle(
                 'Notes',
                 parent=styles['Normal'],
-                fontSize=10,
+                fontSize=9,
                 alignment=TA_RIGHT,
                 fontName=arabic_font,
                 backColor=colors.lightgrey,
-                borderPadding=(8, 8, 8, 8)
+                borderPadding=(6, 6, 6, 6)
             )
             
             elements.append(Paragraph(fix_arabic_text(operation_data['notes']), notes_style))
         
-        elements.append(Spacer(1, 30))
+        elements.append(Spacer(1, 20))
         
-        # ========== SIGNATURE SECTION ==========
-        # Create signature section with two columns
+        # ========== COMPACT SIGNATURE SECTION (RIGHT ALIGNED) ==========
+        # Create signature section with clean text, right-aligned
         user_name = fix_arabic_text(user_data.get('name', 'غير محدد'))
         user_job_title = fix_arabic_text(user_data.get('job_title', 'موظف'))
         current_datetime = datetime.now().strftime('%Y-%m-%d %H:%M')
         
+        # Clean signature text without HTML artifacts
         signature_data = [
             [
-                f"""<b>{fix_arabic_text('توقيع العميل')}</b><br/><br/>
-                {fix_arabic_text('الاسم')}: ________________<br/>
-                {fix_arabic_text('التوقيع')}: ________________<br/>
-                {fix_arabic_text('التاريخ')}: ________________""",
+                f"""{fix_arabic_text('توقيع العميل')}
                 
-                f"""<b>{fix_arabic_text('توقيع الموظف')}</b><br/><br/>
-                {fix_arabic_text('الاسم')}: {user_name}<br/>
-                {fix_arabic_text('المنصب')}: {user_job_title}<br/>
-                {fix_arabic_text('التاريخ')}: {current_datetime}"""
+{fix_arabic_text('الاسم')}: ________________
+{fix_arabic_text('التوقيع')}: ________________
+{fix_arabic_text('التاريخ')}: ________________""",
+                
+                f"""{fix_arabic_text('توقيع الموظف')}
+                
+{fix_arabic_text('الاسم')}: {user_name}
+{fix_arabic_text('المنصب')}: {user_job_title}  
+{fix_arabic_text('التاريخ')}: {current_datetime}"""
             ]
         ]
         
@@ -3826,21 +3759,21 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         signature_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),  # All text right-aligned
             ('FONTNAME', (0, 0), (-1, -1), arabic_font),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('LEFTPADDING', (0, 0), (-1, -1), 12),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('GRID', (0, 0), (-1, -1), 1, colors.darkblue)
         ]))
         
         elements.append(signature_table)
-        elements.append(Spacer(1, 20))
+        elements.append(Spacer(1, 10))
         
-        # ========== FOOTER SECTION ==========
-        # Agency footer with registration details
+        # ========== COMPACT FOOTER SECTION ==========
+        # Agency footer with registration details (compact)
         footer_info = ""
         if agency_data.get('tax_number'):
             footer_info += f"{fix_arabic_text('رقم التسجيل الضريبي')}: {agency_data['tax_number']} | "
@@ -3852,7 +3785,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         footer_style = ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
-            fontSize=8,
+            fontSize=7,
             alignment=TA_CENTER,
             fontName=arabic_font,
             textColor=colors.grey
@@ -3860,32 +3793,18 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         
         if footer_info:
             elements.append(Paragraph(footer_info, footer_style))
-            elements.append(Spacer(1, 5))
         
-        # Custom footer message
-        if agency_data.get('footer_text'):
-            elements.append(Paragraph(fix_arabic_text(agency_data['footer_text']), footer_style))
-            elements.append(Spacer(1, 5))
-        
-        # Generation timestamp
+        # Generation timestamp (compact)
         timestamp_style = ParagraphStyle(
             'Timestamp',
             parent=styles['Normal'],
-            fontSize=8,
+            fontSize=7,
             alignment=TA_CENTER,
             fontName=arabic_font,
             textColor=colors.grey
         )
         
         elements.append(Paragraph(f"{fix_arabic_text('تم إنشاء هذا الوصل بتاريخ')}: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", timestamp_style))
-        
-        # Decorative bottom line
-        elements.append(Spacer(1, 10))
-        bottom_line_table = Table([['', '']], colWidths=[7*inch])
-        bottom_line_table.setStyle(TableStyle([
-            ('LINEBELOW', (0, 0), (-1, -1), 2, colors.darkblue),
-        ]))
-        elements.append(bottom_line_table)
         
         # Build PDF
         doc.build(elements)
