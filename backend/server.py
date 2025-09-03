@@ -5622,6 +5622,19 @@ async def get_daily_financial_report(
             "expense_date": {"$gte": start_date, "$lt": end_date}
         }).to_list(None)
         
+        # Convert ObjectIds to strings for JSON serialization
+        for op in operations:
+            if "_id" in op:
+                op["_id"] = str(op["_id"])
+        
+        for transfer in transfers:
+            if "_id" in transfer:
+                transfer["_id"] = str(transfer["_id"])
+        
+        for expense in expenses:
+            if "_id" in expense:
+                expense["_id"] = str(expense["_id"])
+        
         # Calculate totals
         daily_revenue = sum(op.get('final_price', 0) for op in operations)
         daily_transfers = sum(t.get('amount', 0) for t in transfers if t.get('status') == 'confirmed')
