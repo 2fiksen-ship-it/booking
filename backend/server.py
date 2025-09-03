@@ -3475,12 +3475,12 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
     elements.append(Spacer(1, 30))
     
     # Employee signature section
-    elements.append(Paragraph("<b>توقيع الموظف</b>", header_style))
+    elements.append(Paragraph(f"<b>{fix_arabic_text('توقيع الموظف')}</b>", header_style))
     
     employee_info = f"""
-    الاسم: {user_data['name']}<br/>
-    المنصب: {user_data.get('job_title', 'موظف')}<br/>
-    التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}<br/>
+    {fix_arabic_text('الاسم')}: {fix_arabic_text(user_data['name'])}<br/>
+    {fix_arabic_text('المنصب')}: {fix_arabic_text(user_data.get('job_title', 'موظف'))}<br/>
+    {fix_arabic_text('التاريخ')}: {datetime.now().strftime('%Y-%m-%d %H:%M')}<br/>
     """
     
     elements.append(Paragraph(employee_info, normal_style))
@@ -3488,18 +3488,18 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
     if user_data.get('signature_url'):
         # Placeholder for digital signature
         elements.append(Spacer(1, 20))
-        elements.append(Paragraph("التوقيع الإلكتروني", normal_style))
+        elements.append(Paragraph(fix_arabic_text("التوقيع الإلكتروني"), normal_style))
     else:
         elements.append(Spacer(1, 40))
-        elements.append(Paragraph("التوقيع: ________________", normal_style))
+        elements.append(Paragraph(f"{fix_arabic_text('التوقيع')}: ________________", normal_style))
     
     elements.append(Spacer(1, 30))
     
     # Footer
     if agency_data.get('footer_text'):
-        elements.append(Paragraph(agency_data['footer_text'], normal_style))
+        elements.append(Paragraph(fix_arabic_text(agency_data['footer_text']), normal_style))
     
-    elements.append(Paragraph(f"تم إنشاء هذا الوصل بتاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
+    elements.append(Paragraph(f"{fix_arabic_text('تم إنشاء هذا الوصل بتاريخ')}: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
     
     # Build PDF
     doc.build(elements)
