@@ -2075,6 +2075,80 @@ const ClientsManagement = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Add Client Dialog */}
+      <Dialog open={showAddClientDialog} onOpenChange={setShowAddClientDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إضافة عميل جديد</DialogTitle>
+            <DialogDescription>
+              أدخل بيانات العميل الجديد للوكالة
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>الاسم الكامل *</Label>
+                <Input
+                  value={clientFormData.name}
+                  onChange={(e) => setClientFormData({...clientFormData, name: e.target.value})}
+                  placeholder="اسم العميل الكامل"
+                />
+              </div>
+              <div>
+                <Label>رقم الهاتف *</Label>
+                <Input
+                  value={clientFormData.phone}
+                  onChange={(e) => setClientFormData({...clientFormData, phone: e.target.value})}
+                  placeholder="رقم الهاتف"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>البريد الإلكتروني</Label>
+                <Input
+                  type="email"
+                  value={clientFormData.email}
+                  onChange={(e) => setClientFormData({...clientFormData, email: e.target.value})}
+                  placeholder="البريد الإلكتروني (اختياري)"
+                />
+              </div>
+              <div>
+                <Label>رقم الهوية/جواز السفر</Label>
+                <Input
+                  value={clientFormData.cin_passport}
+                  onChange={(e) => setClientFormData({...clientFormData, cin_passport: e.target.value})}
+                  placeholder="رقم الهوية أو جواز السفر (اختياري)"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>العنوان</Label>
+              <Input
+                value={clientFormData.address}
+                onChange={(e) => setClientFormData({...clientFormData, address: e.target.value})}
+                placeholder="عنوان العميل (اختياري)"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 rtl:space-x-reverse">
+              <Button variant="outline" onClick={() => setShowAddClientDialog(false)}>
+                إلغاء
+              </Button>
+              <Button 
+                onClick={handleAddClient}
+                disabled={!clientFormData.name || !clientFormData.phone}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                ✅ إضافة العميل
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
