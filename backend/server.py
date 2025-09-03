@@ -5537,7 +5537,7 @@ async def create_agency_expense(
 ):
     """Create agency expense"""
     # Check permissions
-    if current_user.role not in [UserRole.AGENCY_STAFF, UserRole.GENERAL_MANAGER]:
+    if current_user.role not in [UserRole.AGENCY_STAFF, UserRole.SUPER_ADMIN]:
         raise HTTPException(status_code=403, detail="Not authorized to create expenses")
     
     if current_user.agency_id != agency_id:
