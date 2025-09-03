@@ -9949,6 +9949,299 @@ def main():
         
         return results
 
+    def test_logo_display_issue_investigation(self):
+        """Investigate and Fix Logo Display Issue in PDF - Comprehensive Testing"""
+        print(f"\n🔍 LOGO DISPLAY ISSUE INVESTIGATION - PDF RECEIPTS")
+        print(f"   Testing logo upload status, file existence, and PDF generation with debugging")
+        
+        results = {}
+        
+        # Step 1: Super Admin Login for logo management
+        print(f"\n   1. Super Admin Login for Logo Management...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with logo investigation")
+            return results
+        
+        print(f"   ✅ Super Admin authenticated successfully")
+        
+        # Step 2: Check Agency Logo Status
+        print(f"\n   2. Checking Agency Logo Upload Status...")
+        success, agencies_data = self.run_test(
+            "Get All Agencies - Check Logo URLs",
+            "GET",
+            "agencies",
+            200
+        )
+        results['agencies_check'] = success
+        
+        agencies_with_logos = []
+        agencies_without_logos = []
+        
+        if success:
+            print(f"   ✅ Found {len(agencies_data)} agencies")
+            for agency in agencies_data:
+                agency_name = agency.get('name', 'Unknown')
+                logo_url = agency.get('logo_url', '')
+                
+                if logo_url and logo_url.strip():
+                    agencies_with_logos.append({
+                        'id': agency['id'],
+                        'name': agency_name,
+                        'logo_url': logo_url
+                    })
+                    print(f"   📷 {agency_name}: HAS LOGO - {logo_url}")
+                else:
+                    agencies_without_logos.append({
+                        'id': agency['id'],
+                        'name': agency_name
+                    })
+                    print(f"   📷 {agency_name}: NO LOGO")
+            
+            print(f"\n   LOGO STATUS SUMMARY:")
+            print(f"   - Agencies with logos: {len(agencies_with_logos)}")
+            print(f"   - Agencies without logos: {len(agencies_without_logos)}")
+            
+            results['agencies_with_logos'] = len(agencies_with_logos)
+            results['agencies_without_logos'] = len(agencies_without_logos)
+        
+        # Step 3: Check Logo File Existence
+        print(f"\n   3. Checking Logo File Existence in /uploads/logos/...")
+        
+        # Test static file serving endpoint
+        logo_files_accessible = 0
+        logo_files_missing = 0
+        
+        for agency in agencies_with_logos:
+            logo_url = agency['logo_url']
+            if logo_url.startswith('/'):
+                logo_url = logo_url[1:]  # Remove leading slash
+            
+            # Test if logo file is accessible via static file serving
+            try:
+                import requests
+                logo_file_url = f"{self.base_url}/{logo_url}"
+                response = requests.get(logo_file_url, timeout=10)
+                
+                if response.status_code == 200:
+                    logo_files_accessible += 1
+                    print(f"   ✅ {agency['name']}: Logo file accessible - {logo_file_url}")
+                else:
+                    logo_files_missing += 1
+                    print(f"   ❌ {agency['name']}: Logo file NOT accessible - {logo_file_url} (Status: {response.status_code})")
+            except Exception as e:
+                logo_files_missing += 1
+                print(f"   ❌ {agency['name']}: Logo file check failed - {str(e)}")
+        
+        results['logo_files_accessible'] = logo_files_accessible
+        results['logo_files_missing'] = logo_files_missing
+        
+        print(f"\n   LOGO FILE ACCESSIBILITY SUMMARY:")
+        print(f"   - Accessible logo files: {logo_files_accessible}")
+        print(f"   - Missing/inaccessible logo files: {logo_files_missing}")
+        
+        # Step 4: Test PDF Generation with Logo Debugging
+        print(f"\n   4. Testing PDF Generation with Logo Debugging...")
+        
+        # Login as Agency Staff to test PDF generation
+        print(f"\n   4a. Agency Staff Login for PDF Testing...")
+        staff_auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['staff_login'] = staff_auth_success
+        
+        if staff_auth_success:
+            print(f"   ✅ Agency Staff authenticated successfully")
+            print(f"   Staff User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+            print(f"   Staff Agency: {self.current_user.get('agency_id')}")
+            
+            # Get daily operations for PDF testing
+            success, operations_data = self.run_test(
+                "Get Daily Operations for PDF Testing",
+                "GET",
+                "daily-operations",
+                200
+            )
+            results['operations_check'] = success
+            
+            if success and operations_data:
+                print(f"   ✅ Found {len(operations_data)} daily operations for testing")
+                
+                # Test PDF generation for first few operations
+                pdf_tests = []
+                test_count = min(3, len(operations_data))
+                
+                for i in range(test_count):
+                    operation = operations_data[i]
+                    operation_id = operation['id']
+                    operation_no = operation.get('operation_no', 'Unknown')
+                    
+                    print(f"\n   4b.{i+1}. Testing PDF Generation for Operation {operation_no}...")
+                    
+                    # Test PDF generation endpoint
+                    success, pdf_response = self.run_test(
+                        f"Generate PDF for Operation {operation_no}",
+                        "GET",
+                        f"daily-operations/{operation_id}/print",
+                        200
+                    )
+                    
+                    pdf_test_result = {
+                        'operation_id': operation_id,
+                        'operation_no': operation_no,
+                        'pdf_generated': success
+                    }
+                    
+                    if success:
+                        print(f"   ✅ PDF generated successfully for operation {operation_no}")
+                        
+                        # Check response headers for PDF content
+                        try:
+                            import requests
+                            pdf_url = f"{self.api_url}/daily-operations/{operation_id}/print"
+                            headers = {'Authorization': f'Bearer {self.token}'}
+                            response = requests.get(pdf_url, headers=headers, timeout=10)
+                            
+                            content_type = response.headers.get('content-type', '')
+                            content_disposition = response.headers.get('content-disposition', '')
+                            content_length = len(response.content)
+                            
+                            pdf_test_result['content_type'] = content_type
+                            pdf_test_result['content_length'] = content_length
+                            pdf_test_result['is_pdf'] = content_type == 'application/pdf'
+                            pdf_test_result['has_content'] = content_length > 1000  # PDFs should be substantial
+                            
+                            print(f"   📄 Content-Type: {content_type}")
+                            print(f"   📄 Content-Length: {content_length} bytes")
+                            print(f"   📄 Content-Disposition: {content_disposition}")
+                            
+                            # Check if PDF content starts with PDF magic bytes
+                            if response.content.startswith(b'%PDF'):
+                                print(f"   ✅ Valid PDF format confirmed")
+                                pdf_test_result['valid_pdf_format'] = True
+                            else:
+                                print(f"   ❌ Invalid PDF format - does not start with %PDF")
+                                pdf_test_result['valid_pdf_format'] = False
+                                
+                        except Exception as e:
+                            print(f"   ❌ PDF validation failed: {str(e)}")
+                            pdf_test_result['validation_error'] = str(e)
+                    else:
+                        print(f"   ❌ PDF generation failed for operation {operation_no}")
+                    
+                    pdf_tests.append(pdf_test_result)
+                
+                results['pdf_tests'] = pdf_tests
+                
+                # Calculate PDF generation success rate
+                successful_pdfs = sum(1 for test in pdf_tests if test['pdf_generated'])
+                success_rate = (successful_pdfs / len(pdf_tests)) * 100 if pdf_tests else 0
+                results['pdf_success_rate'] = success_rate
+                
+                print(f"\n   PDF GENERATION SUMMARY:")
+                print(f"   - Total operations tested: {len(pdf_tests)}")
+                print(f"   - Successful PDF generations: {successful_pdfs}")
+                print(f"   - Success rate: {success_rate:.1f}%")
+            else:
+                print(f"   ❌ No daily operations found for PDF testing")
+        
+        # Step 5: Test Logo Upload Functionality
+        print(f"\n   5. Testing Logo Upload Functionality...")
+        
+        # Switch back to Super Admin for logo upload testing
+        super_admin_auth = self.test_login('superadmin@sanhaja.com', 'super123')
+        
+        if super_admin_auth and agencies_without_logos:
+            test_agency = agencies_without_logos[0]
+            agency_id = test_agency['id']
+            agency_name = test_agency['name']
+            
+            print(f"   Testing logo upload for agency: {agency_name}")
+            
+            # Test logo upload endpoint accessibility
+            success, upload_response = self.run_test(
+                f"Test Logo Upload Endpoint (No File)",
+                "POST",
+                f"agencies/{agency_id}/upload-logo",
+                422  # Expected 422 for missing file
+            )
+            results['logo_upload_endpoint'] = success
+            
+            if success:
+                print(f"   ✅ Logo upload endpoint accessible (correctly rejects requests without file)")
+            
+            # Test logo removal endpoint
+            success, remove_response = self.run_test(
+                f"Test Logo Removal Endpoint",
+                "DELETE",
+                f"agencies/{agency_id}/remove-logo",
+                200  # Should succeed even if no logo exists
+            )
+            results['logo_removal_endpoint'] = success
+            
+            if success:
+                print(f"   ✅ Logo removal endpoint accessible")
+        
+        # Step 6: Test Static File Serving
+        print(f"\n   6. Testing Static File Serving for Logos...")
+        
+        # Test static file serving endpoint structure
+        try:
+            import requests
+            test_logo_url = f"{self.base_url}/uploads/logos/nonexistent-logo.jpg"
+            response = requests.get(test_logo_url, timeout=10)
+            
+            if response.status_code == 404:
+                print(f"   ✅ Static file serving working (correctly returns 404 for non-existent files)")
+                results['static_file_serving'] = True
+            else:
+                print(f"   ⚠️  Static file serving response: {response.status_code}")
+                results['static_file_serving'] = False
+        except Exception as e:
+            print(f"   ❌ Static file serving test failed: {str(e)}")
+            results['static_file_serving'] = False
+        
+        # Step 7: Debug Analysis and Recommendations
+        print(f"\n   7. Debug Analysis and Recommendations...")
+        
+        issues_found = []
+        recommendations = []
+        
+        # Analyze results
+        if results.get('agencies_with_logos', 0) == 0:
+            issues_found.append("No agencies have logo_url set")
+            recommendations.append("Upload logos to agencies using Super Admin account")
+        
+        if results.get('logo_files_missing', 0) > 0:
+            issues_found.append(f"{results.get('logo_files_missing', 0)} logo files are missing or inaccessible")
+            recommendations.append("Check /uploads/logos/ directory and file permissions")
+        
+        if results.get('pdf_success_rate', 0) < 100:
+            issues_found.append(f"PDF generation success rate is {results.get('pdf_success_rate', 0):.1f}%")
+            recommendations.append("Check PDF generation logs for specific errors")
+        
+        if not results.get('static_file_serving', False):
+            issues_found.append("Static file serving may not be working correctly")
+            recommendations.append("Check FastAPI static file mounting configuration")
+        
+        print(f"\n   LOGO DISPLAY ISSUE ANALYSIS:")
+        
+        if issues_found:
+            print(f"   🐛 ISSUES IDENTIFIED:")
+            for i, issue in enumerate(issues_found, 1):
+                print(f"     {i}. {issue}")
+            
+            print(f"\n   💡 RECOMMENDATIONS:")
+            for i, rec in enumerate(recommendations, 1):
+                print(f"     {i}. {rec}")
+        else:
+            print(f"   ✅ No major issues found with logo system")
+        
+        results['issues_found'] = len(issues_found)
+        results['recommendations'] = recommendations
+        
+        return results
+
 if __name__ == "__main__":
     # Check if specific test is requested
     if len(sys.argv) > 1:
