@@ -156,27 +156,33 @@ backend:
 
   - task: "Logo Management System"
     implemented: true
-    working: true
+    working: false
     file: "backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
       - working: true
         agent: "testing"
         comment: "✅ Logo Management System working correctly. Fixed GENERAL_MANAGER enum error. Upload endpoint accessible (422 without file), removal endpoint working (200 success). Permission control verified: Super Admin ✅, General Accountant ✅, Agency Staff ❌ (403 denied). Static file serving working at /uploads/logos/."
+      - working: false
+        agent: "testing"
+        comment: "🐛 CRITICAL LOGO DISPLAY ISSUE IDENTIFIED: Logo investigation revealed that agency logo_url points to external URL (https://assets.sanhaja.com/logos/tlemcen.png) but PDF generation expects local file paths (/uploads/logos/filename). Logo upload system creates correct local paths but existing agency has external URL. PDF generation logs show 'Logo file does not exist' and falls back to placeholder. Need to either: 1) Update agency logo_url to local path, or 2) Modify PDF generation to handle external URLs. Logo upload/removal endpoints working correctly."
 
   - task: "PDF with Logo Integration"
     implemented: true
-    working: true
+    working: false
     file: "backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
       - working: true
         agent: "testing"
         comment: "✅ PDF with Logo Integration working. PDF generation works with or without logo files. Proper fallback handling when logo missing. Generated PDFs include agency logo in header alongside agency information."
+      - working: false
+        agent: "testing"
+        comment: "🐛 LOGO INTEGRATION FAILING DUE TO URL MISMATCH: PDF generation code expects local file paths (./uploads/logos/filename) but agency logo_url contains external URL (https://assets.sanhaja.com/logos/tlemcen.png). Backend logs show 'Trying to load logo from: https://assets.sanhaja.com/logos/tlemcen.png' and 'Logo file does not exist'. Fallback to placeholder (🏢) works correctly. Root cause: logo_url format inconsistency between database and PDF generation expectations."
 
   - task: "File Validation for Logo Upload"
     implemented: true
