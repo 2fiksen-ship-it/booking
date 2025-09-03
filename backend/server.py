@@ -30,6 +30,7 @@ from io import BytesIO
 
 # NEW: File upload imports
 from fastapi import UploadFile, File
+from fastapi.staticfiles import StaticFiles
 import os
 import uuid
 from pathlib import Path
