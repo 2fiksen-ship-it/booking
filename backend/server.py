@@ -117,6 +117,46 @@ class ServiceSaleStatus(str, Enum):
     PENDING_CASH = "pending_cash"
     CASH_RECEIVED = "cash_received"
 
+# Financial tracking models for agency cash flow
+class CashTransfer(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    agency_id: str
+    transferred_by: str  # User ID
+    amount: float
+    transfer_date: datetime = Field(default_factory=datetime.now)
+    notes: str = ""
+    status: str = "pending"  # pending, confirmed, cancelled
+    confirmation_by: Optional[str] = None  # General Accountant/Super Admin ID
+    confirmation_date: Optional[datetime] = None
+
+class CashTransferCreate(BaseModel):
+    amount: float
+    notes: str = ""
+
+class AgencyExpense(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    agency_id: str
+    employee_id: str  # User ID
+    amount: float
+    description: str
+    expense_date: datetime = Field(default_factory=datetime.now)
+    approved_by: Optional[str] = None  # Manager/Accountant ID
+    approval_date: Optional[datetime] = None
+    category: str = "operational"  # operational, travel, supplies, other
+
+class AgencyExpenseCreate(BaseModel):
+    amount: float
+    description: str
+    category: str = "operational"
+
+class AgencyBalance(BaseModel):
+    agency_id: str
+    total_revenue: float = 0.0  # من العمليات اليومية
+    total_transferred: float = 0.0  # المحول للإدارة العامة
+    total_expenses: float = 0.0  # المصاريف
+    current_balance: float = 0.0  # الرصيد الحالي
+    last_updated: datetime = Field(default_factory=datetime.now)
+
 class InstallmentStatus(str, Enum):
     PENDING = "pending"
     PARTIAL = "partial"  # NEW: for partial payments
