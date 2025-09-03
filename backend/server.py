@@ -3574,7 +3574,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         # ========== PAYMENT INFORMATION ==========
         elements.append(Paragraph(f"<b>{fix_arabic_text('معلومات الدفع')}</b>", client_section_title))
         
-        # Payment details with enhanced styling
+        # Payment details with enhanced styling - RTL format
         payment_data_table = []
         
         if payment_info and payment_info.get('total_paid'):
@@ -3582,27 +3582,29 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
             payment_method_ar = fix_arabic_text('نقدي') if payment_method == 'cash' else fix_arabic_text('بنكي')
             payment_status_ar = fix_arabic_text(payment_info.get('payment_status', 'غير محدد'))
             
+            # RTL table - Arabic labels on RIGHT, values on LEFT
             payment_data_table = [
-                [fix_arabic_text('طريقة الدفع:'), payment_method_ar],
-                [fix_arabic_text('المبلغ المدفوع:'), f"{payment_info.get('total_paid', 0):,.0f} {fix_arabic_text('دج')}"],
-                [fix_arabic_text('المبلغ المتبقي:'), f"{payment_info.get('remaining_amount', 0):,.0f} {fix_arabic_text('دج')}"],
-                [fix_arabic_text('حالة الدفع:'), payment_status_ar],
-                [fix_arabic_text('عدد الدفعات:'), str(payment_info.get('payments_count', 0))],
+                [payment_method_ar, fix_arabic_text('طريقة الدفع:')],
+                [f"{payment_info.get('total_paid', 0):,.0f} {fix_arabic_text('دج')}", fix_arabic_text('المبلغ المدفوع:')],
+                [f"{payment_info.get('remaining_amount', 0):,.0f} {fix_arabic_text('دج')}", fix_arabic_text('المبلغ المتبقي:')],
+                [payment_status_ar, fix_arabic_text('حالة الدفع:')],
+                [str(payment_info.get('payments_count', 0)), fix_arabic_text('عدد الدفعات:')],
             ]
         else:
-            # Default payment info
+            # Default payment info - RTL format
             payment_data_table = [
-                [fix_arabic_text('طريقة الدفع:'), fix_arabic_text('نقدي')],
-                [fix_arabic_text('المبلغ المدفوع:'), f"0 {fix_arabic_text('دج')}"],
-                [fix_arabic_text('المبلغ المتبقي:'), f"{final_price:,.0f} {fix_arabic_text('دج')}"],
-                [fix_arabic_text('حالة الدفع:'), fix_arabic_text('غير مدفوع')],
+                [fix_arabic_text('نقدي'), fix_arabic_text('طريقة الدفع:')],
+                [f"0 {fix_arabic_text('دج')}", fix_arabic_text('المبلغ المدفوع:')],
+                [f"{final_price:,.0f} {fix_arabic_text('دج')}", fix_arabic_text('المبلغ المتبقي:')],
+                [fix_arabic_text('غير مدفوع'), fix_arabic_text('حالة الدفع:')],
             ]
         
-        payment_table = Table(payment_data_table, colWidths=[2*inch, 4*inch])
+        payment_table = Table(payment_data_table, colWidths=[4*inch, 2*inch])
         payment_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightyellow),
+            ('BACKGROUND', (1, 0), (1, -1), colors.lightyellow),  # Right column (Arabic labels) background
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),   # Left column (values) align left
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),  # Right column (labels) align right
             ('FONTNAME', (0, 0), (-1, -1), arabic_font),
             ('FONTSIZE', (0, 0), (-1, -1), 11),
             ('LEFTPADDING', (0, 0), (-1, -1), 8),
