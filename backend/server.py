@@ -5494,7 +5494,7 @@ async def get_cash_transfers(current_user: User = Depends(get_current_user)):
         # Role-based filtering
         if current_user.role == UserRole.AGENCY_STAFF:
             query["agency_id"] = current_user.agency_id
-        elif current_user.role == UserRole.GENERAL_MANAGER:
+        elif current_user.role == UserRole.SUPER_ADMIN:
             # Can see all transfers for their managed agencies
             query["agency_id"] = current_user.agency_id
         # Super Admin and General Accountant can see all
