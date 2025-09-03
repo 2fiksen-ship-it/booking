@@ -3400,26 +3400,28 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         elements.append(Spacer(1, 12))
     
     # Agency name and title
-    agency_title = f"<b>{agency_data['name']}</b><br/>{agency_data.get('header_text', 'وصل استلام')}"
+    agency_name = fix_arabic_text(agency_data['name'])
+    header_text = fix_arabic_text(agency_data.get('header_text', 'وصل استلام'))
+    agency_title = f"<b>{agency_name}</b><br/>{header_text}"
     elements.append(Paragraph(agency_title, title_style))
     elements.append(Spacer(1, 12))
     
     # Agency details
     agency_info = f"""
-    العنوان: {agency_data['address']}, {agency_data['city']}<br/>
-    الهاتف: {agency_data.get('phone', 'غير محدد')}<br/>
-    البريد: {agency_data.get('email', 'غير محدد')}<br/>
+    {fix_arabic_text('العنوان')}: {fix_arabic_text(agency_data['address'])}, {fix_arabic_text(agency_data['city'])}<br/>
+    {fix_arabic_text('الهاتف')}: {agency_data.get('phone', 'غير محدد')}<br/>
+    {fix_arabic_text('البريد')}: {agency_data.get('email', 'غير محدد')}<br/>
     """
     if agency_data.get('tax_number'):
-        agency_info += f"رقم التسجيل الضريبي: {agency_data['tax_number']}<br/>"
+        agency_info += f"{fix_arabic_text('رقم التسجيل الضريبي')}: {agency_data['tax_number']}<br/>"
     if agency_data.get('commercial_register'):
-        agency_info += f"السجل التجاري: {agency_data['commercial_register']}<br/>"
+        agency_info += f"{fix_arabic_text('السجل التجاري')}: {agency_data['commercial_register']}<br/>"
     
     elements.append(Paragraph(agency_info, normal_style))
     elements.append(Spacer(1, 20))
     
     # Receipt details
-    elements.append(Paragraph("<b>تفاصيل الوصل</b>", header_style))
+    elements.append(Paragraph(f"<b>{fix_arabic_text('تفاصيل الوصل')}</b>", header_style))
     
     # Create receipt details table with payment information
     receipt_data = [
