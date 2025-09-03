@@ -1823,6 +1823,388 @@ class SanhajaAPITester:
         
         return results
 
+    def test_financial_management_system(self):
+        """Test New Simplified Financial Management System as requested in review"""
+        print(f"\n💰 Testing New Simplified Financial Management System (Review Request)...")
+        print(f"   Testing: Agency Balance, Cash Transfers, Expenses, Daily Financial Reports")
+        
+        results = {}
+        
+        # Step 1: Super Admin Login
+        print(f"\n   1. Super Admin Login (superadmin@sanhaja.com / super123)...")
+        auth_success = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = auth_success
+        
+        if not auth_success:
+            print("   ❌ CRITICAL: Super Admin login failed - cannot proceed with financial tests")
+            return results
+        
+        # Get agencies for testing
+        success, agencies_data = self.run_test("Get Agencies", "GET", "agencies", 200)
+        if not success or not agencies_data:
+            print("   ❌ CRITICAL: Cannot get agencies - cannot proceed with financial tests")
+            return results
+        
+        test_agency_id = agencies_data[0]['id']
+        test_agency_name = agencies_data[0].get('name', 'Unknown')
+        print(f"   Using agency: {test_agency_name} (ID: {test_agency_id})")
+        
+        # Test 1: Agency Balance Calculation
+        print(f"\n   🏦 1. Testing Agency Balance Calculation...")
+        success, balance_data = self.run_test(
+            "Agency Balance Calculation",
+            "GET",
+            f"agencies/{test_agency_id}/balance",
+            200
+        )
+        results['agency_balance'] = success
+        
+        if success:
+            print(f"   ✅ Agency balance endpoint accessible")
+            print(f"   Total Revenue: {balance_data.get('total_revenue', 0)} DZD")
+            print(f"   Total Transferred: {balance_data.get('total_transferred', 0)} DZD")
+            print(f"   Total Expenses: {balance_data.get('total_expenses', 0)} DZD")
+            print(f"   Current Balance: {balance_data.get('current_balance', 0)} DZD")
+            
+            # Verify balance components exist
+            required_fields = ['total_revenue', 'total_transferred', 'total_expenses', 'current_balance']
+            all_fields_present = all(field in balance_data for field in required_fields)
+            results['balance_components'] = all_fields_present
+            
+            if all_fields_present:
+                print(f"   ✅ All balance components present")
+            else:
+                print(f"   ❌ Missing balance components")
+        
+        # Test 2: Cash Transfer System
+        print(f"\n   💸 2. Testing Cash Transfer System...")
+        
+        # Create cash transfer
+        transfer_data = {
+            "amount": 50000.0,
+            "notes": "Test cash transfer to general management"
+        }
+        
+        success, transfer_response = self.run_test(
+            "Create Cash Transfer",
+            "POST",
+            f"agencies/{test_agency_id}/cash-transfer",
+            200,
+            data=transfer_data
+        )
+        results['create_cash_transfer'] = success
+        
+        transfer_id = None
+        if success:
+            print(f"   ✅ Cash transfer created successfully")
+            transfer_id = transfer_response.get('id')
+            print(f"   Transfer ID: {transfer_id}")
+        
+        # Get cash transfers
+        success, transfers_list = self.run_test(
+            "Get Cash Transfers",
+            "GET",
+            "cash-transfers",
+            200
+        )
+        results['get_cash_transfers'] = success
+        
+        if success:
+            print(f"   ✅ Cash transfers list accessible")
+            print(f"   Total transfers: {len(transfers_list)}")
+            
+            # Find our test transfer
+            test_transfer = None
+            for transfer in transfers_list:
+                if transfer.get('id') == transfer_id:
+                    test_transfer = transfer
+                    break
+            
+            if test_transfer:
+                print(f"   ✅ Test transfer found in list")
+                print(f"   Status: {test_transfer.get('status', 'unknown')}")
+                print(f"   Amount: {test_transfer.get('amount', 0)} DZD")
+        
+        # Test balance validation (try to transfer more than available)
+        print(f"\n   💰 2a. Testing Balance Validation...")
+        
+        # Get current balance first
+        success, current_balance = self.run_test(
+            "Get Current Balance for Validation",
+            "GET",
+            f"agencies/{test_agency_id}/balance",
+            200
+        )
+        
+        if success:
+            available_balance = current_balance.get('current_balance', 0)
+            excessive_amount = available_balance + 100000  # More than available
+            
+            success, validation_response = self.run_test(
+                "Cash Transfer - Excessive Amount (Should Fail)",
+                "POST",
+                f"agencies/{test_agency_id}/cash-transfer",
+                400,  # Should fail with validation error
+                data={
+                    "amount": excessive_amount,
+                    "notes": "Test excessive transfer amount"
+                }
+            )
+            results['transfer_validation'] = success
+            
+            if success:
+                print(f"   ✅ Balance validation working - excessive transfer rejected")
+            else:
+                print(f"   ⚠️  Balance validation may not be working properly")
+        
+        # Test 3: General Accountant Cash Transfer Confirmation
+        print(f"\n   👨‍💼 3. Testing Cash Transfer Confirmation (General Accountant)...")
+        
+        # Login as General Accountant
+        ga_auth_success = self.test_login('generalaccountant@sanhaja.com', 'acc123')
+        results['general_accountant_login'] = ga_auth_success
+        
+        if ga_auth_success and transfer_id:
+            success, confirm_response = self.run_test(
+                "Confirm Cash Transfer (General Accountant)",
+                "PUT",
+                f"cash-transfers/{transfer_id}/confirm",
+                200
+            )
+            results['confirm_cash_transfer'] = success
+            
+            if success:
+                print(f"   ✅ Cash transfer confirmed by General Accountant")
+                print(f"   Response: {confirm_response.get('message', 'No message')}")
+        
+        # Test that Agency Staff cannot confirm transfers
+        print(f"\n   🚫 3a. Testing Agency Staff Cannot Confirm Transfers...")
+        
+        staff_auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        if staff_auth_success and transfer_id:
+            success, staff_confirm_response = self.run_test(
+                "Agency Staff Try Confirm Transfer (Should Fail)",
+                "PUT",
+                f"cash-transfers/{transfer_id}/confirm",
+                403  # Should be forbidden
+            )
+            results['staff_cannot_confirm'] = success
+            
+            if success:
+                print(f"   ✅ Agency Staff correctly denied transfer confirmation")
+        
+        # Switch back to Super Admin for remaining tests
+        self.test_login('superadmin@sanhaja.com', 'super123')
+        
+        # Test 4: Expense Management
+        print(f"\n   📊 4. Testing Expense Management...")
+        
+        # Create agency expense
+        expense_data = {
+            "amount": 15000.0,
+            "description": "Office supplies and equipment",
+            "category": "operational"
+        }
+        
+        success, expense_response = self.run_test(
+            "Create Agency Expense",
+            "POST",
+            f"agencies/{test_agency_id}/expenses",
+            200,
+            data=expense_data
+        )
+        results['create_expense'] = success
+        
+        if success:
+            print(f"   ✅ Agency expense created successfully")
+            expense_id = expense_response.get('id')
+            print(f"   Expense ID: {expense_id}")
+        
+        # Get agency expenses
+        success, expenses_list = self.run_test(
+            "Get Agency Expenses",
+            "GET",
+            f"agencies/{test_agency_id}/expenses",
+            200
+        )
+        results['get_expenses'] = success
+        
+        if success:
+            print(f"   ✅ Agency expenses list accessible")
+            print(f"   Total expenses: {len(expenses_list)}")
+            
+            # Verify expense categories
+            categories = set()
+            for expense in expenses_list:
+                category = expense.get('category', 'unknown')
+                categories.add(category)
+            
+            print(f"   Expense categories found: {list(categories)}")
+            
+            expected_categories = ['operational', 'travel', 'supplies', 'other']
+            valid_categories = [cat for cat in categories if cat in expected_categories]
+            results['expense_categories'] = len(valid_categories) > 0
+            
+            if len(valid_categories) > 0:
+                print(f"   ✅ Valid expense categories found")
+        
+        # Test 5: Daily Financial Reports
+        print(f"\n   📈 5. Testing Daily Financial Reports...")
+        
+        # Test with today's date
+        from datetime import datetime
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        success, daily_report = self.run_test(
+            "Daily Financial Report",
+            "GET",
+            f"reports/daily-financial/{test_agency_id}?date={today}",
+            200
+        )
+        results['daily_financial_report'] = success
+        
+        if success:
+            print(f"   ✅ Daily financial report generated")
+            
+            # Verify report structure
+            expected_sections = ['operations', 'transfers', 'expenses', 'summary']
+            report_sections = list(daily_report.keys())
+            
+            print(f"   Report sections: {report_sections}")
+            
+            # Check summary calculations
+            if 'summary' in daily_report:
+                summary = daily_report['summary']
+                print(f"   Summary - Total Revenue: {summary.get('total_revenue', 0)} DZD")
+                print(f"   Summary - Total Transfers: {summary.get('total_transfers', 0)} DZD")
+                print(f"   Summary - Total Expenses: {summary.get('total_expenses', 0)} DZD")
+                print(f"   Summary - Net Balance: {summary.get('net_balance', 0)} DZD")
+                
+                results['report_structure'] = 'summary' in daily_report
+            
+            # Check operations section
+            if 'operations' in daily_report:
+                operations = daily_report['operations']
+                print(f"   Operations count: {len(operations) if isinstance(operations, list) else 'N/A'}")
+                results['report_operations'] = True
+            
+            # Check transfers section
+            if 'transfers' in daily_report:
+                transfers = daily_report['transfers']
+                print(f"   Transfers count: {len(transfers) if isinstance(transfers, list) else 'N/A'}")
+                results['report_transfers'] = True
+            
+            # Check expenses section
+            if 'expenses' in daily_report:
+                expenses = daily_report['expenses']
+                print(f"   Expenses count: {len(expenses) if isinstance(expenses, list) else 'N/A'}")
+                results['report_expenses'] = True
+        
+        # Test 6: Date Filtering for Reports
+        print(f"\n   📅 6. Testing Date Filtering for Reports...")
+        
+        # Test with specific date range
+        from datetime import datetime, timedelta
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        success, filtered_report = self.run_test(
+            "Daily Financial Report - Specific Date",
+            "GET",
+            f"reports/daily-financial/{test_agency_id}?date={yesterday}",
+            200
+        )
+        results['date_filtering'] = success
+        
+        if success:
+            print(f"   ✅ Date filtering working for reports")
+        
+        # Test 7: Role-Based Access Control for Financial Endpoints
+        print(f"\n   🔐 7. Testing Role-Based Access Control...")
+        
+        # Test Agency Staff access to their own agency balance
+        staff_auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        if staff_auth_success:
+            staff_agency_id = self.current_user.get('agency_id')
+            
+            success, staff_balance = self.run_test(
+                "Agency Staff - Own Agency Balance",
+                "GET",
+                f"agencies/{staff_agency_id}/balance",
+                200
+            )
+            results['staff_own_balance'] = success
+            
+            if success:
+                print(f"   ✅ Agency Staff can access their own agency balance")
+            
+            # Test Agency Staff cannot access other agency balance
+            if staff_agency_id != test_agency_id:
+                success, other_balance = self.run_test(
+                    "Agency Staff - Other Agency Balance (Should Fail)",
+                    "GET",
+                    f"agencies/{test_agency_id}/balance",
+                    403
+                )
+                results['staff_other_balance_denied'] = success
+                
+                if success:
+                    print(f"   ✅ Agency Staff correctly denied access to other agency balance")
+        
+        # Test 8: Integration Testing - Verify Balance Updates
+        print(f"\n   🔄 8. Testing Integration - Balance Updates...")
+        
+        # Switch back to Super Admin
+        self.test_login('superadmin@sanhaja.com', 'super123')
+        
+        # Get balance before and after operations
+        success, balance_before = self.run_test(
+            "Balance Before Operations",
+            "GET",
+            f"agencies/{test_agency_id}/balance",
+            200
+        )
+        
+        if success:
+            print(f"   Balance before: {balance_before.get('current_balance', 0)} DZD")
+            
+            # Create another expense
+            success, new_expense = self.run_test(
+                "Create Another Expense",
+                "POST",
+                f"agencies/{test_agency_id}/expenses",
+                200,
+                data={
+                    "amount": 5000.0,
+                    "description": "Integration test expense",
+                    "category": "other"
+                }
+            )
+            
+            if success:
+                # Get balance after expense
+                success, balance_after = self.run_test(
+                    "Balance After Expense",
+                    "GET",
+                    f"agencies/{test_agency_id}/balance",
+                    200
+                )
+                
+                if success:
+                    print(f"   Balance after: {balance_after.get('current_balance', 0)} DZD")
+                    
+                    # Verify balance decreased by expense amount
+                    balance_diff = balance_before.get('current_balance', 0) - balance_after.get('current_balance', 0)
+                    expected_diff = 5000.0
+                    
+                    if abs(balance_diff - expected_diff) < 0.01:  # Allow for floating point precision
+                        print(f"   ✅ Balance correctly updated after expense (decreased by {balance_diff} DZD)")
+                        results['balance_integration'] = True
+                    else:
+                        print(f"   ❌ Balance integration issue - expected decrease of {expected_diff}, got {balance_diff}")
+                        results['balance_integration'] = False
+        
+        return results
+
     def test_basic_requirements(self):
         """Test the basic requirements from the review request"""
         print(f"\n🎯 Testing Basic Requirements from Review Request...")
