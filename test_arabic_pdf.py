@@ -298,7 +298,7 @@ class ArabicPDFTester:
             
             print(f"\n   5.1. Testing Arabic Elements Processing for Operation {operation_id}...")
             
-            url = f"{self.api_url}/daily-operations/{operation_id}/receipt-pdf"
+            url = f"{self.api_url}/daily-operations/{operation_id}/print"
             headers = {'Authorization': f'Bearer {self.token}'}
             
             try:
