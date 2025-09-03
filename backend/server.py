@@ -3480,7 +3480,7 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
         header_table_data = []
         
         # Create header with logo (left) and agency info (right)
-        if agency_data.get('logo_url') and False:  # Disable logo for now until we have actual logo files
+        if agency_data.get('logo_url'):
             # If logo exists, create a two-column header
             agency_info_text = f"""
             <font size="18" color="darkblue"><b>{fix_arabic_text(agency_data['name'])}</b></font><br/>
@@ -3489,11 +3489,63 @@ def create_receipt_pdf(operation_data: dict, agency_data: dict, user_data: dict,
             <font size="10">{fix_arabic_text('هاتف')}: {agency_data.get('phone', '')}</font>
             """
             
-            header_table_data = [
-                [Paragraph(agency_info_text, ParagraphStyle('HeaderInfo', 
-                    parent=styles['Normal'], alignment=TA_RIGHT, fontName=arabic_font)),
-                 Paragraph('LOGO', styles['Normal'])]  # Simple text placeholder instead of image
-            ]
+            try:
+                # Create table with logo and agency info
+                header_table_data = [
+                    [
+                        Paragraph(agency_info_text, ParagraphStyle('HeaderInfo', 
+                            parent=styles['Normal'], alignment=TA_RIGHT, fontName=arabic_font)),
+                        # Logo will be added as an image
+                        ""  # Placeholder for logo
+                    ]
+                ]
+                
+                header_table = Table(header_table_data, colWidths=[4*inch, 2*inch])
+                
+                # Try to add logo image
+                logo_path = f".{agency_data['logo_url']}" if agency_data['logo_url'].startswith('/') else agency_data['logo_url']
+                if os.path.exists(logo_path):
+                    from reportlab.platypus.flowables import Image as ReportLabImage
+                    
+                    # Add logo to the table
+                    logo_img = ReportLabImage(logo_path, width=80, height=80)
+                    header_table_data[0][1] = logo_img
+                    header_table = Table(header_table_data, colWidths=[4*inch, 2*inch])
+                else:
+                    # If logo file doesn't exist, use text placeholder
+                    header_table_data[0][1] = Paragraph('<font color="gray">LOGO</font>', styles['Normal'])
+                    header_table = Table(header_table_data, colWidths=[4*inch, 2*inch])
+                
+                header_table.setStyle(TableStyle([
+                    ('ALIGN', (0, 0), (0, 0), 'RIGHT'),
+                    ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ]))
+                
+                elements.append(header_table)
+                
+            except Exception as e:
+                print(f"Error adding logo to PDF: {e}")
+                # Fallback to text-only header
+                agency_title = f"""
+                <font size="20" color="darkblue"><b>{fix_arabic_text(agency_data.get('name', 'اسم الوكالة'))}</b></font><br/>
+                <font size="14" color="gray">{fix_arabic_text('وكالة الأسفار والسياحة')}</font><br/>
+                <font size="11">{fix_arabic_text(agency_data.get('address', ''))}, {fix_arabic_text(agency_data.get('city', ''))}</font><br/>
+                <font size="11">{fix_arabic_text('هاتف')}: {agency_data.get('phone', '')} | {fix_arabic_text('إيميل')}: {agency_data.get('email', '')}</font>
+                """
+                
+                title_style = ParagraphStyle(
+                    'AgencyTitle',
+                    parent=styles['Normal'],
+                    fontSize=16,
+                    spaceAfter=20,
+                    alignment=TA_CENTER,
+                    fontName=arabic_font
+                )
+                
+                elements.append(Paragraph(agency_title, title_style))
         else:
             # No logo - centered agency info
             agency_name = fix_arabic_text(agency_data.get('name', 'اسم الوكالة'))
