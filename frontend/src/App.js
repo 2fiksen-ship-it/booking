@@ -8095,6 +8095,14 @@ const DailyOperationsManagement = () => {
     remainingAmount: 0,
     paymentStatus: 'مدفوع كاملاً' // مدفوع كاملاً، دفعة مقدمة، مؤجل
   });
+  const [showAddClientDialog, setShowAddClientDialog] = useState(false);  // Add this for client dialog
+  const [clientFormData, setClientFormData] = useState({  // Add this for client form
+    name: '',
+    phone: '',
+    cin_passport: '',
+    email: '',
+    address: ''
+  });
   const [formData, setFormData] = useState({
     service_id: '',
     client_id: '',
