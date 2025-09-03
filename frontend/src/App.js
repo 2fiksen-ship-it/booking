@@ -769,6 +769,7 @@ const Layout = ({ children }) => {
           items: [
             { id: 'invoices', label: t('invoices'), icon: FileText },
             { id: 'payments', label: t('payments'), icon: CreditCard },
+            { id: 'financial-management', label: '💰 الإدارة المالية', icon: DollarSign },
             { id: 'installments', label: '📅 إدارة التقسيط', icon: CalendarIcon },
             { id: 'enhanced-installments', label: '📅 نظام التقسيط المتكامل', icon: CalendarIcon },
             { id: 'reports', label: t('reports'), icon: BarChart3 },
