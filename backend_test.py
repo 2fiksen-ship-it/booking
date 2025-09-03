@@ -10348,9 +10348,39 @@ if __name__ == "__main__":
             
             print(f"{'='*80}")
             sys.exit(0)
+        elif test_name == "logo_investigation":
+            print("🔍 Running Logo Display Issue Investigation (Review Request)...")
+            tester = SanhajaAPITester()
+            results = tester.test_logo_display_issue_investigation()
+            
+            # Print summary
+            print(f"\n{'='*80}")
+            print(f"🎯 LOGO DISPLAY ISSUE INVESTIGATION SUMMARY")
+            print(f"{'='*80}")
+            print(f"Total Tests Run: {tester.tests_run}")
+            print(f"Tests Passed: {tester.tests_passed}")
+            print(f"Success Rate: {(tester.tests_passed/tester.tests_run*100):.1f}%" if tester.tests_run > 0 else "No tests run")
+            
+            # Print detailed results
+            if isinstance(results, dict):
+                print(f"\n📊 Logo Investigation Results:")
+                print(f"   Agencies with logos: {results.get('agencies_with_logos', 0)}")
+                print(f"   Agencies without logos: {results.get('agencies_without_logos', 0)}")
+                print(f"   Logo files accessible: {results.get('logo_files_accessible', 0)}")
+                print(f"   Logo files missing: {results.get('logo_files_missing', 0)}")
+                print(f"   PDF success rate: {results.get('pdf_success_rate', 0):.1f}%")
+                print(f"   Issues found: {results.get('issues_found', 0)}")
+                
+                if results.get('recommendations'):
+                    print(f"\n💡 Recommendations:")
+                    for i, rec in enumerate(results['recommendations'], 1):
+                        print(f"   {i}. {rec}")
+            
+            print(f"{'='*80}")
+            sys.exit(0)
         else:
             print(f"❌ Unknown test: {test_name}")
-            print("Available tests: professional_pdf, service_cash_flow, installments")
+            print("Available tests: professional_pdf, service_cash_flow, installments, logo_investigation")
             sys.exit(1)
     else:
         # Run default main function
