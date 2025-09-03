@@ -6870,6 +6870,9 @@ const AgencySettingsManagement = () => {
   const [selectedAgency, setSelectedAgency] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
