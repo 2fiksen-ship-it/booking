@@ -7287,6 +7287,149 @@ const AgencySettingsManagement = () => {
             </CardContent>
           </Card>
 
+          {/* Logo Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle>🎨 إدارة اللوجو</CardTitle>
+              <CardDescription>
+                رفع وإدارة لوجو الوكالة الذي سيظهر في جميع الوثائق والوصولات
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Current Logo Display */}
+              {formData.logo_url ? (
+                <div className="bg-gray-50 p-4 rounded-lg border">
+                  <Label className="font-medium text-gray-700 mb-2 block">اللوجو الحالي:</Label>
+                  <div className="flex items-center space-x-4 rtl:space-x-reverse">
+                    <img 
+                      src={formData.logo_url} 
+                      alt="Logo" 
+                      className="w-20 h-20 object-contain bg-white border rounded"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    <div style={{display: 'none'}} className="w-20 h-20 bg-gray-200 border rounded flex items-center justify-center text-gray-500 text-xs">
+                      صورة غير متاحة
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600 mb-2">
+                        اللوجو الحالي سيظهر في جميع الوصولات والطباعات
+                      </p>
+                      {!isReadOnly && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleLogoRemove}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          🗑️ حذف اللوجو
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-center space-x-3 rtl:space-x-reverse text-blue-700">
+                    <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
+                      🎨
+                    </div>
+                    <div>
+                      <p className="font-medium">لا يوجد لوجو حالياً</p>
+                      <p className="text-sm">قم برفع لوجو الوكالة ليظهر في جميع الوثائق</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Logo Upload Section */}
+              {!isReadOnly && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="logo-upload" className="font-medium">رفع لوجو جديد:</Label>
+                    <div className="mt-2">
+                      <input
+                        id="logo-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoFileSelect}
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        الملفات المدعومة: PNG, JPG, GIF (أقل من 5 ميجابايت)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Logo Preview */}
+                  {logoPreview && (
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                      <Label className="font-medium text-green-700 mb-2 block">معاينة اللوجو الجديد:</Label>
+                      <div className="flex items-center space-x-4 rtl:space-x-reverse">
+                        <img 
+                          src={logoPreview} 
+                          alt="Logo Preview" 
+                          className="w-20 h-20 object-contain bg-white border rounded"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm text-green-700 mb-3">
+                            اللоجو جاهز للرفع. اضغط "رفع اللوجو" لحفظه.
+                          </p>
+                          <div className="flex space-x-2 rtl:space-x-reverse">
+                            <Button 
+                              onClick={handleLogoUpload}
+                              disabled={uploadingLogo}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              size="sm"
+                            >
+                              {uploadingLogo ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                  جاري الرفع...
+                                </>
+                              ) : (
+                                '📤 رفع اللوجو'
+                              )}
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setLogoFile(null);
+                                setLogoPreview(null);
+                                document.getElementById('logo-upload').value = '';
+                              }}
+                            >
+                              إلغاء
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Logo URL Input (fallback for manual entry) */}
+              <div>
+                <Label htmlFor="logo_url">رابط اللوجو (اختياري):</Label>
+                <Input
+                  id="logo_url"
+                  type="url"
+                  value={formData.logo_url}
+                  onChange={(e) => handleInputChange('logo_url', e.target.value)}
+                  disabled={isReadOnly}
+                  placeholder="https://example.com/logo.png"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  يمكنك إدخال رابط مباشر للوجو بدلاً من رفع ملف
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Registration Details */}
           <Card>
             <CardHeader>
