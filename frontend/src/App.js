@@ -5930,7 +5930,516 @@ const EnhancedInstallmentsManagement = memo(() => {
   );
 });
 
-// Agency Management Component (Super Admin Only)
+// Financial Management Component (Simplified)
+const FinancialManagement = memo(() => {
+  const { user } = useContext(AuthContext);
+  const [loading, setLoading] = useState(true);
+  const [balance, setBalance] = useState(null);
+  const [activeTab, setActiveTab] = useState('balance'); // balance, transfer, expenses, reports
+  
+  // Transfer states
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferNotes, setTransferNotes] = useState('');
+  const [transfers, setTransfers] = useState([]);
+  
+  // Expense states
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseDescription, setExpenseDescription] = useState('');
+  const [expenseCategory, setExpenseCategory] = useState('operational');
+  const [expenses, setExpenses] = useState([]);
+  
+  // Reports
+  const [dailyReport, setDailyReport] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+  useEffect(() => {
+    fetchFinancialData();
+  }, []);
+
+  const fetchFinancialData = async () => {
+    try {
+      const agencyId = user.agency_id;
+      const token = localStorage.getItem('token');
+      
+      // Fetch balance
+      const balanceRes = await axios.get(`${API}/agencies/${agencyId}/balance`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBalance(balanceRes.data);
+      
+      // Fetch transfers
+      const transfersRes = await axios.get(`${API}/cash-transfers`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTransfers(transfersRes.data || []);
+      
+      // Fetch expenses
+      const expensesRes = await axios.get(`${API}/agencies/${agencyId}/expenses`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setExpenses(expensesRes.data || []);
+      
+    } catch (error) {
+      console.error('Error fetching financial data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!transferAmount || parseFloat(transferAmount) <= 0) {
+      alert('يرجى إدخال مبلغ صحيح');
+      return;
+    }
+
+    if (parseFloat(transferAmount) > balance?.current_balance) {
+      alert('المبلغ أكبر من الرصيد المتاح');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API}/agencies/${user.agency_id}/cash-transfer`, {
+        amount: parseFloat(transferAmount),
+        notes: transferNotes
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      alert('✅ تم إنشاء طلب تحويل الأموال بنجاح');
+      setTransferAmount('');
+      setTransferNotes('');
+      fetchFinancialData();
+    } catch (error) {
+      console.error('Error creating transfer:', error);
+      alert('❌ فشل في إنشاء التحويل: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleExpense = async () => {
+    if (!expenseAmount || !expenseDescription) {
+      alert('يرجى إدخال المبلغ والوصف');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API}/agencies/${user.agency_id}/expenses`, {
+        amount: parseFloat(expenseAmount),
+        description: expenseDescription,
+        category: expenseCategory
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      alert('✅ تم تسجيل المصروف بنجاح');
+      setExpenseAmount('');
+      setExpenseDescription('');
+      setExpenseCategory('operational');
+      fetchFinancialData();
+    } catch (error) {
+      console.error('Error creating expense:', error);
+      alert('❌ فشل في تسجيل المصروف: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const fetchDailyReport = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/reports/daily-financial/${user.agency_id}?date=${selectedDate}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDailyReport(response.data);
+    } catch (error) {
+      console.error('Error fetching daily report:', error);
+      alert('فشل في تحميل التقرير اليومي');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">💰 الإدارة المالية</h1>
+          <p className="text-sm text-gray-600 mt-1">رصيد الوكالة والحركات المالية</p>
+        </div>
+      </div>
+
+      {/* Current Balance Card */}
+      {balance && (
+        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold">{balance.current_balance?.toLocaleString()}</div>
+                <div className="text-blue-100">الرصيد الحالي (دج)</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-semibold">{balance.total_revenue?.toLocaleString()}</div>
+                <div className="text-blue-100">إجمالي الإيرادات</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-semibold">{balance.total_transferred?.toLocaleString()}</div>
+                <div className="text-blue-100">المحول للإدارة العامة</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-semibold">{balance.total_expenses?.toLocaleString()}</div>
+                <div className="text-blue-100">إجمالي المصاريف</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: 'balance', label: '💰 الرصيد الحالي', icon: '💰' },
+            { id: 'transfer', label: '📤 تحويل أموال', icon: '📤' },
+            { id: 'expenses', label: '💸 المصاريف', icon: '💸' },
+            { id: 'reports', label: '📊 التقرير اليومي', icon: '📊' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Balance Tab */}
+      {activeTab === 'balance' && balance && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>📈 ملخص مالي</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between">
+                <span>إجمالي الإيرادات:</span>
+                <span className="font-semibold text-green-600">{balance.total_revenue?.toLocaleString()} دج</span>
+              </div>
+              <div className="flex justify-between">
+                <span>المحول للإدارة:</span>
+                <span className="font-semibold text-blue-600">-{balance.total_transferred?.toLocaleString()} دج</span>
+              </div>
+              <div className="flex justify-between">
+                <span>المصاريف:</span>
+                <span className="font-semibold text-red-600">-{balance.total_expenses?.toLocaleString()} دج</span>
+              </div>
+              <hr />
+              <div className="flex justify-between text-lg font-bold">
+                <span>الرصيد الحالي:</span>
+                <span className={balance.current_balance >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {balance.current_balance?.toLocaleString()} دج
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>🔄 آخر الحركات</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {transfers.slice(0, 5).map((transfer) => (
+                  <div key={transfer.id} className="flex justify-between items-center py-2 border-b">
+                    <div>
+                      <p className="font-medium">تحويل للإدارة العامة</p>
+                      <p className="text-sm text-gray-500">{formatDateWithEnglishNumerals(transfer.transfer_date)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-blue-600">-{transfer.amount?.toLocaleString()} دج</p>
+                      <p className="text-xs text-gray-500">{transfer.status === 'confirmed' ? '✅ مؤكد' : '⏳ في الانتظار'}</p>
+                    </div>
+                  </div>
+                ))}
+                {expenses.slice(0, 3).map((expense) => (
+                  <div key={expense.id} className="flex justify-between items-center py-2 border-b">
+                    <div>
+                      <p className="font-medium">{expense.description}</p>
+                      <p className="text-sm text-gray-500">{formatDateWithEnglishNumerals(expense.expense_date)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-red-600">-{expense.amount?.toLocaleString()} دج</p>
+                      <p className="text-xs text-gray-500">{expense.category}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Transfer Tab */}
+      {activeTab === 'transfer' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>📤 تحويل أموال للإدارة العامة</CardTitle>
+              <CardDescription>
+                تحويل جزء من أموال الوكالة إلى الإدارة العامة
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>المبلغ المراد تحويله *</Label>
+                <Input
+                  type="number"
+                  value={transferAmount}
+                  onChange={(e) => setTransferAmount(e.target.value)}
+                  placeholder="المبلغ بالدينار الجزائري"
+                />
+                <p className="text-xs text-gray-500">
+                  الرصيد المتاح: {balance?.current_balance?.toLocaleString()} دج
+                </p>
+              </div>
+
+              <div>
+                <Label>ملاحظات</Label>
+                <Textarea
+                  value={transferNotes}
+                  onChange={(e) => setTransferNotes(e.target.value)}
+                  placeholder="ملاحظات حول التحويل (اختياري)"
+                />
+              </div>
+
+              <Button 
+                onClick={handleTransfer} 
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                disabled={!transferAmount || parseFloat(transferAmount) <= 0}
+              >
+                📤 إنشاء طلب التحويل
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>📋 سجل التحويلات</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {transfers.map((transfer) => (
+                  <div key={transfer.id} className="p-3 border rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium">{transfer.amount?.toLocaleString()} دج</span>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        transfer.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                        transfer.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {transfer.status === 'confirmed' ? '✅ مؤكد' :
+                         transfer.status === 'pending' ? '⏳ في الانتظار' : '❌ ملغي'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">{formatDateWithEnglishNumerals(transfer.transfer_date)}</p>
+                    {transfer.notes && <p className="text-sm text-gray-500 mt-1">{transfer.notes}</p>}
+                  </div>
+                ))}
+                {transfers.length === 0 && (
+                  <p className="text-center text-gray-500 py-4">لا توجد تحويلات مسجلة</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Expenses Tab */}
+      {activeTab === 'expenses' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>💸 تسجيل مصروف جديد</CardTitle>
+              <CardDescription>
+                تسجيل المصاريف التي تنخصم من رصيد الوكالة
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>مبلغ المصروف *</Label>
+                <Input
+                  type="number"
+                  value={expenseAmount}
+                  onChange={(e) => setExpenseAmount(e.target.value)}
+                  placeholder="المبلغ بالدينار الجزائري"
+                />
+              </div>
+
+              <div>
+                <Label>وصف المصروف *</Label>
+                <Input
+                  value={expenseDescription}
+                  onChange={(e) => setExpenseDescription(e.target.value)}
+                  placeholder="مثال: بنزين، إيجار، مصاريف تشغيلية"
+                />
+              </div>
+
+              <div>
+                <Label>نوع المصروف</Label>
+                <Select value={expenseCategory} onValueChange={setExpenseCategory}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="operational">تشغيلية</SelectItem>
+                    <SelectItem value="travel">سفر</SelectItem>
+                    <SelectItem value="supplies">مستلزمات</SelectItem>
+                    <SelectItem value="other">أخرى</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button 
+                onClick={handleExpense} 
+                className="w-full bg-red-600 hover:bg-red-700"
+                disabled={!expenseAmount || !expenseDescription}
+              >
+                💸 تسجيل المصروف
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>📋 سجل المصاريف</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {expenses.map((expense) => (
+                  <div key={expense.id} className="p-3 border rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium">{expense.description}</span>
+                      <span className="font-bold text-red-600">{expense.amount?.toLocaleString()} دج</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm text-gray-500">
+                      <span>{formatDateWithEnglishNumerals(expense.expense_date)}</span>
+                      <span className="bg-gray-100 px-2 py-1 rounded">{expense.category}</span>
+                    </div>
+                  </div>
+                ))}
+                {expenses.length === 0 && (
+                  <p className="text-center text-gray-500 py-4">لا توجد مصاريف مسجلة</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Reports Tab */}
+      {activeTab === 'reports' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>📊 التقرير المالي اليومي</CardTitle>
+            <CardDescription>
+              تقرير مفصل لجميع الحركات المالية في يوم محدد
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-4 rtl:space-x-reverse">
+              <Label>التاريخ:</Label>
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-48"
+              />
+              <Button onClick={fetchDailyReport} className="bg-blue-600 hover:bg-blue-700">
+                📊 إنشاء التقرير
+              </Button>
+            </div>
+
+            {dailyReport && (
+              <div className="mt-6 space-y-4">
+                {/* Summary */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-bold mb-3">ملخص اليوم ({selectedDate}):</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-lg font-bold text-green-600">
+                        {dailyReport.summary?.daily_revenue?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">إيرادات اليوم</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {dailyReport.summary?.daily_transfers?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">تحويلات اليوم</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-red-600">
+                        {dailyReport.summary?.daily_expenses?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">مصاريف اليوم</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-purple-600">
+                        {dailyReport.summary?.current_balance?.toLocaleString() || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">الرصيد الحالي</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Operations */}
+                {dailyReport.operations && dailyReport.operations.length > 0 && (
+                  <div>
+                    <h4 className="font-bold mb-2">العمليات اليومية ({dailyReport.operations.length}):</h4>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-right">رقم العملية</TableHead>
+                            <TableHead className="text-right">العميل</TableHead>
+                            <TableHead className="text-right">الخدمة</TableHead>
+                            <TableHead className="text-right">المبلغ</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {dailyReport.operations.map((op) => (
+                            <TableRow key={op.id}>
+                              <TableCell>{op.operation_no}</TableCell>
+                              <TableCell>{op.client_name}</TableCell>
+                              <TableCell>{op.service_name}</TableCell>
+                              <TableCell className="font-semibold text-green-600">
+                                {op.final_price?.toLocaleString()} دج
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+});
 const AgencyManagement = () => {
   const { t } = useContext(LanguageContext);
   const { user } = useContext(AuthContext);
