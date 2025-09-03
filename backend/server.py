@@ -937,7 +937,7 @@ async def upload_agency_logo(
 async def remove_agency_logo(agency_id: str, current_user: User = Depends(get_current_user)):
     """Remove logo for agency"""
     # Check permissions
-    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_MANAGER, UserRole.GENERAL_ACCOUNTANT]:
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
         if current_user.role == UserRole.AGENCY_STAFF and current_user.agency_id != agency_id:
             raise HTTPException(status_code=403, detail="Not authorized to remove logo for this agency")
         elif current_user.role == UserRole.AGENCY_STAFF:
