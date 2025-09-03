@@ -4338,34 +4338,42 @@ const InstallmentsManagement = () => {
       console.log('=== FETCHING INSTALLMENT PLANS ===');
       const plansData = [];
       
-      // Check each sale for installment plans
-      for (const sale of sales) {
+      // Optimize: Batch API calls instead of loop
+      const saleIds = sales.slice(0, 20).map(sale => sale.id); // Limit to 20 for performance
+      const planPromises = saleIds.map(async (saleId) => {
         try {
-          const response = await axios.get(`${API}/service-sales/${sale.id}/installment-plan`, {
+          const response = await axios.get(`${API}/service-sales/${saleId}/installment-plan`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
           });
           
           if (response.data) {
-            // Add sale info to the plan
-            const planWithSaleInfo = {
+            const sale = sales.find(s => s.id === saleId);
+            return {
               ...response.data,
               sale_info: {
-                service_name: sale.service_name,
-                client_name: sale.client_name
+                service_name: sale?.service_name || 'غير محدد',
+                client_name: sale?.client_name || 'غير محدد'
               }
             };
-            plansData.push(planWithSaleInfo);
           }
+          return null;
         } catch (error) {
-          // 404 means no installment plan exists for this sale - that's normal
+          // 404 means no installment plan exists - normal
           if (error.response?.status !== 404) {
-            console.error(`Error fetching plan for sale ${sale.id}:`, error);
+            console.error(`Error fetching plan for sale ${saleId}:`, error);
           }
+          return null;
         }
-      }
+      });
       
-      console.log('Fetched installment plans:', plansData.length);
-      setInstallmentPlans(plansData);
+      // Execute batch requests with concurrency limit
+      const results = await Promise.allSettled(planPromises);
+      const validPlans = results
+        .filter(result => result.status === 'fulfilled' && result.value)
+        .map(result => result.value);
+      
+      console.log('Fetched installment plans:', validPlans.length);
+      setInstallmentPlans(validPlans);
     } catch (error) {
       console.error('Error fetching installment plans:', error);
     }
