@@ -255,7 +255,7 @@ class ArabicPDFTester:
                         print(f"        Service: {service_name}")
                         
                         # Test PDF generation
-                        url = f"{self.api_url}/daily-operations/{operation_id}/receipt-pdf"
+                        url = f"{self.api_url}/daily-operations/{operation_id}/print"
                         headers = {'Authorization': f'Bearer {self.token}'}
                         
                         try:
