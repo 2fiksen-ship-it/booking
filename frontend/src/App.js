@@ -5154,6 +5154,779 @@ const InstallmentsManagement = memo(() => {
   );
 });
 
+// Enhanced Installments Management with Client & Service Creation
+const EnhancedInstallmentsManagement = memo(() => {
+  const { t } = useContext(LanguageContext);
+  const { user } = useContext(AuthContext);
+  
+  // Main states
+  const [activeTab, setActiveTab] = useState('create-plan'); // create-plan, manage-plans, reports
+  const [loading, setLoading] = useState(false);
+  
+  // Client management states
+  const [clients, setClients] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [showAddClientDialog, setShowAddClientDialog] = useState(false);
+  const [clientFormData, setClientFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    national_id: '',
+    notes: ''
+  });
+  
+  // Service management states
+  const [services, setServices] = useState([]);
+  const [selectedService, setSelectedService] = useState(null);
+  const [showAddServiceDialog, setShowAddServiceDialog] = useState(false);
+  const [serviceFormData, setServiceFormData] = useState({
+    name: '',
+    description: '',
+    base_price: '',
+    category: 'عمرة',
+    duration_days: '',
+    inclusions: ''
+  });
+  
+  // Installment plan states
+  const [installmentPlans, setInstallmentPlans] = useState([]);
+  const [planFormData, setPlanFormData] = useState({
+    client_id: '',
+    service_id: '',
+    total_amount: '',
+    down_payment: '',
+    number_of_installments: 3,
+    start_date: new Date().toISOString().split('T')[0],
+    installment_dates: [],
+    payment_methods: ['نقد'],
+    notes: ''
+  });
+  
+  // Load initial data
+  useEffect(() => {
+    fetchClients();
+    fetchServices();
+    fetchInstallmentPlans();
+  }, []);
+  
+  const fetchClients = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/clients`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setClients(response.data || []);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    }
+  }, []);
+  
+  const fetchServices = useCallback(async () => {
+    try {
+      // We'll create a custom services endpoint or use existing services
+      const response = await axios.get(`${API}/services`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setServices(response.data || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      // Fallback to hardcoded services if endpoint doesn't exist
+      setServices([
+        { id: '1', name: 'عمرة اقتصادية', base_price: 80000, category: 'عمرة' },
+        { id: '2', name: 'عمرة VIP', base_price: 150000, category: 'عمرة' },
+        { id: '3', name: 'حج اقتصادي', base_price: 200000, category: 'حج' },
+        { id: '4', name: 'حج VIP', base_price: 350000, category: 'حج' }
+      ]);
+    }
+  }, []);
+  
+  const fetchInstallmentPlans = useCallback(async () => {
+    try {
+      // This would be a new endpoint for installment plans
+      const response = await axios.get(`${API}/installment-plans`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setInstallmentPlans(response.data || []);
+    } catch (error) {
+      console.error('Error fetching installment plans:', error);
+      setInstallmentPlans([]);
+    }
+  }, []);
+  
+  const addClient = useCallback(async () => {
+    if (!clientFormData.name || !clientFormData.phone) {
+      alert('يرجى إدخال الاسم ورقم الهاتف على الأقل');
+      return;
+    }
+    
+    try {
+      const response = await axios.post(`${API}/clients`, clientFormData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      alert('✅ تم إضافة العميل بنجاح');
+      setClients([...clients, response.data]);
+      setSelectedClient(response.data);
+      setShowAddClientDialog(false);
+      setClientFormData({
+        name: '',
+        phone: '',
+        email: '',
+        address: '',
+        national_id: '',
+        notes: ''
+      });
+    } catch (error) {
+      console.error('Error adding client:', error);
+      alert('❌ فشل في إضافة العميل: ' + (error.response?.data?.detail || error.message));
+    }
+  }, [clientFormData, clients]);
+  
+  const addService = useCallback(async () => {
+    if (!serviceFormData.name || !serviceFormData.base_price) {
+      alert('يرجى إدخال اسم الخدمة والسعر على الأقل');
+      return;
+    }
+    
+    try {
+      // For now, we'll add to local state since we might not have services endpoint
+      const newService = {
+        id: Date.now().toString(),
+        ...serviceFormData,
+        base_price: parseFloat(serviceFormData.base_price)
+      };
+      
+      setServices([...services, newService]);
+      setSelectedService(newService);
+      setPlanFormData({...planFormData, total_amount: newService.base_price.toString()});
+      setShowAddServiceDialog(false);
+      setServiceFormData({
+        name: '',
+        description: '',
+        base_price: '',
+        category: 'عمرة',
+        duration_days: '',
+        inclusions: ''
+      });
+      
+      alert('✅ تم إضافة الخدمة بنجاح');
+    } catch (error) {
+      console.error('Error adding service:', error);
+      alert('❌ فشل في إضافة الخدمة');
+    }
+  }, [serviceFormData, services, planFormData]);
+  
+  const generateInstallmentDates = useCallback((numberOfInstallments, startDate) => {
+    const dates = [];
+    const start = new Date(startDate);
+    
+    for (let i = 0; i < numberOfInstallments; i++) {
+      const date = new Date(start);
+      date.setMonth(date.getMonth() + i + 1); // Monthly installments starting next month
+      dates.push(date.toISOString().split('T')[0]);
+    }
+    
+    return dates;
+  }, []);
+  
+  const createInstallmentPlan = useCallback(async () => {
+    if (!selectedClient || !selectedService || !planFormData.total_amount) {
+      alert('يرجى اختيار العميل والخدمة وتحديد المبلغ الإجمالي');
+      return;
+    }
+    
+    try {
+      const planData = {
+        client_id: selectedClient.id,
+        client_name: selectedClient.name,
+        service_name: selectedService.name,
+        total_amount: parseFloat(planFormData.total_amount),
+        down_payment: parseFloat(planFormData.down_payment) || 0,
+        number_of_installments: planFormData.number_of_installments,
+        start_date: planFormData.start_date,
+        installment_dates: planFormData.installment_dates,
+        payment_methods: planFormData.payment_methods,
+        notes: planFormData.notes
+      };
+      
+      // For now, add to local state since we need to create the backend endpoint
+      const newPlan = {
+        id: Date.now().toString(),
+        ...planData,
+        status: 'active',
+        created_at: new Date().toISOString()
+      };
+      
+      setInstallmentPlans([...installmentPlans, newPlan]);
+      alert('✅ تم إنشاء خطة التقسيط بنجاح');
+      
+      // Reset form
+      setPlanFormData({
+        client_id: '',
+        service_id: '',
+        total_amount: '',
+        down_payment: '',
+        number_of_installments: 3,
+        start_date: new Date().toISOString().split('T')[0],
+        installment_dates: [],
+        payment_methods: ['نقد'],
+        notes: ''
+      });
+      setSelectedClient(null);
+      setSelectedService(null);
+      
+    } catch (error) {
+      console.error('Error creating installment plan:', error);
+      alert('❌ فشل في إنشاء خطة التقسيط');
+    }
+  }, [selectedClient, selectedService, planFormData, installmentPlans]);
+  
+  // Update installment dates when count or start date changes
+  useEffect(() => {
+    if (planFormData.number_of_installments && planFormData.start_date) {
+      const dates = generateInstallmentDates(planFormData.number_of_installments, planFormData.start_date);
+      setPlanFormData(prev => ({...prev, installment_dates: dates}));
+    }
+  }, [planFormData.number_of_installments, planFormData.start_date, generateInstallmentDates]);
+  
+  // Update total amount when service is selected
+  useEffect(() => {
+    if (selectedService) {
+      setPlanFormData(prev => ({
+        ...prev, 
+        service_id: selectedService.id,
+        total_amount: selectedService.base_price?.toString() || ''
+      }));
+    }
+  }, [selectedService]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">📅 نظام التقسيط المتكامل</h1>
+          <p className="text-sm text-gray-600 mt-1">إدارة شاملة للعملاء والخدمات وخطط التقسيط</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('create-plan')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'create-plan'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            ➕ إنشاء خطة تقسيط
+          </button>
+          <button
+            onClick={() => setActiveTab('manage-plans')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'manage-plans'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            📋 إدارة الخطط
+          </button>
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'reports'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            📊 التقارير
+          </button>
+        </nav>
+      </div>
+
+      {/* Create Plan Tab */}
+      {activeTab === 'create-plan' && (
+        <div className="space-y-6">
+          {/* Client Selection/Creation Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                👤 اختيار/إضافة العميل
+                <Button 
+                  onClick={() => setShowAddClientDialog(true)}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  ➕ عميل جديد
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {selectedClient ? (
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-bold text-blue-800">العميل المحدد:</h4>
+                      <p><strong>الاسم:</strong> {selectedClient.name}</p>
+                      <p><strong>الهاتف:</strong> {selectedClient.phone}</p>
+                      {selectedClient.email && <p><strong>الإيميل:</strong> {selectedClient.email}</p>}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setSelectedClient(null)}
+                    >
+                      تغيير العميل
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <Label>اختر عميل موجود</Label>
+                  <Select onValueChange={(value) => {
+                    const client = clients.find(c => c.id === value);
+                    setSelectedClient(client);
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر من العملاء المتاحين أو أضف عميل جديد" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name} - {client.phone}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Service Selection/Creation Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                🎯 اختيار/إنشاء الخدمة
+                <Button 
+                  onClick={() => setShowAddServiceDialog(true)}
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  ➕ خدمة جديدة
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {selectedService ? (
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-bold text-purple-800">الخدمة المحددة:</h4>
+                      <p><strong>الاسم:</strong> {selectedService.name}</p>
+                      <p><strong>السعر:</strong> {selectedService.base_price?.toLocaleString()} دج</p>
+                      <p><strong>التصنيف:</strong> {selectedService.category}</p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setSelectedService(null)}
+                    >
+                      تغيير الخدمة
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <Label>اختر خدمة موجودة</Label>
+                  <Select onValueChange={(value) => {
+                    const service = services.find(s => s.id === value);
+                    setSelectedService(service);
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر من الخدمات المتاحة أو أنشئ خدمة جديدة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {services.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
+                          {service.name} - {service.base_price?.toLocaleString()} دج - {service.category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Installment Plan Details */}
+          {selectedClient && selectedService && (
+            <Card>
+              <CardHeader>
+                <CardTitle>📋 تفاصيل خطة التقسيط</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>المبلغ الإجمالي *</Label>
+                    <Input
+                      type="number"
+                      value={planFormData.total_amount}
+                      onChange={(e) => setPlanFormData({...planFormData, total_amount: e.target.value})}
+                      placeholder="المبلغ الإجمالي بالدينار"
+                    />
+                  </div>
+                  <div>
+                    <Label>الدفعة المقدمة</Label>
+                    <Input
+                      type="number"
+                      value={planFormData.down_payment}
+                      onChange={(e) => setPlanFormData({...planFormData, down_payment: e.target.value})}
+                      placeholder="الدفعة المقدمة (اختياري)"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>عدد الأقساط *</Label>
+                    <Input
+                      type="number"
+                      min="2"
+                      max="24"
+                      value={planFormData.number_of_installments}
+                      onChange={(e) => setPlanFormData({...planFormData, number_of_installments: parseInt(e.target.value) || 3})}
+                    />
+                  </div>
+                  <div>
+                    <Label>تاريخ البداية *</Label>
+                    <Input
+                      type="date"
+                      value={planFormData.start_date}
+                      onChange={(e) => setPlanFormData({...planFormData, start_date: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                {planFormData.total_amount && planFormData.number_of_installments && (
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="font-bold text-green-800 mb-2">ملخص التقسيط:</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div><strong>المبلغ الإجمالي:</strong> {parseFloat(planFormData.total_amount).toLocaleString()} دج</div>
+                      <div><strong>الدفعة المقدمة:</strong> {(parseFloat(planFormData.down_payment) || 0).toLocaleString()} دج</div>
+                      <div><strong>المبلغ المتبقي:</strong> {(parseFloat(planFormData.total_amount) - (parseFloat(planFormData.down_payment) || 0)).toLocaleString()} دج</div>
+                      <div><strong>قيمة كل قسط:</strong> {((parseFloat(planFormData.total_amount) - (parseFloat(planFormData.down_payment) || 0)) / planFormData.number_of_installments).toLocaleString()} دج</div>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <Label>ملاحظات</Label>
+                  <Textarea
+                    value={planFormData.notes}
+                    onChange={(e) => setPlanFormData({...planFormData, notes: e.target.value})}
+                    placeholder="ملاحظات إضافية حول خطة التقسيط..."
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <Button 
+                    onClick={createInstallmentPlan}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    disabled={!selectedClient || !selectedService || !planFormData.total_amount}
+                  >
+                    📅 إنشاء خطة التقسيط
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Manage Plans Tab */}
+      {activeTab === 'manage-plans' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>📋 خطط التقسيط المُنشأة</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {installmentPlans.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <p>لا توجد خطط تقسيط حالياً</p>
+                <p className="text-sm">انتقل إلى "إنشاء خطة تقسيط" لإضافة خطة جديدة</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">العميل</TableHead>
+                      <TableHead className="text-right">الخدمة</TableHead>
+                      <TableHead className="text-right">المبلغ الإجمالي</TableHead>
+                      <TableHead className="text-right">الدفعة المقدمة</TableHead>
+                      <TableHead className="text-right">عدد الأقساط</TableHead>
+                      <TableHead className="text-right">تاريخ البداية</TableHead>
+                      <TableHead className="text-right">الحالة</TableHead>
+                      <TableHead className="text-right">الإجراءات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {installmentPlans.map((plan) => (
+                      <TableRow key={plan.id}>
+                        <TableCell className="font-medium">{plan.client_name}</TableCell>
+                        <TableCell>{plan.service_name}</TableCell>
+                        <TableCell>{plan.total_amount?.toLocaleString()} دج</TableCell>
+                        <TableCell>{plan.down_payment?.toLocaleString() || 0} دج</TableCell>
+                        <TableCell>{plan.number_of_installments}</TableCell>
+                        <TableCell>{formatDateWithEnglishNumerals(plan.start_date)}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-green-100 text-green-800">✅ نشط</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2 rtl:space-x-reverse">
+                            <Button size="sm" variant="outline" className="text-blue-600">
+                              👁️ عرض التفاصيل
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-green-600">
+                              💰 إدارة المدفوعات
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Reports Tab */}
+      {activeTab === 'reports' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>📊 تقارير التقسيط</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{clients.length}</div>
+                <div className="text-sm text-blue-600">إجمالي العملاء</div>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">{services.length}</div>
+                <div className="text-sm text-purple-600">إجمالي الخدمات</div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{installmentPlans.length}</div>
+                <div className="text-sm text-green-600">خطط التقسيط النشطة</div>
+              </div>
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {installmentPlans.reduce((sum, plan) => sum + (plan.total_amount || 0), 0).toLocaleString()}
+                </div>
+                <div className="text-sm text-yellow-600">إجمالي المبالغ (دج)</div>
+              </div>
+            </div>
+            
+            <div className="text-center py-4 text-gray-500">
+              <p>تقارير تفصيلية أكثر ستكون متاحة قريباً</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Add Client Dialog */}
+      <Dialog open={showAddClientDialog} onOpenChange={setShowAddClientDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إضافة عميل جديد</DialogTitle>
+            <DialogDescription>
+              أدخل بيانات العميل الجديد
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>الاسم الكامل *</Label>
+                <Input
+                  value={clientFormData.name}
+                  onChange={(e) => setClientFormData({...clientFormData, name: e.target.value})}
+                  placeholder="اسم العميل الكامل"
+                />
+              </div>
+              <div>
+                <Label>رقم الهاتف *</Label>
+                <Input
+                  value={clientFormData.phone}
+                  onChange={(e) => setClientFormData({...clientFormData, phone: e.target.value})}
+                  placeholder="رقم الهاتف"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>البريد الإلكتروني</Label>
+                <Input
+                  type="email"
+                  value={clientFormData.email}
+                  onChange={(e) => setClientFormData({...clientFormData, email: e.target.value})}
+                  placeholder="البريد الإلكتروني (اختياري)"
+                />
+              </div>
+              <div>
+                <Label>رقم الهوية الوطنية</Label>
+                <Input
+                  value={clientFormData.national_id}
+                  onChange={(e) => setClientFormData({...clientFormData, national_id: e.target.value})}
+                  placeholder="رقم الهوية (اختياري)"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>العنوان</Label>
+              <Input
+                value={clientFormData.address}
+                onChange={(e) => setClientFormData({...clientFormData, address: e.target.value})}
+                placeholder="عنوان العميل (اختياري)"
+              />
+            </div>
+
+            <div>
+              <Label>ملاحظات</Label>
+              <Textarea
+                value={clientFormData.notes}
+                onChange={(e) => setClientFormData({...clientFormData, notes: e.target.value})}
+                placeholder="ملاحظات إضافية عن العميل (اختياري)"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 rtl:space-x-reverse">
+              <Button variant="outline" onClick={() => setShowAddClientDialog(false)}>
+                إلغاء
+              </Button>
+              <Button 
+                onClick={addClient}
+                disabled={!clientFormData.name || !clientFormData.phone}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                ✅ إضافة العميل
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Service Dialog */}
+      <Dialog open={showAddServiceDialog} onOpenChange={setShowAddServiceDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إنشاء خدمة جديدة</DialogTitle>
+            <DialogDescription>
+              أدخل تفاصيل الخدمة/البرنامج الجديد
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>اسم الخدمة/البرنامج *</Label>
+                <Input
+                  value={serviceFormData.name}
+                  onChange={(e) => setServiceFormData({...serviceFormData, name: e.target.value})}
+                  placeholder="مثال: عمرة VIP، حج اقتصادي"
+                />
+              </div>
+              <div>
+                <Label>السعر الأساسي *</Label>
+                <Input
+                  type="number"
+                  value={serviceFormData.base_price}
+                  onChange={(e) => setServiceFormData({...serviceFormData, base_price: e.target.value})}
+                  placeholder="السعر بالدينار الجزائري"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>التصنيف</Label>
+                <Select 
+                  value={serviceFormData.category} 
+                  onValueChange={(value) => setServiceFormData({...serviceFormData, category: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="عمرة">عمرة</SelectItem>
+                    <SelectItem value="حج">حج</SelectItem>
+                    <SelectItem value="سياحة">سياحة</SelectItem>
+                    <SelectItem value="أخرى">أخرى</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>مدة البرنامج (أيام)</Label>
+                <Input
+                  type="number"
+                  value={serviceFormData.duration_days}
+                  onChange={(e) => setServiceFormData({...serviceFormData, duration_days: e.target.value})}
+                  placeholder="عدد الأيام (اختياري)"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>وصف الخدمة</Label>
+              <Textarea
+                value={serviceFormData.description}
+                onChange={(e) => setServiceFormData({...serviceFormData, description: e.target.value})}
+                placeholder="وصف تفصيلي للخدمة أو البرنامج (اختياري)"
+              />
+            </div>
+
+            <div>
+              <Label>ما يتضمنه البرنامج</Label>
+              <Textarea
+                value={serviceFormData.inclusions}
+                onChange={(e) => setServiceFormData({...serviceFormData, inclusions: e.target.value})}
+                placeholder="مثال: تذاكر الطيران، الإقامة، النقل، الوجبات... (اختياري)"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 rtl:space-x-reverse">
+              <Button variant="outline" onClick={() => setShowAddServiceDialog(false)}>
+                إلغاء
+              </Button>
+              <Button 
+                onClick={addService}
+                disabled={!serviceFormData.name || !serviceFormData.base_price}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                ✅ إنشاء الخدمة
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+});
+
 // Agency Management Component (Super Admin Only)
 const AgencyManagement = () => {
   const { t } = useContext(LanguageContext);
