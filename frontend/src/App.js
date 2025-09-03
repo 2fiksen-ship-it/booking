@@ -840,6 +840,7 @@ const Layout = ({ children }) => {
         items: [
           { id: 'payments', label: '💰 المدفوعات (العمليات)', icon: CreditCard },
           { id: 'installments', label: '📅 إدارة التقسيط', icon: CalendarIcon },
+          { id: 'enhanced-installments', label: '📅 نظام التقسيط المتكامل', icon: CalendarIcon },
           { id: 'dailyOperationsReports', label: t('dailyOperationsReports'), icon: BarChart3 }
           // REMOVED: invoices (restricted to managers/accountants)
         ]
