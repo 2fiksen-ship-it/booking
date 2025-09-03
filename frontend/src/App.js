@@ -4269,7 +4269,7 @@ const UserManagement = () => {
 };
 
 // Installments Management Component
-const InstallmentsManagement = () => {
+const InstallmentsManagement = memo(() => {
   const { t } = useContext(LanguageContext);
   const { user } = useContext(AuthContext);
   const [serviceSales, setServiceSales] = useState([]);
