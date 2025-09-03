@@ -813,6 +813,7 @@ const Layout = ({ children }) => {
           items: [
             { id: 'invoices', label: t('invoices') + ' (جميع الوكالات)', icon: FileText },
             { id: 'payments', label: t('payments') + ' (جميع الوكالات)', icon: CreditCard },
+            { id: 'financial-management', label: '💰 الإدارة المالية', icon: CreditCard },
             { id: 'installments', label: '📅 إدارة التقسيط', icon: CalendarIcon },
             { id: 'enhanced-installments', label: '📅 نظام التقسيط المتكامل', icon: CalendarIcon }
           ]
