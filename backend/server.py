@@ -878,6 +878,93 @@ async def create_agency(agency_data: AgencyCreate, current_user: User = Depends(
     await db.agencies.insert_one(agency.dict())
     return agency
 
+# Agency Logo Management Endpoints
+@api_router.post("/agencies/{agency_id}/upload-logo")
+async def upload_agency_logo(
+    agency_id: str, 
+    logo: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload logo for agency"""
+    # Check permissions
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_MANAGER, UserRole.GENERAL_ACCOUNTANT]:
+        if current_user.role == UserRole.AGENCY_STAFF and current_user.agency_id != agency_id:
+            raise HTTPException(status_code=403, detail="Not authorized to upload logo for this agency")
+        elif current_user.role == UserRole.AGENCY_STAFF:
+            raise HTTPException(status_code=403, detail="Agency staff cannot upload logos")
+    
+    # Validate file type
+    if not logo.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # Validate file size (5MB max)
+    max_size = 5 * 1024 * 1024  # 5MB
+    contents = await logo.read()
+    if len(contents) > max_size:
+        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+    
+    # Create uploads directory if it doesn't exist
+    upload_dir = Path("uploads/logos")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate unique filename
+    file_extension = Path(logo.filename).suffix
+    unique_filename = f"{agency_id}_{uuid.uuid4()}{file_extension}"
+    file_path = upload_dir / unique_filename
+    
+    try:
+        # Save file
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        
+        # Update agency with logo URL
+        logo_url = f"/uploads/logos/{unique_filename}"
+        await db.agencies.update_one(
+            {"id": agency_id},
+            {"$set": {"logo_url": logo_url}}
+        )
+        
+        return {"message": "Logo uploaded successfully", "logo_url": logo_url}
+        
+    except Exception as e:
+        # Clean up file if database update fails
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(status_code=500, detail=f"Failed to upload logo: {str(e)}")
+
+@api_router.delete("/agencies/{agency_id}/remove-logo")
+async def remove_agency_logo(agency_id: str, current_user: User = Depends(get_current_user)):
+    """Remove logo for agency"""
+    # Check permissions
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_MANAGER, UserRole.GENERAL_ACCOUNTANT]:
+        if current_user.role == UserRole.AGENCY_STAFF and current_user.agency_id != agency_id:
+            raise HTTPException(status_code=403, detail="Not authorized to remove logo for this agency")
+        elif current_user.role == UserRole.AGENCY_STAFF:
+            raise HTTPException(status_code=403, detail="Agency staff cannot remove logos")
+    
+    try:
+        # Get current agency data to find logo file
+        agency = await db.agencies.find_one({"id": agency_id})
+        if not agency:
+            raise HTTPException(status_code=404, detail="Agency not found")
+        
+        # Remove logo file if it exists
+        if agency.get("logo_url"):
+            logo_path = Path(f".{agency['logo_url']}")  # Remove leading slash for local path
+            if logo_path.exists():
+                logo_path.unlink()
+        
+        # Update agency to remove logo URL
+        await db.agencies.update_one(
+            {"id": agency_id},
+            {"$set": {"logo_url": ""}}
+        )
+        
+        return {"message": "Logo removed successfully"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to remove logo: {str(e)}")
+
 # Notification Routes
 @api_router.post("/notifications")
 async def create_notification(
