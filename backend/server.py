@@ -5582,7 +5582,7 @@ async def get_daily_financial_report(
 ):
     """Get detailed daily financial report for agency"""
     # Check permissions
-    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT, UserRole.GENERAL_MANAGER]:
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
         if current_user.agency_id != agency_id:
             raise HTTPException(status_code=403, detail="Not authorized to view this report")
     
