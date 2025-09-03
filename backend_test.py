@@ -2205,6 +2205,377 @@ class SanhajaAPITester:
         
         return results
 
+    def test_agency_isolation_and_new_agency_workflow(self):
+        """Test Agency Data Isolation and Client Access for New Agencies - REVIEW REQUEST"""
+        print(f"\n🏢 TESTING AGENCY ISOLATION AND NEW AGENCY WORKFLOW (REVIEW REQUEST)")
+        print(f"   User reports: New employee in new agency cannot see client names when adding daily operations")
+        print(f"   Testing: Agency isolation + New agency client access workflow")
+        
+        results = {}
+        
+        # Step 1: Verify Agency Isolation Works Correctly
+        print(f"\n   === STEP 1: AGENCY ISOLATION VERIFICATION ===")
+        
+        # Test 1.1: Login as Tlemcen Agency Staff
+        print(f"\n   1.1 Testing Tlemcen Agency Staff Login...")
+        tlemcen_auth = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['tlemcen_staff_login'] = tlemcen_auth
+        
+        if tlemcen_auth:
+            tlemcen_agency_id = self.current_user.get('agency_id')
+            print(f"   ✅ Tlemcen staff authenticated - Agency ID: {tlemcen_agency_id}")
+            
+            # Get Tlemcen clients
+            success, tlemcen_clients = self.run_test(
+                "Tlemcen Staff - Get Clients",
+                "GET",
+                "clients",
+                200
+            )
+            results['tlemcen_clients'] = success
+            if success:
+                print(f"   Tlemcen staff sees {len(tlemcen_clients)} clients")
+                results['tlemcen_clients_count'] = len(tlemcen_clients)
+            
+            # Get Tlemcen daily operations
+            success, tlemcen_operations = self.run_test(
+                "Tlemcen Staff - Get Daily Operations",
+                "GET",
+                "daily-operations",
+                200
+            )
+            results['tlemcen_operations'] = success
+            if success:
+                print(f"   Tlemcen staff sees {len(tlemcen_operations)} daily operations")
+                results['tlemcen_operations_count'] = len(tlemcen_operations)
+        
+        # Test 1.2: Login as Different Agency Staff (Oran)
+        print(f"\n   1.2 Testing Different Agency Staff Login (Oran)...")
+        oran_auth = self.test_login('staff1@oran.sanhaja.com', 'staff123')
+        results['oran_staff_login'] = oran_auth
+        
+        if oran_auth:
+            oran_agency_id = self.current_user.get('agency_id')
+            print(f"   ✅ Oran staff authenticated - Agency ID: {oran_agency_id}")
+            
+            # Get Oran clients
+            success, oran_clients = self.run_test(
+                "Oran Staff - Get Clients",
+                "GET",
+                "clients",
+                200
+            )
+            results['oran_clients'] = success
+            if success:
+                print(f"   Oran staff sees {len(oran_clients)} clients")
+                results['oran_clients_count'] = len(oran_clients)
+            
+            # Get Oran daily operations
+            success, oran_operations = self.run_test(
+                "Oran Staff - Get Daily Operations",
+                "GET",
+                "daily-operations",
+                200
+            )
+            results['oran_operations'] = success
+            if success:
+                print(f"   Oran staff sees {len(oran_operations)} daily operations")
+                results['oran_operations_count'] = len(oran_operations)
+            
+            # Verify isolation
+            if tlemcen_agency_id and oran_agency_id and tlemcen_agency_id != oran_agency_id:
+                print(f"   ✅ AGENCY ISOLATION CONFIRMED: Different agency IDs")
+                results['agency_isolation_working'] = True
+            else:
+                print(f"   ❌ AGENCY ISOLATION FAILED: Same or missing agency IDs")
+                results['agency_isolation_working'] = False
+        
+        # Step 2: Create New Agency and Test Workflow
+        print(f"\n   === STEP 2: NEW AGENCY CLIENT ACCESS TESTING ===")
+        
+        # Test 2.1: Super Admin creates new agency
+        print(f"\n   2.1 Super Admin creates new test agency...")
+        super_admin_auth = self.test_login('superadmin@sanhaja.com', 'super123')
+        results['super_admin_login'] = super_admin_auth
+        
+        new_agency_id = None
+        new_user_id = None
+        
+        if super_admin_auth:
+            # Create new test agency
+            test_agency_name = f"Test Agency {datetime.now().strftime('%H%M%S')}"
+            success, agency_response = self.run_test(
+                "Super Admin - Create New Test Agency",
+                "POST",
+                "agencies",
+                200,
+                data={
+                    "name": test_agency_name,
+                    "address": "123 Test Street",
+                    "city": "Test City",
+                    "phone": "0123456789",
+                    "email": "test@testagency.com"
+                }
+            )
+            results['create_new_agency'] = success
+            
+            if success:
+                new_agency_id = agency_response.get('id')
+                print(f"   ✅ New agency created - ID: {new_agency_id}, Name: {test_agency_name}")
+                
+                # Test 2.2: Create new user for the new agency
+                print(f"\n   2.2 Creating new user for the new agency...")
+                test_user_email = f"newstaff{datetime.now().strftime('%H%M%S')}@testagency.com"
+                success, user_response = self.run_test(
+                    "Super Admin - Create New Agency Staff",
+                    "POST",
+                    "users",
+                    200,
+                    data={
+                        "name": "New Agency Staff",
+                        "email": test_user_email,
+                        "password": "newstaff123",
+                        "role": "agency_staff",
+                        "agency_id": new_agency_id
+                    }
+                )
+                results['create_new_user'] = success
+                
+                if success:
+                    new_user_id = user_response.get('id')
+                    print(f"   ✅ New user created - Email: {test_user_email}")
+                    
+                    # Test 2.3: Login as new agency staff
+                    print(f"\n   2.3 Testing login as new agency staff...")
+                    new_staff_auth = self.test_login(test_user_email, 'newstaff123')
+                    results['new_staff_login'] = new_staff_auth
+                    
+                    if new_staff_auth:
+                        print(f"   ✅ New agency staff authenticated successfully")
+                        print(f"   User: {self.current_user.get('name')} ({self.current_user.get('role')})")
+                        print(f"   Agency: {self.current_user.get('agency_id')}")
+                        
+                        # Test 2.4: Check client list (should be empty)
+                        print(f"\n   2.4 Testing client list for new agency (should be empty)...")
+                        success, new_agency_clients = self.run_test(
+                            "New Agency Staff - Get Clients",
+                            "GET",
+                            "clients",
+                            200
+                        )
+                        results['new_agency_clients'] = success
+                        
+                        if success:
+                            print(f"   New agency staff sees {len(new_agency_clients)} clients")
+                            if len(new_agency_clients) == 0:
+                                print(f"   ✅ CORRECT: New agency has empty client list")
+                                results['new_agency_empty_clients'] = True
+                            else:
+                                print(f"   ❌ ISSUE: New agency should have 0 clients but has {len(new_agency_clients)}")
+                                results['new_agency_empty_clients'] = False
+                        
+                        # Test 2.5: Test client creation for new agency
+                        print(f"\n   2.5 Testing client creation for new agency...")
+                        success, client_response = self.run_test(
+                            "New Agency Staff - Create Client",
+                            "POST",
+                            "clients",
+                            200,
+                            data={
+                                "name": "Test Client for New Agency",
+                                "phone": "0987654321",
+                                "cin_passport": "TEST123456"
+                            }
+                        )
+                        results['new_agency_create_client'] = success
+                        
+                        if success:
+                            print(f"   ✅ New agency staff can create clients")
+                            
+                            # Verify client was created and is visible
+                            success, updated_clients = self.run_test(
+                                "New Agency Staff - Get Clients After Creation",
+                                "GET",
+                                "clients",
+                                200
+                            )
+                            
+                            if success and len(updated_clients) == 1:
+                                print(f"   ✅ Client creation successful - now sees {len(updated_clients)} client")
+                                results['client_creation_verified'] = True
+                            else:
+                                print(f"   ❌ Client creation issue - expected 1 client, got {len(updated_clients)}")
+                                results['client_creation_verified'] = False
+        
+        # Step 3: Daily Operations Workflow Testing
+        print(f"\n   === STEP 3: DAILY OPERATIONS WORKFLOW TESTING ===")
+        
+        if new_agency_id and self.token:
+            # Test 3.1: Access daily operations as new agency staff
+            print(f"\n   3.1 Testing daily operations access for new agency...")
+            success, daily_operations = self.run_test(
+                "New Agency Staff - Get Daily Operations",
+                "GET",
+                "daily-operations",
+                200
+            )
+            results['new_agency_daily_operations'] = success
+            
+            if success:
+                print(f"   New agency staff sees {len(daily_operations)} daily operations")
+                if len(daily_operations) == 0:
+                    print(f"   ✅ CORRECT: New agency has empty daily operations list")
+                    results['new_agency_empty_operations'] = True
+                else:
+                    print(f"   ⚠️  New agency has {len(daily_operations)} existing operations")
+                    results['new_agency_empty_operations'] = False
+            
+            # Test 3.2: Get services for operation creation
+            print(f"\n   3.2 Testing services access for new agency...")
+            success, services = self.run_test(
+                "New Agency Staff - Get Services",
+                "GET",
+                "services",
+                200
+            )
+            results['new_agency_services'] = success
+            
+            if success:
+                print(f"   New agency staff sees {len(services)} services")
+                
+                # Test 3.3: Try to create daily operation (should work if client exists)
+                if results.get('client_creation_verified', False):
+                    print(f"\n   3.3 Testing daily operation creation...")
+                    
+                    # Get the created client ID
+                    success, clients_for_operation = self.run_test(
+                        "New Agency Staff - Get Clients for Operation",
+                        "GET",
+                        "clients",
+                        200
+                    )
+                    
+                    if success and len(clients_for_operation) > 0 and len(services) > 0:
+                        client_id = clients_for_operation[0]['id']
+                        service_id = services[0]['id']
+                        
+                        success, operation_response = self.run_test(
+                            "New Agency Staff - Create Daily Operation",
+                            "POST",
+                            "daily-operations",
+                            200,
+                            data={
+                                "service_id": service_id,
+                                "client_id": client_id,
+                                "base_price": 50000.0,
+                                "discount_amount": 0.0,
+                                "notes": "Test operation for new agency"
+                            }
+                        )
+                        results['new_agency_create_operation'] = success
+                        
+                        if success:
+                            print(f"   ✅ New agency staff can create daily operations")
+                        else:
+                            print(f"   ❌ New agency staff cannot create daily operations")
+                    else:
+                        print(f"   ⚠️  Cannot test operation creation - missing clients or services")
+        
+        # Step 4: Client Management Access Testing
+        print(f"\n   === STEP 4: CLIENT MANAGEMENT ACCESS TESTING ===")
+        
+        if self.token:
+            # Test 4.1: Verify client management access
+            print(f"\n   4.1 Testing client management access...")
+            success, client_management = self.run_test(
+                "New Agency Staff - Client Management Access",
+                "GET",
+                "clients",
+                200
+            )
+            results['client_management_access'] = success
+            
+            if success:
+                print(f"   ✅ New agency staff has client management access")
+                
+                # Test 4.2: Test client assignment verification
+                print(f"\n   4.2 Verifying clients are properly assigned to correct agency...")
+                
+                # Check that all clients belong to the new agency
+                all_clients_correct_agency = True
+                for client in client_management:
+                    if client.get('agency_id') != new_agency_id:
+                        all_clients_correct_agency = False
+                        break
+                
+                if all_clients_correct_agency:
+                    print(f"   ✅ All clients properly assigned to new agency")
+                    results['client_assignment_correct'] = True
+                else:
+                    print(f"   ❌ Some clients not properly assigned to new agency")
+                    results['client_assignment_correct'] = False
+        
+        # Step 5: Verify Agency Isolation Still Works
+        print(f"\n   === STEP 5: FINAL AGENCY ISOLATION VERIFICATION ===")
+        
+        # Login back as Tlemcen staff and verify they don't see new agency data
+        print(f"\n   5.1 Re-testing Tlemcen staff isolation...")
+        tlemcen_reauth = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        
+        if tlemcen_reauth:
+            success, tlemcen_final_clients = self.run_test(
+                "Tlemcen Staff - Final Client Check",
+                "GET",
+                "clients",
+                200
+            )
+            
+            if success:
+                # Verify Tlemcen staff doesn't see new agency clients
+                new_agency_clients_visible = False
+                for client in tlemcen_final_clients:
+                    if client.get('agency_id') == new_agency_id:
+                        new_agency_clients_visible = True
+                        break
+                
+                if not new_agency_clients_visible:
+                    print(f"   ✅ ISOLATION CONFIRMED: Tlemcen staff cannot see new agency clients")
+                    results['final_isolation_confirmed'] = True
+                else:
+                    print(f"   ❌ ISOLATION BROKEN: Tlemcen staff can see new agency clients")
+                    results['final_isolation_confirmed'] = False
+        
+        # Cleanup: Delete test data
+        print(f"\n   === CLEANUP: REMOVING TEST DATA ===")
+        
+        if new_agency_id and super_admin_auth:
+            # Re-login as super admin for cleanup
+            cleanup_auth = self.test_login('superadmin@sanhaja.com', 'super123')
+            
+            if cleanup_auth:
+                # Delete test user
+                if new_user_id:
+                    success, _ = self.run_test(
+                        "Cleanup - Delete Test User",
+                        "DELETE",
+                        f"users/{new_user_id}",
+                        200
+                    )
+                    if success:
+                        print(f"   ✅ Test user deleted")
+                
+                # Delete test agency
+                success, _ = self.run_test(
+                    "Cleanup - Delete Test Agency",
+                    "DELETE",
+                    f"agencies/{new_agency_id}",
+                    200
+                )
+                if success:
+                    print(f"   ✅ Test agency deleted")
+        
+        return results
+
     def test_basic_requirements(self):
         """Test the basic requirements from the review request"""
         print(f"\n🎯 Testing Basic Requirements from Review Request...")
