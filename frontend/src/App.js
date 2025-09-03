@@ -4311,7 +4311,7 @@ const InstallmentsManagement = memo(() => {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [salesRes] = await Promise.all([
         axios.get(`${API}/service-sales`, {
@@ -4331,7 +4331,7 @@ const InstallmentsManagement = memo(() => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const fetchInstallmentPlans = async (sales = serviceSales) => {
     try {
