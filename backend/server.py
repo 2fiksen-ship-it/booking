@@ -6627,6 +6627,10 @@ async def get_services_for_management(
         # Get usage statistics for each service
         services_with_stats = []
         for service in services:
+            # Convert ObjectId to string if present
+            if '_id' in service:
+                del service['_id']
+            
             # Count operations using this service
             operations_count = await db.daily_operations.count_documents({
                 "service_name": service["name"]
@@ -6635,7 +6639,7 @@ async def get_services_for_management(
             # Get total revenue from this service
             operations = await db.daily_operations.find({
                 "service_name": service["name"],
-                "status": {"$in": ["approved", "pending_approval"]}
+                "status": {"$in": ["معتمد", "في انتظار الموافقة"]}  # Use Arabic status values
             }).to_list(None)
             
             total_revenue = sum(op.get("final_price", 0) for op in operations)
