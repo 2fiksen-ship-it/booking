@@ -5815,6 +5815,40 @@ async def get_comprehensive_daily_financial_reports(
                 if agency_services[service]['count'] > 0:
                     agency_services[service]['avg_price'] = agency_services[service]['revenue'] / agency_services[service]['count']
             
+            # Convert MongoDB documents to JSON-serializable format
+            serialized_operations = []
+            for op in agency_operations:
+                op_dict = dict(op)
+                if '_id' in op_dict:
+                    del op_dict['_id']
+                # Convert datetime objects to strings
+                for key, value in op_dict.items():
+                    if isinstance(value, datetime):
+                        op_dict[key] = value.isoformat()
+                serialized_operations.append(op_dict)
+            
+            serialized_transfers = []
+            for transfer in transfers:
+                transfer_dict = dict(transfer)
+                if '_id' in transfer_dict:
+                    del transfer_dict['_id']
+                # Convert datetime objects to strings
+                for key, value in transfer_dict.items():
+                    if isinstance(value, datetime):
+                        transfer_dict[key] = value.isoformat()
+                serialized_transfers.append(transfer_dict)
+            
+            serialized_expenses = []
+            for expense in expenses:
+                expense_dict = dict(expense)
+                if '_id' in expense_dict:
+                    del expense_dict['_id']
+                # Convert datetime objects to strings
+                for key, value in expense_dict.items():
+                    if isinstance(value, datetime):
+                        expense_dict[key] = value.isoformat()
+                serialized_expenses.append(expense_dict)
+
             agency_report = {
                 "agency_id": agency_id_current,
                 "agency_name": agency["name"],
@@ -5826,9 +5860,9 @@ async def get_comprehensive_daily_financial_reports(
                 "current_balance": current_balance,
                 "operations_count": len(agency_operations),
                 "services_breakdown": agency_services,
-                "operations": agency_operations,
-                "transfers": transfers,
-                "expenses": expenses
+                "operations": serialized_operations,
+                "transfers": serialized_transfers,
+                "expenses": serialized_expenses
             }
             
             agency_reports.append(agency_report)
