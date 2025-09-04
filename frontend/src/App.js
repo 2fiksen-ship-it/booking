@@ -10172,11 +10172,11 @@ const DailyOperationsReports = memo(() => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {Object.entries(reportData.service_analytics || {}).slice(0, 5).map(([service, data], index) => (
-                  <div key={service} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                {Object.entries(reportData.service_analytics || {}).slice(0, 5).map(([serviceName, data]) => (
+                  <div key={`service-summary-${serviceName}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center">
-                      <div className={`w-3 h-3 rounded-full ${getServiceColor(index)} mr-3`}></div>
-                      <span className="font-medium">{service}</span>
+                      <div className={`w-3 h-3 rounded-full ${getServiceColor(Object.keys(reportData.service_analytics).indexOf(serviceName))} mr-3`}></div>
+                      <span className="font-medium">{serviceName}</span>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-green-600">{formatCurrency(data.total_revenue)}</p>
