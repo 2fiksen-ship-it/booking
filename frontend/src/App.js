@@ -9953,70 +9953,22 @@ const DailyOperationsReports = memo(() => {
     };
   }, [selectedDate, selectedAgency, serviceFilter]);
 
-  // Separate refresh handler
+  // Simple PDF download handler
   const handleRefresh = useCallback(async () => {
-    const controller = new AbortController();
+    // Refresh data
+    window.location.reload();
+  }, []);
+  
+  const downloadPDF = useCallback((endpoint) => {
+    const params = new URLSearchParams();
+    if (selectedDate) params.append('date', selectedDate);
+    if (selectedAgency) params.append('agency_id', selectedAgency);
+    if (serviceFilter) params.append('service_filter', serviceFilter);
     
-    try {
-      setLoading(true);
-      setReportData(null);
-      setServicesAnalytics(null);
-      
-      // Prepare parameters for comprehensive reports
-      const comprehensiveParams = new URLSearchParams();
-      if (selectedDate) comprehensiveParams.append('date', selectedDate);
-      if (selectedAgency) comprehensiveParams.append('agency_id', selectedAgency);
-      if (serviceFilter) comprehensiveParams.append('service_filter', serviceFilter);
-
-      // Prepare parameters for services analytics
-      const analyticsParams = new URLSearchParams();
-      if (selectedDate) {
-        const endDate = new Date(selectedDate);
-        const startDate = new Date(endDate);
-        startDate.setDate(startDate.getDate() - 30);
-        analyticsParams.append('start_date', startDate.toISOString().split('T')[0]);
-        analyticsParams.append('end_date', selectedDate);
-      }
-      if (selectedAgency) analyticsParams.append('agency_id', selectedAgency);
-
-      // Execute both API calls simultaneously but handle them properly
-      const [comprehensiveResponse, analyticsResponse] = await Promise.allSettled([
-        axios.get(`${API}/reports/comprehensive-daily-financial?${comprehensiveParams.toString()}`, {
-          signal: controller.signal
-        }),
-        axios.get(`${API}/reports/services-analytics?${analyticsParams.toString()}`, {
-          signal: controller.signal
-        })
-      ]);
-
-      // Handle comprehensive reports response
-      if (comprehensiveResponse.status === 'fulfilled') {
-        setReportData(comprehensiveResponse.value.data);
-      } else {
-        console.error('Error fetching comprehensive reports:', comprehensiveResponse.reason);
-        if (!controller.signal.aborted) {
-          alert('خطأ في تحميل التقارير الشاملة: ' + (comprehensiveResponse.reason?.response?.data?.detail || comprehensiveResponse.reason?.message));
-        }
-      }
-
-      // Handle services analytics response
-      if (analyticsResponse.status === 'fulfilled') {
-        setServicesAnalytics(analyticsResponse.value.data);
-      } else {
-        console.error('Error fetching services analytics:', analyticsResponse.reason);
-        // Don't show alert for analytics as it's not critical
-      }
-
-    } catch (error) {
-      if (!controller.signal.aborted) {
-        console.error('Error in handleRefresh:', error);
-        alert('خطأ في تحميل البيانات: ' + (error.response?.data?.detail || error.message));
-      }
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false);
-      }
-    }
+    const link = document.createElement('a');
+    link.href = `${API}/${endpoint}?${params.toString()}`;
+    link.download = `report_${selectedDate || new Date().toISOString().split('T')[0]}.pdf`;
+    link.click();
   }, [selectedDate, selectedAgency, serviceFilter]);
 
   const formatCurrency = (amount) => {
