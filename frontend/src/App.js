@@ -10993,6 +10993,7 @@ const MainApp = ({ activeTab, setActiveTab }) => {
     agencyManagement: AgencyManagement,
     dailyReports: DailyReportsManagement,
     servicesManagement: EnhancedServicesManagement,
+    bulkServicesManagement: ServicesManagement,
     agencySettings: AgencySettingsManagement,
     dailyOperations: DailyOperationsManagement,
     dailyOperationsReports: DailyOperationsReports
