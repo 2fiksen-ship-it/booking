@@ -6849,7 +6849,7 @@ const AgencyManagement = () => {
                 <div key={`phone-${phoneIndex}-${phone || 'empty'}`} className="flex items-center space-x-2 mt-2">
                   <Input
                     value={phone}
-                    onChange={(e) => updatePhoneNumber(index, e.target.value)}
+                    onChange={(e) => updatePhoneNumber(phoneIndex, e.target.value)}
                     placeholder="مثال: 043123456"
                     className="flex-1"
                   />
@@ -6858,7 +6858,7 @@ const AgencyManagement = () => {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => removePhoneNumber(index)}
+                      onClick={() => removePhoneNumber(phoneIndex)}
                       className="text-red-600"
                     >
                       <Minus className="h-3 w-3" />
