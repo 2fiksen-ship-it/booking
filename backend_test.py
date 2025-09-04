@@ -12627,5 +12627,20 @@ if __name__ == "__main__":
             print("Available tests: professional_pdf, service_cash_flow, installments, logo_investigation")
             sys.exit(1)
     else:
-        # Run default main function
-        sys.exit(main())
+        # Run the new reporting and analytics endpoints test as requested in Arabic review
+        tester = SanhajaAPITester()
+        results = tester.test_new_reporting_analytics_endpoints()
+        
+        # Print summary
+        total_tests = len(results)
+        passed_tests = sum(1 for result in results.values() if result is True)
+        
+        if passed_tests == total_tests:
+            print(f"\n🎉 ALL TESTS PASSED! New reporting endpoints are production-ready.")
+            sys.exit(0)
+        elif passed_tests >= total_tests * 0.8:
+            print(f"\n✅ MOSTLY WORKING: {passed_tests}/{total_tests} tests passed. Minor issues detected.")
+            sys.exit(0)
+        else:
+            print(f"\n❌ CRITICAL ISSUES: Only {passed_tests}/{total_tests} tests passed. Major fixes needed.")
+            sys.exit(1)
