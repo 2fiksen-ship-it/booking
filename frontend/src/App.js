@@ -3960,8 +3960,8 @@ const ReportsManagement = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {reportData.data.map((row, index) => (
-                          <TableRow key={index} className="hover:bg-gray-50">
+                        {reportData.data.map((row) => (
+                          <TableRow key={`report-row-${row.month || row.date || Math.random()}`} className="hover:bg-gray-50">
                             <TableCell className="font-medium text-right">{row.client}</TableCell>
                             <TableCell className="text-right">{row.invoice}</TableCell>
                             <TableCell className="text-right text-red-600 font-semibold">
