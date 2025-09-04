@@ -7229,8 +7229,8 @@ const DailyReportsManagement = () => {
   );
 };
 
-// Services Management Component (General Manager and General Accountant Only)
-const ServicesManagement = () => {
+// NEW: Services Management Component
+const ServicesManagement = memo(() => {
   const { t } = useContext(LanguageContext);
   const { user } = useContext(AuthContext);
   const [services, setServices] = useState([]);
