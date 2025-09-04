@@ -10195,11 +10195,11 @@ const DailyOperationsReports = memo(() => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {reportData.agencies?.sort((a, b) => b.daily_revenue - a.daily_revenue).slice(0, 5).map((agency, index) => (
-                  <div key={agency.agency_id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                {reportData.agencies?.sort((a, b) => b.daily_revenue - a.daily_revenue).slice(0, 5).map((agency) => (
+                  <div key={`top-agency-${agency.agency_id}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-sm font-bold text-blue-600">{index + 1}</span>
+                        <span className="text-sm font-bold text-blue-600">{reportData.agencies.sort((a, b) => b.daily_revenue - a.daily_revenue).indexOf(agency) + 1}</span>
                       </div>
                       <div>
                         <p className="font-medium">{agency.agency_name}</p>
