@@ -175,8 +175,8 @@ async def create_seed_data():
             supplier = agency_suppliers[i % len(agency_suppliers)]
             booking_type = booking_types[i % len(booking_types)]
             
-            cost = round(2000 + (i * 150) + (i % 3 * 500), 2)
-            sell_price = round(cost * 1.25, 2)  # 25% markup
+            cost = round(200000 + (i * 15000) + (i % 3 * 50000), 2)  # تكلفة بالدينار الجزائري
+            sell_price = round(cost * 1.25, 2)  # هامش ربح 25%
             
             start_date = datetime.now(timezone.utc) + timedelta(days=15 + i*2)
             end_date = start_date + timedelta(days=7 if booking_type in ['عمرة', 'فندق'] else 1)
