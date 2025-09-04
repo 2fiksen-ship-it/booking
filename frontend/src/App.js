@@ -10710,6 +10710,24 @@ const DailyOperationsReports = memo(() => {
                 تحديث البيانات
               </Button>
               <Button 
+                onClick={downloadComprehensivePDF}
+                variant="outline"
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+                disabled={loading}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                {loading ? 'جاري التحميل...' : 'تحميل PDF'}
+              </Button>
+              <Button 
+                onClick={downloadServicesAnalyticsPDF}
+                variant="outline"
+                className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+                disabled={loading}
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                تحليل الخدمات PDF
+              </Button>
+              <Button 
                 onClick={() => {
                   const printContent = document.getElementById('report-content');
                   if (printContent) {
