@@ -7229,24 +7229,16 @@ const DailyReportsManagement = () => {
   );
 };
 
-// Services Management Component (General Manager and General Accountant Only)
-const ServicesManagement = () => {
-  const { t } = useContext(LanguageContext);
+// NEW: Services Management Component
+const ServicesManagement = memo(() => {
   const { user } = useContext(AuthContext);
+  const [loading, setLoading] = useState(false);
   const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [editingService, setEditingService] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    service_type: 'عمرة',
-    category: 'خدمات دينية',
-    base_price: '',
-    min_price: '',
-    is_fixed_price: true,
-    is_active: true
-  });
+  const [selectedServices, setSelectedServices] = useState(new Set());
+  const [includeInactive, setIncludeInactive] = useState(true);
+  const [bulkAction, setBulkAction] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Check if user can manage services
   const canManageServices = user?.role === 'super_admin' || user?.role === 'general_accountant';
