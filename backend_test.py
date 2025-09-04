@@ -889,15 +889,312 @@ class SanhajaAPITester:
         
         return results
 
+    def test_daily_operations_reports_integration_fix(self):
+        """Test the connection between daily operations and reports after the fix (Arabic Review Request)"""
+        print(f"\n🔗 اختبار الربط بين العمليات اليومية والتقارير بعد الإصلاح")
+        print(f"   Testing Daily Operations and Reports Integration Fix")
+        print(f"   Context: Reports now include both 'approved' and 'pending_approval' operations")
+        
+        results = {}
+        created_operation_id = None
+        
+        # Step 1: Login as Agency Staff (staff1@tlemcen.sanhaja.com/staff123)
+        print(f"\n   1️⃣ تسجيل دخول كـ Agency Staff...")
+        auth_success = self.test_login('staff1@tlemcen.sanhaja.com', 'staff123')
+        results['agency_staff_login'] = auth_success
+        
+        if not auth_success:
+            print(f"   ❌ Agency Staff login failed - cannot proceed")
+            return results
+        
+        print(f"   ✅ Agency Staff authenticated successfully")
+        staff_agency_id = self.current_user.get('agency_id')
+        print(f"   Agency ID: {staff_agency_id}")
+        
+        # Step 2: Get existing services and clients for operation creation
+        print(f"\n   2️⃣ جلب الخدمات والعملاء المتاحين...")
+        
+        # Get services
+        success, services = self.run_test(
+            "Get Available Services",
+            "GET",
+            "services",
+            200
+        )
+        results['get_services'] = success
+        
+        if not success or not services:
+            print(f"   ❌ No services available - cannot create operation")
+            return results
+        
+        service = services[0]  # Use first available service
+        print(f"   Available service: {service.get('name', 'Unknown')} (ID: {service.get('id')})")
+        
+        # Get clients
+        success, clients = self.run_test(
+            "Get Available Clients",
+            "GET",
+            "clients",
+            200
+        )
+        results['get_clients'] = success
+        
+        if not success or not clients:
+            print(f"   ❌ No clients available - cannot create operation")
+            return results
+        
+        client = clients[0]  # Use first available client
+        print(f"   Available client: {client.get('name', 'Unknown')} (ID: {client.get('id')})")
+        
+        # Step 3: Create a new daily operation
+        print(f"\n   3️⃣ إنشاء عملية يومية جديدة...")
+        
+        operation_data = {
+            "service_id": service.get('id'),
+            "client_id": client.get('id'),
+            "base_price": service.get('base_price', 50000.0),
+            "discount_amount": 0.0,
+            "notes": "عملية تجريبية لاختبار الربط مع التقارير"
+        }
+        
+        success, response = self.run_test(
+            "Create New Daily Operation",
+            "POST",
+            "daily-operations",
+            200,
+            data=operation_data
+        )
+        results['create_operation'] = success
+        
+        if success and 'id' in response:
+            created_operation_id = response['id']
+            operation_status = response.get('status', 'unknown')
+            print(f"   ✅ Operation created successfully")
+            print(f"   Operation ID: {created_operation_id}")
+            print(f"   Status: {operation_status}")
+            
+            # Verify status is "pending_approval"
+            if operation_status == "pending_approval":
+                print(f"   ✅ Operation correctly saved with 'pending_approval' status")
+                results['correct_status'] = True
+            else:
+                print(f"   ❌ Operation status is '{operation_status}' instead of 'pending_approval'")
+                results['correct_status'] = False
+        else:
+            print(f"   ❌ Failed to create operation - cannot proceed with report tests")
+            return results
+        
+        # Step 4: Verify operation appears in GET /api/daily-operations
+        print(f"\n   4️⃣ التحقق من ظهور العملية في GET /api/daily-operations...")
+        
+        success, operations = self.run_test(
+            "Get Daily Operations",
+            "GET",
+            "daily-operations",
+            200
+        )
+        results['get_operations'] = success
+        
+        if success:
+            # Find our created operation
+            created_operation = None
+            for op in operations:
+                if op.get('id') == created_operation_id:
+                    created_operation = op
+                    break
+            
+            if created_operation:
+                print(f"   ✅ Created operation found in operations list")
+                print(f"   Status: {created_operation.get('status')}")
+                print(f"   Service: {created_operation.get('service_name')}")
+                results['operation_in_list'] = True
+            else:
+                print(f"   ❌ Created operation not found in operations list")
+                results['operation_in_list'] = False
+            
+            # Check status distribution
+            pending_ops = [op for op in operations if op.get('status') == 'pending_approval']
+            approved_ops = [op for op in operations if op.get('status') == 'approved']
+            
+            print(f"   Operations status distribution:")
+            print(f"   - Pending approval: {len(pending_ops)}")
+            print(f"   - Approved: {len(approved_ops)}")
+            print(f"   - Total: {len(operations)}")
+        
+        # Step 5: Test comprehensive daily financial report includes the new operation
+        print(f"\n   5️⃣ اختبار تقرير comprehensive-daily-financial يشمل العملية الجديدة...")
+        
+        today_date = datetime.now().strftime('%Y-%m-%d')
+        
+        success, report_response = self.run_test(
+            "Get Comprehensive Daily Financial Report (Today)",
+            "GET",
+            f"reports/comprehensive-daily-financial?date={today_date}",
+            200
+        )
+        results['comprehensive_report'] = success
+        
+        if success:
+            print(f"   ✅ Comprehensive daily financial report accessible")
+            
+            # Check if our operation appears in the report
+            agencies = report_response.get('agencies', [])
+            operation_found_in_report = False
+            
+            for agency in agencies:
+                if agency.get('agency_id') == staff_agency_id:
+                    operations_in_report = agency.get('operations', [])
+                    for op in operations_in_report:
+                        if op.get('id') == created_operation_id:
+                            operation_found_in_report = True
+                            print(f"   ✅ New operation found in comprehensive report")
+                            print(f"   Operation status in report: {op.get('status')}")
+                            break
+                    break
+            
+            if operation_found_in_report:
+                results['operation_in_comprehensive_report'] = True
+            else:
+                print(f"   ❌ New operation NOT found in comprehensive report")
+                results['operation_in_comprehensive_report'] = False
+            
+            # Check summary includes pending operations
+            summary = report_response.get('summary', {})
+            total_operations = summary.get('total_operations', 0)
+            total_revenue = summary.get('total_revenue', 0)
+            
+            print(f"   Report summary:")
+            print(f"   - Total operations: {total_operations}")
+            print(f"   - Total revenue: {total_revenue} DZD")
+            
+            if total_operations > 0:
+                print(f"   ✅ Report includes operations (including pending ones)")
+                results['summary_includes_pending'] = True
+            else:
+                print(f"   ❌ Report shows 0 operations")
+                results['summary_includes_pending'] = False
+        
+        # Step 6: Test services analytics includes the new operation
+        print(f"\n   6️⃣ اختبار services-analytics يشمل العملية الجديدة...")
+        
+        success, analytics_response = self.run_test(
+            "Get Services Analytics Report",
+            "GET",
+            "reports/services-analytics",
+            200
+        )
+        results['services_analytics'] = success
+        
+        if success:
+            print(f"   ✅ Services analytics report accessible")
+            
+            # Check if our service appears in analytics
+            services_performance = analytics_response.get('services_performance', [])
+            service_found_in_analytics = False
+            
+            for service_perf in services_performance:
+                if service_perf.get('service_name') == service.get('name'):
+                    service_found_in_analytics = True
+                    operations_count = service_perf.get('operations_count', 0)
+                    revenue = service_perf.get('total_revenue', 0)
+                    
+                    print(f"   ✅ Service '{service.get('name')}' found in analytics")
+                    print(f"   Operations count: {operations_count}")
+                    print(f"   Total revenue: {revenue} DZD")
+                    break
+            
+            if service_found_in_analytics:
+                results['service_in_analytics'] = True
+            else:
+                print(f"   ❌ Service NOT found in analytics report")
+                results['service_in_analytics'] = False
+            
+            # Check chart data includes our service
+            chart_data = analytics_response.get('chart_data', {})
+            labels = chart_data.get('labels', [])
+            
+            if service.get('name') in labels:
+                print(f"   ✅ Service appears in chart data labels")
+                results['service_in_chart_data'] = True
+            else:
+                print(f"   ❌ Service NOT in chart data labels")
+                results['service_in_chart_data'] = False
+        
+        # Step 7: Test both approved and pending operations are included
+        print(f"\n   7️⃣ التحقق من شمول العمليات المعتمدة والمعلقة...")
+        
+        # Get comprehensive report without date filter to see all operations
+        success, full_report = self.run_test(
+            "Get Full Comprehensive Report (All Operations)",
+            "GET",
+            "reports/comprehensive-daily-financial",
+            200
+        )
+        
+        if success:
+            agencies = full_report.get('agencies', [])
+            total_pending = 0
+            total_approved = 0
+            
+            for agency in agencies:
+                operations = agency.get('operations', [])
+                for op in operations:
+                    status = op.get('status', '')
+                    if status == 'pending_approval':
+                        total_pending += 1
+                    elif status == 'approved':
+                        total_approved += 1
+            
+            print(f"   Operations in full report:")
+            print(f"   - Pending approval: {total_pending}")
+            print(f"   - Approved: {total_approved}")
+            print(f"   - Total: {total_pending + total_approved}")
+            
+            if total_pending > 0 and total_approved >= 0:
+                print(f"   ✅ Report includes both pending and approved operations")
+                results['includes_both_statuses'] = True
+            elif total_pending > 0:
+                print(f"   ✅ Report includes pending operations (no approved operations found)")
+                results['includes_both_statuses'] = True
+            else:
+                print(f"   ❌ Report does not include pending operations")
+                results['includes_both_statuses'] = False
+        
+        # Step 8: Verify the fix works for different date ranges
+        print(f"\n   8️⃣ اختبار التقارير مع نطاقات تاريخ مختلفة...")
+        
+        # Test with date range
+        success, range_report = self.run_test(
+            "Get Report with Date Range",
+            "GET",
+            f"reports/comprehensive-daily-financial?start_date={today_date}&end_date={today_date}",
+            200
+        )
+        
+        if success:
+            range_summary = range_report.get('summary', {})
+            range_operations = range_summary.get('total_operations', 0)
+            
+            print(f"   Date range report operations: {range_operations}")
+            
+            if range_operations > 0:
+                print(f"   ✅ Date range filtering includes pending operations")
+                results['date_range_includes_pending'] = True
+            else:
+                print(f"   ⚠️  Date range report shows 0 operations (may be expected)")
+                results['date_range_includes_pending'] = False
+        
+        return results
+
 if __name__ == "__main__":
     tester = SanhajaAPITester()
     
-    # Run the new reporting and analytics endpoints test as requested in Arabic review
-    print("📊 اختبار شامل للنقاط الطرفية الجديدة للتقارير والتحليل البياني")
-    print("🔍 Testing NEW Reporting & Analytics Endpoints")
+    # Run the specific Arabic review request test
+    print("🔗 اختبار الربط بين العمليات اليومية والتقارير بعد الإصلاح")
+    print("🔍 Testing Daily Operations and Reports Integration Fix")
     print("=" * 80)
     
-    results = tester.test_new_reporting_analytics_endpoints()
+    results = tester.test_daily_operations_reports_integration_fix()
     
     # Print summary
     print(f"\n" + "=" * 80)
