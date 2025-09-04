@@ -5720,7 +5720,7 @@ async def get_comprehensive_daily_financial_reports(
                 "$gte": start_date,
                 "$lt": end_date
             },
-            "status": {"$in": ["approved", "pending_approval"]}  # Include both approved and pending operations
+            "status": {"$in": ["معتمد", "في انتظار الموافقة"]}  # Include both approved and pending operations
         }
         
         # Add agency filter if specified
