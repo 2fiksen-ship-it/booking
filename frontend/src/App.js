@@ -10244,7 +10244,7 @@ const DailyOperationsReports = memo(() => {
                 </thead>
                 <tbody>
                   {reportData.agencies?.map((agency) => (
-                    <tr key={agency.agency_id} className="hover:bg-gray-50">
+                    <tr key={`agency-detailed-${agency.agency_id}`} className="hover:bg-gray-50">
                       <td className="border p-3 font-medium">{agency.agency_name}</td>
                       <td className="border p-3">{agency.city}</td>
                       <td className="border p-3 text-green-600 font-semibold">
