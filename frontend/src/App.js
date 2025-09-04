@@ -9864,642 +9864,494 @@ const DailyOperationsManagement = () => {
   );
 };
 
-// Daily Operations Reports Component
-const DailyOperationsReports = () => {
+// Enhanced Daily Operations Reports Component with Detailed Analytics
+const DailyOperationsReports = memo(() => {
   const { t } = useContext(LanguageContext);
   const { user } = useContext(AuthContext);
-  const [reportData, setReportData] = useState(null);
-  const [agencies, setAgencies] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
-  const [groupByAgency, setGroupByAgency] = useState(true);
-  const [groupByService, setGroupByService] = useState(false);
-  const [selectedAgency, setSelectedAgency] = useState('all');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedAgency, setSelectedAgency] = useState(null);
+  const [serviceFilter, setServiceFilter] = useState('');
+  const [reportData, setReportData] = useState(null);
+  const [servicesAnalytics, setServicesAnalytics] = useState(null);
+  const [viewMode, setViewMode] = useState('summary'); // summary, detailed, charts
 
-  useEffect(() => {
-    fetchAgencies();
-  }, []);
-
-  const fetchAgencies = async () => {
+  // Fetch comprehensive daily reports
+  const fetchComprehensiveReports = async () => {
     try {
-      const response = await axios.get(`${API}/agencies`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setAgencies(response.data);
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (selectedDate) params.append('date', selectedDate);
+      if (selectedAgency) params.append('agency_id', selectedAgency);
+      if (serviceFilter) params.append('service_filter', serviceFilter);
+
+      const response = await axios.get(`${API}/reports/comprehensive-daily-financial?${params.toString()}`);
+      setReportData(response.data);
     } catch (error) {
-      console.error('Error fetching agencies:', error);
-    }
-  };
-
-  const generateReport = async () => {
-    setLoading(true);
-    try {
-      console.log('=== GENERATING REPORT ===');
-      const params = new URLSearchParams({
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-        group_by_agency: groupByAgency.toString(),
-        group_by_service: groupByService.toString()
-      });
-
-      // Add agency filter if specific agency is selected
-      if (selectedAgency !== 'all') {
-        params.append('agency_ids', selectedAgency);
-      }
-
-      console.log('Report params:', params.toString());
-      const apiUrl = `${API}/reports/daily-operations?${params}`;
-      console.log('Report API URL:', apiUrl);
-
-      const response = await axios.get(apiUrl, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      
-      console.log('Report response:', response.data);
-      console.log('Report response status:', response.status);
-      
-      if (response.data) {
-        setReportData(response.data);
-        console.log('✅ Report data set successfully');
-      } else {
-        console.log('❌ No report data received');
-        alert('لا توجد بيانات للفترة المحددة');
-      }
-    } catch (error) {
-      console.error('Error generating report:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      alert('خطأ في إنتاج التقرير: ' + (error.response?.data?.detail || error.message));
+      console.error('Error fetching comprehensive reports:', error);
+      alert('خطأ في تحميل التقارير: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePrintReport = async () => {
-    if (!reportData) {
-      alert('يجب إنشاء التقرير أولاً');
-      return;
-    }
-    
+  // Fetch services analytics
+  const fetchServicesAnalytics = async () => {
     try {
-      console.log('=== PRINTING REPORT ===');
-      alert('بدء طباعة التقرير...');
-      
-      // Create HTML report for better readability
-      const htmlReport = createHTMLReport(reportData);
-      
-      // Create blob and open in new window
-      const blob = new Blob([htmlReport], { type: 'text/html' });
-      const url = window.URL.createObjectURL(blob);
-      
-      const newWindow = window.open(url, '_blank');
-      if (newWindow) {
-        newWindow.onload = function() {
-          setTimeout(() => {
-            newWindow.print();
-          }, 1000);
-        };
-        alert('✅ تم فتح التقرير في نافذة جديدة للطباعة');
-      } else {
-        alert('❌ لم يتم فتح النافذة. تأكد من السماح للنوافذ المنبثقة');
+      const params = new URLSearchParams();
+      if (selectedDate) {
+        // Get analytics for the past 30 days from selected date
+        const endDate = new Date(selectedDate);
+        const startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - 30);
+        params.append('start_date', startDate.toISOString().split('T')[0]);
+        params.append('end_date', selectedDate);
       }
-      
-      // Clean up after 5 seconds
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-      }, 5000);
-      
+      if (selectedAgency) params.append('agency_id', selectedAgency);
+
+      const response = await axios.get(`${API}/reports/services-analytics?${params.toString()}`);
+      setServicesAnalytics(response.data);
     } catch (error) {
-      console.error('Error printing report:', error);
-      alert('خطأ في طباعة التقرير: ' + error.message);
+      console.error('Error fetching services analytics:', error);
     }
   };
 
-  const createHTMLReport = (data) => {
-    const totals = data.grand_totals || data.agencies_data?.[0]?.totals || {};
-    
-    return `
-      <!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>تقرير العمليات اليومية</title>
-        <style>
-          body {
-            font-family: 'Arial', 'Tahoma', sans-serif;
-            margin: 20px;
-            direction: rtl;
-            background-color: white;
-          }
-          .header {
-            text-align: center;
-            border-bottom: 3px solid #2563eb;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-          }
-          .title {
-            font-size: 24px;
-            color: #1e40af;
-            font-weight: bold;
-            margin-bottom: 10px;
-          }
-          .subtitle {
-            font-size: 18px;
-            color: #059669;
-            margin-bottom: 15px;
-          }
-          .period {
-            font-size: 14px;
-            color: #6b7280;
-            margin-bottom: 5px;
-          }
-          .summary-section {
-            background-color: #f8fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
-          }
-          .summary-title {
-            font-size: 18px;
-            color: #1e40af;
-            font-weight: bold;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #cbd5e1;
-            padding-bottom: 8px;
-          }
-          .summary-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-          }
-          .summary-item {
-            background-color: white;
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid #3b82f6;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          }
-          .summary-label {
-            font-size: 14px;
-            color: #6b7280;
-            margin-bottom: 5px;
-          }
-          .summary-value {
-            font-size: 20px;
-            font-weight: bold;
-            color: #1f2937;
-          }
-          .agencies-section {
-            margin-top: 30px;
-          }
-          .agency-card {
-            background-color: #fefefe;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          }
-          .agency-name {
-            font-size: 16px;
-            font-weight: bold;
-            color: #dc2626;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #fecaca;
-          }
-          .agency-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-top: 15px;
-          }
-          .agency-stat {
-            text-align: center;
-            padding: 10px;
-            background-color: #f9fafb;
-            border-radius: 4px;
-          }
-          .stat-label {
-            font-size: 12px;
-            color: #6b7280;
-            margin-bottom: 5px;
-          }
-          .stat-value {
-            font-size: 16px;
-            font-weight: bold;
-            color: #374151;
-          }
-          .footer {
-            margin-top: 40px;
-            text-align: center;
-            color: #9ca3af;
-            font-size: 12px;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 20px;
-          }
-          @media print {
-            body { margin: 0; }
-            .summary-grid { grid-template-columns: 1fr 1fr; }
-            .agency-stats { grid-template-columns: repeat(2, 1fr); }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="title">🏢 نظام إدارة الوكالات السياحية</div>
-          <div class="subtitle">📊 تقرير العمليات اليومية المفصل</div>
-          <div class="period">📅 فترة التقرير: ${data.period || 'غير محددة'}</div>
-          <div class="period">⏰ تاريخ الإنشاء: ${new Date().toLocaleDateString('ar-SA')} - ${new Date().toLocaleTimeString('ar-SA')}</div>
-        </div>
+  useEffect(() => {
+    fetchComprehensiveReports();
+    fetchServicesAnalytics();
+  }, [selectedDate, selectedAgency, serviceFilter]);
 
-        <div class="summary-section">
-          <div class="summary-title">📈 ملخص التقرير العام</div>
-          <div class="summary-grid">
-            <div class="summary-item">
-              <div class="summary-label">📊 عدد العمليات الإجمالي</div>
-              <div class="summary-value">${totals.operations_count || 0}</div>
-            </div>
-            <div class="summary-item">
-              <div class="summary-label">💰 الإيرادات الإجمالية</div>
-              <div class="summary-value">${(totals.total_revenue || 0).toLocaleString()} دج</div>
-            </div>
-            <div class="summary-item">
-              <div class="summary-label">🏷️ إجمالي التخفيضات</div>
-              <div class="summary-value">${(totals.total_discounts || 0).toLocaleString()} دج</div>
-            </div>
-            <div class="summary-item">
-              <div class="summary-label">✅ صافي الإيرادات</div>
-              <div class="summary-value" style="color: #059669;">${(totals.net_revenue || 0).toLocaleString()} دج</div>
-            </div>
-          </div>
-        </div>
-
-        ${data.agencies_data && data.agencies_data.length > 0 ? `
-        <div class="agencies-section">
-          <div class="summary-title">🏢 تفاصيل الوكالات</div>
-          ${data.agencies_data.map(agency => `
-            <div class="agency-card">
-              <div class="agency-name">▶ ${agency.agency_name || 'وكالة غير محددة'}</div>
-              <div class="agency-stats">
-                <div class="agency-stat">
-                  <div class="stat-label">العمليات</div>
-                  <div class="stat-value">${agency.totals?.operations_count || 0}</div>
-                </div>
-                <div class="agency-stat">
-                  <div class="stat-label">الإيرادات</div>
-                  <div class="stat-value">${(agency.totals?.total_revenue || 0).toLocaleString()}</div>
-                </div>
-                <div class="agency-stat">
-                  <div class="stat-label">التخفيضات</div>
-                  <div class="stat-value">${(agency.totals?.total_discounts || 0).toLocaleString()}</div>
-                </div>
-                <div class="agency-stat">
-                  <div class="stat-label">الصافي</div>
-                  <div class="stat-value" style="color: #059669;">${(agency.totals?.net_revenue || 0).toLocaleString()}</div>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        ` : ''}
-
-        <div class="footer">
-          <div>═══════════════════════════════════════════════════════════════</div>
-          <div style="margin-top: 10px;">تم إنشاء هذا التقرير بواسطة نظام إدارة الوكالات السياحية</div>
-          <div>📧 للدعم الفني يرجى التواصل مع قسم تقنية المعلومات</div>
-        </div>
-      </body>
-      </html>
-    `;
+  const formatCurrency = (amount) => {
+    return `${(amount || 0).toLocaleString()} دج`;
   };
 
-  // Test function to create dummy report data
-  const createTestReport = () => {
-    console.log('Creating test report data...');
-    const testData = {
-      title: 'تقرير العمليات اليومية - اختبار',
-      period: `من ${startDate.toLocaleDateString('ar-SA')} إلى ${endDate.toLocaleDateString('ar-SA')}`,
-      total_operations: 5,
-      total_amount: 125000,
-      agencies_data: [
-        {
-          agency_name: 'وكالة سنهاجة الرئيسية',
-          operations_count: 3,
-          total_amount: 75000,
-          operations: [
-            { operation_no: 'OP-001', service_name: 'حجز طيران', amount: 25000, date: '2025-09-02' },
-            { operation_no: 'OP-002', service_name: 'حجز فندق', amount: 30000, date: '2025-09-02' },
-            { operation_no: 'OP-003', service_name: 'تأشيرة', amount: 20000, date: '2025-09-02' }
-          ]
-        }
-      ],
-      group_by_agency: true
-    };
-    
-    console.log('Setting report data...', testData);
-    setReportData(testData);
-    console.log('Report data set successfully');
-    setLoading(false); // Make sure loading is false
-    alert('✅ تم إنشاء تقرير اختبار');
+  const getServiceColor = (index) => {
+    const colors = [
+      'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500',
+      'bg-red-500', 'bg-indigo-500', 'bg-pink-500', 'bg-orange-500'
+    ];
+    return colors[index % colors.length];
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 space-y-6" dir="rtl">
-      <h1 className="text-2xl font-bold text-gray-900">{t('dailyOperationsReports')}</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">📊 {t('dailyOperationsReports')}</h1>
+          <p className="text-sm text-gray-600 mt-1">تقارير مفصلة للحالة المالية لجميع الوكالات</p>
+        </div>
+      </div>
 
+      {/* Filters Card */}
       <Card>
         <CardHeader>
-          <CardTitle>إعدادات التقرير</CardTitle>
+          <CardTitle className="flex items-center">
+            <Filter className="h-5 w-5 ml-2" />
+            🔍 الفلاتر والتحكم
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Date Filter */}
             <div>
-              <Label>من تاريخ</Label>
+              <Label>📅 التاريخ</Label>
               <Input
                 type="date"
-                value={startDate.toISOString().split('T')[0]}
-                onChange={(e) => setStartDate(new Date(e.target.value))}
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
               />
             </div>
+
+            {/* Agency Filter */}
+            {['super_admin', 'general_accountant'].includes(user?.role) && (
+              <div>
+                <Label>🏢 الوكالة</Label>
+                <AgencyFilter
+                  selectedAgency={selectedAgency}
+                  onAgencyChange={setSelectedAgency}
+                  showAllOption={true}
+                />
+              </div>
+            )}
+
+            {/* Service Filter */}
             <div>
-              <Label>إلى تاريخ</Label>
+              <Label>🛠️ فلتر الخدمة</Label>
               <Input
-                type="date"
-                value={endDate.toISOString().split('T')[0]}
-                onChange={(e) => setEndDate(new Date(e.target.value))}
+                placeholder="مثال: عمرة، طيران، نقل"
+                value={serviceFilter}
+                onChange={(e) => setServiceFilter(e.target.value)}
               />
             </div>
-          </div>
 
-          {/* NEW: Agency Filter */}
-          <div>
-            <Label>فلتر الوكالة</Label>
-            <Select value={selectedAgency} onValueChange={setSelectedAgency}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر الوكالة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">🌐 جميع الوكالات</SelectItem>
-                {agencies.map((agency) => (
-                  <SelectItem key={agency.id} value={agency.id}>
-                    {agency.name} - {agency.city}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex space-x-4">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="groupByAgency"
-                checked={groupByAgency}
-                onChange={(e) => setGroupByAgency(e.target.checked)}
-              />
-              <Label htmlFor="groupByAgency">تجميع حسب الوكالة</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="groupByService"
-                checked={groupByService}
-                onChange={(e) => setGroupByService(e.target.checked)}
-              />
-              <Label htmlFor="groupByService">تجميع حسب الخدمة</Label>
+            {/* View Mode */}
+            <div>
+              <Label>👁️ طريقة العرض</Label>
+              <Select value={viewMode} onValueChange={setViewMode}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="summary">📊 ملخص إجمالي</SelectItem>
+                  <SelectItem value="detailed">📋 تفصيلي لكل وكالة</SelectItem>
+                  <SelectItem value="charts">📈 المخططات البيانية</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-
-          <Button onClick={generateReport} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
-            {loading ? 'جاري الإنتاج...' : t('generateReport')}
-          </Button>
-
-          {/* Test Button - temporary */}
-          <Button onClick={createTestReport} className="bg-yellow-600 hover:bg-yellow-700">
-            🧪 إنشاء تقرير اختبار
-          </Button>
-
-          {/* Print Report Button */}
-          {reportData && (
-            <Button 
-              onClick={handlePrintReport} 
-              disabled={loading}
-              variant="outline" 
-              className="bg-green-600 hover:bg-green-700 text-white border-green-600"
-            >
-              🖨️ طباعة التقرير PDF
-            </Button>
-          )}
         </CardContent>
       </Card>
 
+      {/* Summary Cards */}
       {reportData && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center">
+                <Wallet className="h-8 w-8 mr-3" />
+                <div>
+                  <p className="text-sm opacity-90">إجمالي الإيرادات</p>
+                  <p className="text-xl font-bold">{formatCurrency(reportData.summary?.total_revenue)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center">
+                <ArrowUpCircle className="h-8 w-8 mr-3" />
+                <div>
+                  <p className="text-sm opacity-90">إجمالي التحويلات</p>
+                  <p className="text-xl font-bold">{formatCurrency(reportData.summary?.total_transfers)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-red-500 to-pink-600 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center">
+                <ArrowDownCircle className="h-8 w-8 mr-3" />
+                <div>
+                  <p className="text-sm opacity-90">إجمالي المصاريف</p>
+                  <p className="text-xl font-bold">{formatCurrency(reportData.summary?.total_expenses)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-purple-500 to-violet-600 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center">
+                <Building2 className="h-8 w-8 mr-3" />
+                <div>
+                  <p className="text-sm opacity-90">عدد الوكالات</p>
+                  <p className="text-xl font-bold">{reportData.summary?.total_agencies || 0}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Content Based on View Mode */}
+      {viewMode === 'summary' && reportData && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Services Analytics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>🛠️ تحليل الخدمات</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Object.entries(reportData.service_analytics || {}).slice(0, 5).map(([service, data], index) => (
+                  <div key={service} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center">
+                      <div className={`w-3 h-3 rounded-full ${getServiceColor(index)} mr-3`}></div>
+                      <span className="font-medium">{service}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-green-600">{formatCurrency(data.total_revenue)}</p>
+                      <p className="text-xs text-gray-500">{data.revenue_percentage?.toFixed(1)}%</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Performing Agencies */}
+          <Card>
+            <CardHeader>
+              <CardTitle>🏆 أفضل الوكالات أداءً</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {reportData.agencies?.sort((a, b) => b.daily_revenue - a.daily_revenue).slice(0, 5).map((agency, index) => (
+                  <div key={agency.agency_id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-sm font-bold text-blue-600">{index + 1}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">{agency.agency_name}</p>
+                        <p className="text-xs text-gray-500">{agency.city}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-green-600">{formatCurrency(agency.daily_revenue)}</p>
+                      <p className="text-xs text-gray-500">{agency.operations_count} عملية</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Detailed View */}
+      {viewMode === 'detailed' && reportData && (
         <Card>
           <CardHeader>
-            <CardTitle>{reportData.title}</CardTitle>
+            <CardTitle>📋 التقرير المفصل لكل وكالة</CardTitle>
             <CardDescription>
-              {reportData.period}
-              {selectedAgency !== 'all' && (
-                <span className="mr-2 text-blue-600">
-                  • الوكالة: {agencies.find(a => a.id === selectedAgency)?.name}
-                </span>
-              )}
+              عرض تفصيلي للحالة المالية لكل وكالة بتاريخ {selectedDate}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {reportData.group_by_agency && reportData.agencies_data ? (
-              <div className="space-y-6">
-                {reportData.agencies_data.map((agency, index) => (
-                  <div key={index} className="border rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-4">{agency.agency_name}</h3>
-                    <div className="grid grid-cols-4 gap-4 mb-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {agency.totals.operations_count}
-                        </div>
-                        <div className="text-sm text-gray-600">العمليات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {agency.totals.total_revenue.toLocaleString()} دج
-                        </div>
-                        <div className="text-sm text-gray-600">إجمالي الإيرادات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">
-                          {agency.totals.total_discounts.toLocaleString()} دج
-                        </div>
-                        <div className="text-sm text-gray-600">إجمالي التخفيضات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">
-                          {agency.totals.net_revenue.toLocaleString()} دج
-                        </div>
-                        <div className="text-sm text-gray-600">صافي الإيرادات</div>
-                      </div>
-                    </div>
-
-                    {/* Display detailed operations if available */}
-                    {agency.services && Array.isArray(agency.services) && agency.services.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="font-semibold mb-2">تفاصيل العمليات:</h4>
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="text-right">رقم الوصل</TableHead>
-                                <TableHead className="text-right">التاريخ</TableHead>
-                                <TableHead className="text-right">العميل</TableHead>
-                                <TableHead className="text-right">الخدمة</TableHead>
-                                <TableHead className="text-right">السعر الأساسي</TableHead>
-                                <TableHead className="text-right">التخفيض</TableHead>
-                                <TableHead className="text-right">السعر النهائي</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {agency.services.slice(0, 10).map((operation, opIndex) => (
-                                <TableRow key={opIndex}>
-                                  <TableCell className="text-right text-sm">{operation.operation_no}</TableCell>
-                                  <TableCell className="text-right text-sm">{operation.date}</TableCell>
-                                  <TableCell className="text-right text-sm">{operation.client_name}</TableCell>
-                                  <TableCell className="text-right text-sm">{operation.service_name}</TableCell>
-                                  <TableCell className="text-right text-sm">{operation.base_price.toLocaleString()} دج</TableCell>
-                                  <TableCell className="text-right text-sm">{operation.discount_amount.toLocaleString()} دج</TableCell>
-                                  <TableCell className="text-right text-sm font-semibold">{operation.final_price.toLocaleString()} دج</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                          {agency.services.length > 10 && (
-                            <p className="text-sm text-gray-600 mt-2">
-                              عرض أول 10 عمليات من إجمالي {agency.services.length} عملية
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                
-                {reportData.grand_totals && (
-                  <div className="border-t pt-4">
-                    <h3 className="text-lg font-semibold mb-4">
-                      المجموع العام
-                      {selectedAgency !== 'all' && (
-                        <span className="text-sm text-gray-600 font-normal mr-2">
-                          (الوكالة المحددة فقط)
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border p-3 text-right">الوكالة</th>
+                    <th className="border p-3 text-right">المدينة</th>
+                    <th className="border p-3 text-right">الدخل اليومي</th>
+                    <th className="border p-3 text-right">التحويلات</th>
+                    <th className="border p-3 text-right">المصاريف</th>
+                    <th className="border p-3 text-right">الصافي</th>
+                    <th className="border p-3 text-right">الرصيد الحالي</th>
+                    <th className="border p-3 text-right">العمليات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.agencies?.map((agency) => (
+                    <tr key={agency.agency_id} className="hover:bg-gray-50">
+                      <td className="border p-3 font-medium">{agency.agency_name}</td>
+                      <td className="border p-3">{agency.city}</td>
+                      <td className="border p-3 text-green-600 font-semibold">
+                        {formatCurrency(agency.daily_revenue)}
+                      </td>
+                      <td className="border p-3 text-blue-600">
+                        {formatCurrency(agency.daily_transfers)}
+                      </td>
+                      <td className="border p-3 text-red-600">
+                        {formatCurrency(agency.daily_expenses)}
+                      </td>
+                      <td className={`border p-3 font-semibold ${agency.net_balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(agency.net_balance)}
+                      </td>
+                      <td className="border p-3 font-semibold">
+                        {formatCurrency(agency.current_balance)}
+                      </td>
+                      <td className="border p-3 text-center">
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
+                          {agency.operations_count}
                         </span>
-                      )}
-                    </h3>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {reportData.grand_totals.operations_count}
-                        </div>
-                        <div className="text-sm text-gray-600">إجمالي العمليات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {reportData.grand_totals.total_revenue.toLocaleString()} دج
-                        </div>
-                        <div className="text-sm text-gray-600">إجمالي الإيرادات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">
-                          {reportData.grand_totals.total_discounts.toLocaleString()} دج
-                        </div>
-                        <div className="text-sm text-gray-600">إجمالي التخفيضات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">
-                          {reportData.grand_totals.net_revenue.toLocaleString()} دج
-                        </div>
-                        <div className="text-sm text-gray-600">صافي الإيرادات</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : reportData.data ? (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">تفاصيل العمليات</h3>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-right">رقم الوصل</TableHead>
-                        <TableHead className="text-right">التاريخ</TableHead>
-                        <TableHead className="text-right">الوكالة</TableHead>
-                        <TableHead className="text-right">العميل</TableHead>
-                        <TableHead className="text-right">الخدمة</TableHead>
-                        <TableHead className="text-right">السعر الأساسي</TableHead>
-                        <TableHead className="text-right">التخفيض</TableHead>
-                        <TableHead className="text-right">السعر النهائي</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {reportData.data.map((operation, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="text-right text-sm">{operation.operation_no}</TableCell>
-                          <TableCell className="text-right text-sm">{operation.date}</TableCell>
-                          <TableCell className="text-right text-sm">{operation.agency_name}</TableCell>
-                          <TableCell className="text-right text-sm">{operation.client_name}</TableCell>
-                          <TableCell className="text-right text-sm">{operation.service_name}</TableCell>
-                          <TableCell className="text-right text-sm">{operation.base_price.toLocaleString()} دج</TableCell>
-                          <TableCell className="text-right text-sm">{operation.discount_amount.toLocaleString()} دج</TableCell>
-                          <TableCell className="text-right text-sm font-semibold">{operation.final_price.toLocaleString()} دج</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {reportData.totals && (
-                  <div className="border-t pt-4">
-                    <h3 className="text-lg font-semibold mb-4">المجموع العام</h3>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {reportData.totals.operations_count}
-                        </div>
-                        <div className="text-sm text-gray-600">إجمالي العمليات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {reportData.totals.total_revenue.toLocaleString()} دج
-                        </div>
-                        <div className="text-sm text-gray-600">إجمالي الإيرادات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">
-                          {reportData.totals.total_discounts.toLocaleString()} دج
-                        </div>
-                        <div className="text-sm text-gray-600">إجمالي التخفيضات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">
-                          {reportData.totals.net_revenue.toLocaleString()} دج
-                        </div>
-                        <div className="text-sm text-gray-600">صافي الإيرادات</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center text-gray-600">
-                لا توجد بيانات لعرضها
-              </div>
-            )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-blue-50 font-bold">
+                    <td className="border p-3" colSpan="2">المجموع الإجمالي</td>
+                    <td className="border p-3 text-green-600">
+                      {formatCurrency(reportData.summary?.total_revenue)}
+                    </td>
+                    <td className="border p-3 text-blue-600">
+                      {formatCurrency(reportData.summary?.total_transfers)}
+                    </td>
+                    <td className="border p-3 text-red-600">
+                      {formatCurrency(reportData.summary?.total_expenses)}
+                    </td>
+                    <td className="border p-3 text-purple-600">
+                      {formatCurrency(reportData.summary?.total_net_balance)}
+                    </td>
+                    <td className="border p-3">-</td>
+                    <td className="border p-3 text-center">
+                      {reportData.summary?.total_operations}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Charts View */}
+      {viewMode === 'charts' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Services Distribution Chart */}
+          {servicesAnalytics && (
+            <Card>
+              <CardHeader>
+                <CardTitle>📊 توزيع الخدمات حسب الإيرادات</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {Object.entries(servicesAnalytics.services_performance || {}).slice(0, 6).map(([service, data], index) => (
+                    <div key={service} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">{service}</span>
+                        <span className="text-sm text-gray-500">
+                          {data.revenue_percentage?.toFixed(1)}% ({formatCurrency(data.total_revenue)})
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className={`h-3 rounded-full ${getServiceColor(index)}`}
+                          style={{ width: `${Math.min(data.revenue_percentage || 0, 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Agency Performance Chart */}
+          {reportData && (
+            <Card>
+              <CardHeader>
+                <CardTitle>🏢 أداء الوكالات</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {reportData.agencies?.sort((a, b) => b.daily_revenue - a.daily_revenue).slice(0, 6).map((agency, index) => {
+                    const maxRevenue = Math.max(...reportData.agencies.map(a => a.daily_revenue));
+                    const percentage = maxRevenue > 0 ? (agency.daily_revenue / maxRevenue) * 100 : 0;
+                    
+                    return (
+                      <div key={agency.agency_id} className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">{agency.agency_name}</span>
+                          <span className="text-sm text-gray-500">
+                            {formatCurrency(agency.daily_revenue)}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div 
+                            className="h-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Financial Summary Chart */}
+          {reportData && (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>💰 الملخص المالي العام</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-8">
+                  {/* Revenue */}
+                  <div className="text-center">
+                    <div className="w-24 h-24 mx-auto mb-4 relative">
+                      <div className="w-full h-full bg-green-200 rounded-full flex items-center justify-center">
+                        <Wallet className="h-10 w-10 text-green-600" />
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-green-600">الإيرادات</h3>
+                    <p className="text-xl font-bold text-green-700">
+                      {formatCurrency(reportData.summary?.total_revenue)}
+                    </p>
+                  </div>
+
+                  {/* Transfers */}
+                  <div className="text-center">
+                    <div className="w-24 h-24 mx-auto mb-4 relative">
+                      <div className="w-full h-full bg-blue-200 rounded-full flex items-center justify-center">
+                        <ArrowUpCircle className="h-10 w-10 text-blue-600" />
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-blue-600">التحويلات</h3>
+                    <p className="text-xl font-bold text-blue-700">
+                      {formatCurrency(reportData.summary?.total_transfers)}
+                    </p>
+                  </div>
+
+                  {/* Expenses */}
+                  <div className="text-center">
+                    <div className="w-24 h-24 mx-auto mb-4 relative">
+                      <div className="w-full h-full bg-red-200 rounded-full flex items-center justify-center">
+                        <ArrowDownCircle className="h-10 w-10 text-red-600" />
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-red-600">المصاريف</h3>
+                    <p className="text-xl font-bold text-red-700">
+                      {formatCurrency(reportData.summary?.total_expenses)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Export and Actions */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              آخر تحديث: {new Date().toLocaleString('ar-SA')}
+            </div>
+            <div className="flex space-x-2 rtl:space-x-reverse">
+              <Button 
+                onClick={() => fetchComprehensiveReports()}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                تحديث البيانات
+              </Button>
+              <Button 
+                onClick={() => {
+                  const printContent = document.getElementById('report-content');
+                  if (printContent) {
+                    window.print();
+                  }
+                }}
+                variant="outline"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                طباعة التقرير
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
-};
+});
 
 // Main App Component
 const MainApp = ({ activeTab, setActiveTab }) => {
