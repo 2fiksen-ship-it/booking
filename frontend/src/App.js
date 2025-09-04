@@ -6161,6 +6161,40 @@ const FinancialManagement = memo(() => {
     }
   };
 
+  const confirmTransfer = async (transferId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API}/cash-transfers/${transferId}/confirm`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      alert('✅ تم تأكيد التحويل بنجاح');
+      fetchFinancialData();
+    } catch (error) {
+      console.error('Error confirming transfer:', error);
+      alert('❌ فشل في تأكيد التحويل: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const rejectTransfer = async (transferId) => {
+    if (!confirm('هل أنت متأكد من رفض هذا التحويل؟')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API}/cash-transfers/${transferId}/reject`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      alert('✅ تم رفض التحويل بنجاح');
+      fetchFinancialData();
+    } catch (error) {
+      console.error('Error rejecting transfer:', error);
+      alert('❌ فشل في رفض التحويل: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   const fetchDailyReport = async () => {
     try {
       const token = localStorage.getItem('token');
