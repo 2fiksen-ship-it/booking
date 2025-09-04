@@ -6023,6 +6023,499 @@ async def get_services_analytics(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating services analytics: {str(e)}")
 
+# NEW: Comprehensive PDF Reports Generation
+@api_router.get("/reports/comprehensive-daily-financial-pdf")
+async def generate_comprehensive_daily_financial_pdf(
+    date: str = None,  # Format: YYYY-MM-DD
+    service_filter: str = None,  # Filter by service type
+    agency_id: str = None,  # Filter by specific agency
+    current_user: User = Depends(get_current_user)
+):
+    """Generate comprehensive daily financial reports as PDF"""
+    # Permission check - only Super Admin and General Accountant can see all agencies
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        # Agency staff can only see their own agency
+        agency_id = current_user.agency_id
+    
+    try:
+        # Get the report data first
+        report_data = await get_comprehensive_daily_financial_reports(
+            date=date, 
+            service_filter=service_filter, 
+            agency_id=agency_id, 
+            current_user=current_user
+        )
+        
+        # Create PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        
+        # Container for PDF elements
+        elements = []
+        
+        # Arabic font setup (reusing existing function)
+        try:
+            pdfmetrics.registerFont(TTFont('Arabic', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+            arabic_font = 'Arabic'
+        except:
+            arabic_font = 'Helvetica'
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'ArabicTitle',
+            parent=styles['Title'],
+            fontName=arabic_font,
+            fontSize=18,
+            alignment=TA_CENTER,
+            spaceAfter=30
+        )
+        
+        header_style = ParagraphStyle(
+            'ArabicHeader',
+            parent=styles['Heading2'],
+            fontName=arabic_font,
+            fontSize=14,
+            alignment=TA_RIGHT,
+            spaceAfter=12
+        )
+        
+        normal_style = ParagraphStyle(
+            'ArabicNormal',
+            parent=styles['Normal'],
+            fontName=arabic_font,
+            fontSize=10,
+            alignment=TA_RIGHT
+        )
+        
+        # Title
+        report_date = date or datetime.now().strftime('%Y-%m-%d')
+        title_text = fix_arabic_text(f"التقرير المالي الشامل - {report_date}")
+        elements.append(Paragraph(title_text, title_style))
+        elements.append(Spacer(1, 20))
+        
+        # Summary section
+        summary_text = fix_arabic_text("الملخص الإجمالي")
+        elements.append(Paragraph(summary_text, header_style))
+        
+        summary_data = [
+            [fix_arabic_text("إجمالي الإيرادات"), f"{report_data.get('summary', {}).get('total_revenue', 0):,.2f} دج"],
+            [fix_arabic_text("إجمالي التحويلات"), f"{report_data.get('summary', {}).get('total_transfers', 0):,.2f} دج"],
+            [fix_arabic_text("إجمالي المصاريف"), f"{report_data.get('summary', {}).get('total_expenses', 0):,.2f} دج"],
+            [fix_arabic_text("الصافي"), f"{report_data.get('summary', {}).get('total_net_balance', 0):,.2f} دج"],
+            [fix_arabic_text("عدد الوكالات"), str(report_data.get('summary', {}).get('total_agencies', 0))],
+            [fix_arabic_text("إجمالي العمليات"), str(report_data.get('summary', {}).get('total_operations', 0))]
+        ]
+        
+        summary_table = Table(summary_data, colWidths=[6*cm, 4*cm])
+        summary_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        elements.append(summary_table)
+        elements.append(Spacer(1, 20))
+        
+        # Agencies details section
+        if report_data.get('agencies'):
+            agencies_text = fix_arabic_text("تفاصيل الوكالات")
+            elements.append(Paragraph(agencies_text, header_style))
+            
+            # Table headers
+            agency_headers = [
+                fix_arabic_text("الوكالة"),
+                fix_arabic_text("المدينة"),
+                fix_arabic_text("الدخل اليومي"),
+                fix_arabic_text("التحويلات"),
+                fix_arabic_text("المصاريف"),
+                fix_arabic_text("الصافي"),
+                fix_arabic_text("العمليات")
+            ]
+            
+            agency_data = [agency_headers]
+            
+            for agency in report_data['agencies'][:15]:  # Limit to 15 agencies for PDF
+                row = [
+                    fix_arabic_text(agency.get('agency_name', '')),
+                    fix_arabic_text(agency.get('city', '')),
+                    f"{agency.get('daily_revenue', 0):,.0f} دج",
+                    f"{agency.get('daily_transfers', 0):,.0f} دج", 
+                    f"{agency.get('daily_expenses', 0):,.0f} دج",
+                    f"{agency.get('net_balance', 0):,.0f} دج",
+                    str(agency.get('operations_count', 0))
+                ]
+                agency_data.append(row)
+            
+            agency_table = Table(agency_data, colWidths=[2.5*cm, 1.8*cm, 2*cm, 1.7*cm, 1.7*cm, 1.8*cm, 1.2*cm])
+            agency_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('ALIGN', (0, 0), (1, -1), 'RIGHT'),
+                ('ALIGN', (2, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            
+            elements.append(agency_table)
+            elements.append(Spacer(1, 20))
+        
+        # Services analytics section
+        if report_data.get('service_analytics'):
+            services_text = fix_arabic_text("تحليل الخدمات")
+            elements.append(Paragraph(services_text, header_style))
+            
+            service_headers = [
+                fix_arabic_text("الخدمة"),
+                fix_arabic_text("العدد"),
+                fix_arabic_text("الإيرادات"),
+                fix_arabic_text("النسبة المئوية")
+            ]
+            
+            service_data = [service_headers]
+            
+            for service_name, service_info in list(report_data['service_analytics'].items())[:10]:
+                row = [
+                    fix_arabic_text(service_name),
+                    str(service_info.get('total_count', 0)),
+                    f"{service_info.get('total_revenue', 0):,.0f} دج",
+                    f"{service_info.get('revenue_percentage', 0):.1f}%"
+                ]
+                service_data.append(row)
+            
+            service_table = Table(service_data, colWidths=[4*cm, 2*cm, 3*cm, 2.5*cm])
+            service_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            
+            elements.append(service_table)
+        
+        # Footer
+        elements.append(Spacer(1, 30))
+        footer_text = fix_arabic_text(f"تم إنشاء التقرير في: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        elements.append(Paragraph(footer_text, normal_style))
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Return PDF
+        buffer.seek(0)
+        pdf_filename = f"comprehensive_financial_report_{report_date}.pdf"
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={pdf_filename}"}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating PDF report: {str(e)}")
+
+# NEW: Services Analytics PDF Report
+@api_router.get("/reports/services-analytics-pdf")
+async def generate_services_analytics_pdf(
+    start_date: str = None,
+    end_date: str = None,
+    agency_id: str = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate services analytics report as PDF"""
+    # Permission check
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        agency_id = current_user.agency_id
+    
+    try:
+        # Get the analytics data first
+        analytics_data = await get_services_analytics(
+            start_date=start_date, 
+            end_date=end_date, 
+            agency_id=agency_id, 
+            current_user=current_user
+        )
+        
+        # Create PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        
+        # Container for PDF elements
+        elements = []
+        
+        # Arabic font setup
+        try:
+            pdfmetrics.registerFont(TTFont('Arabic', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+            arabic_font = 'Arabic'
+        except:
+            arabic_font = 'Helvetica'
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'ArabicTitle',
+            parent=styles['Title'],
+            fontName=arabic_font,
+            fontSize=18,
+            alignment=TA_CENTER,
+            spaceAfter=30
+        )
+        
+        header_style = ParagraphStyle(
+            'ArabicHeader',
+            parent=styles['Heading2'],
+            fontName=arabic_font,
+            fontSize=14,
+            alignment=TA_RIGHT,
+            spaceAfter=12
+        )
+        
+        # Title
+        period_start = start_date or (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        period_end = end_date or datetime.now().strftime('%Y-%m-%d')
+        title_text = fix_arabic_text(f"تقرير تحليل الخدمات ({period_start} إلى {period_end})")
+        elements.append(Paragraph(title_text, title_style))
+        elements.append(Spacer(1, 20))
+        
+        # Summary section
+        summary_text = fix_arabic_text("ملخص التحليل")
+        elements.append(Paragraph(summary_text, header_style))
+        
+        summary_data = [
+            [fix_arabic_text("إجمالي الخدمات"), str(analytics_data.get('summary', {}).get('total_services', 0))],
+            [fix_arabic_text("إجمالي العمليات"), str(analytics_data.get('summary', {}).get('total_operations', 0))],
+            [fix_arabic_text("إجمالي الإيرادات"), f"{analytics_data.get('summary', {}).get('total_revenue', 0):,.2f} دج"],
+            [fix_arabic_text("متوسط الإيرادات لكل خدمة"), f"{analytics_data.get('summary', {}).get('avg_revenue_per_service', 0):,.2f} دج"]
+        ]
+        
+        summary_table = Table(summary_data, colWidths=[6*cm, 4*cm])
+        summary_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        elements.append(summary_table)
+        elements.append(Spacer(1, 20))
+        
+        # Services performance details
+        if analytics_data.get('services_performance'):
+            performance_text = fix_arabic_text("أداء الخدمات التفصيلي")
+            elements.append(Paragraph(performance_text, header_style))
+            
+            # Table headers
+            performance_headers = [
+                fix_arabic_text("الخدمة"),
+                fix_arabic_text("العدد"),
+                fix_arabic_text("الإيرادات"),
+                fix_arabic_text("متوسط السعر"),
+                fix_arabic_text("أقل سعر"),
+                fix_arabic_text("أعلى سعر"),
+                fix_arabic_text("نسبة الإيرادات")
+            ]
+            
+            performance_data = [performance_headers]
+            
+            for service_name, service_info in list(analytics_data['services_performance'].items())[:15]:
+                row = [
+                    fix_arabic_text(service_name),
+                    str(service_info.get('count', 0)),
+                    f"{service_info.get('total_revenue', 0):,.0f} دج",
+                    f"{service_info.get('avg_price', 0):,.0f} دج",
+                    f"{service_info.get('min_price', 0):,.0f} دج",
+                    f"{service_info.get('max_price', 0):,.0f} دج",
+                    f"{service_info.get('revenue_percentage', 0):.1f}%"
+                ]
+                performance_data.append(row)
+            
+            performance_table = Table(performance_data, colWidths=[2.2*cm, 1.2*cm, 1.8*cm, 1.6*cm, 1.4*cm, 1.4*cm, 1.4*cm])
+            performance_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+                ('FONTSIZE', (0, 0), (-1, -1), 7),
+                ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            
+            elements.append(performance_table)
+        
+        # Footer
+        elements.append(Spacer(1, 30))
+        footer_text = fix_arabic_text(f"تم إنشاء التقرير في: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        elements.append(Paragraph(footer_text, ParagraphStyle(
+            'ArabicNormal',
+            parent=styles['Normal'],
+            fontName=arabic_font,
+            fontSize=10,
+            alignment=TA_RIGHT
+        )))
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Return PDF
+        buffer.seek(0)
+        pdf_filename = f"services_analytics_report_{period_start}_to_{period_end}.pdf"
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={pdf_filename}"}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating services analytics PDF: {str(e)}")
+
+# NEW: Agency Balance Report PDF
+@api_router.get("/reports/agency-balance-pdf/{agency_id}")
+async def generate_agency_balance_pdf(
+    agency_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate agency balance report as PDF"""
+    # Permission check
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        if current_user.agency_id != agency_id:
+            raise HTTPException(status_code=403, detail="Access denied to this agency's data")
+    
+    try:
+        # Get agency balance data
+        balance_data = await get_agency_balance(agency_id, current_user)
+        
+        # Get agency info
+        agency = await db.agencies.find_one({"id": agency_id})
+        if not agency:
+            raise HTTPException(status_code=404, detail="Agency not found")
+        
+        # Create PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        
+        # Container for PDF elements
+        elements = []
+        
+        # Arabic font setup
+        try:
+            pdfmetrics.registerFont(TTFont('Arabic', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+            arabic_font = 'Arabic'
+        except:
+            arabic_font = 'Helvetica'
+        
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'ArabicTitle',
+            parent=styles['Title'],
+            fontName=arabic_font,
+            fontSize=18,
+            alignment=TA_CENTER,
+            spaceAfter=30
+        )
+        
+        header_style = ParagraphStyle(
+            'ArabicHeader',
+            parent=styles['Heading2'],
+            fontName=arabic_font,
+            fontSize=14,
+            alignment=TA_RIGHT,
+            spaceAfter=12
+        )
+        
+        # Title
+        title_text = fix_arabic_text(f"تقرير الرصيد المالي - {agency.get('name', '')}")
+        elements.append(Paragraph(title_text, title_style))
+        elements.append(Spacer(1, 20))
+        
+        # Agency info
+        agency_info_text = fix_arabic_text("معلومات الوكالة")
+        elements.append(Paragraph(agency_info_text, header_style))
+        
+        agency_info_data = [
+            [fix_arabic_text("اسم الوكالة"), fix_arabic_text(agency.get('name', ''))],
+            [fix_arabic_text("المدينة"), fix_arabic_text(agency.get('city', ''))],
+            [fix_arabic_text("العنوان"), fix_arabic_text(agency.get('address', ''))],
+            [fix_arabic_text("تاريخ التقرير"), datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
+        ]
+        
+        agency_info_table = Table(agency_info_data, colWidths=[5*cm, 6*cm])
+        agency_info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        elements.append(agency_info_table)
+        elements.append(Spacer(1, 20))
+        
+        # Balance details
+        balance_text = fix_arabic_text("تفاصيل الرصيد")
+        elements.append(Paragraph(balance_text, header_style))
+        
+        balance_details_data = [
+            [fix_arabic_text("الرصيد الحالي"), f"{balance_data.get('current_balance', 0):,.2f} دج"],
+            [fix_arabic_text("مجموع الإيرادات"), f"{balance_data.get('total_revenue', 0):,.2f} دج"],
+            [fix_arabic_text("مجموع التحويلات"), f"{balance_data.get('total_transfers', 0):,.2f} دج"],
+            [fix_arabic_text("مجموع المصاريف"), f"{balance_data.get('total_expenses', 0):,.2f} دج"]
+        ]
+        
+        balance_table = Table(balance_details_data, colWidths=[6*cm, 4*cm])
+        balance_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), arabic_font),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        elements.append(balance_table)
+        
+        # Footer
+        elements.append(Spacer(1, 50))
+        footer_text = fix_arabic_text(f"تم إنشاء التقرير في: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        elements.append(Paragraph(footer_text, ParagraphStyle(
+            'ArabicNormal',
+            parent=styles['Normal'],
+            fontName=arabic_font,
+            fontSize=10,
+            alignment=TA_RIGHT
+        )))
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Return PDF
+        buffer.seek(0)
+        pdf_filename = f"agency_balance_report_{agency.get('name', agency_id)}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={pdf_filename}"}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating agency balance PDF: {str(e)}")
+
 # Include the router in the main app
 app.include_router(api_router)
 
