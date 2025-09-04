@@ -9876,8 +9876,85 @@ const DailyOperationsReports = memo(() => {
   const [servicesAnalytics, setServicesAnalytics] = useState(null);
   const [viewMode, setViewMode] = useState('summary'); // summary, detailed, charts
 
-  // Combined fetch function to prevent race conditions
-  const fetchAllReports = useCallback(async () => {
+  useEffect(() => {
+    let isCleanedUp = false;
+    const controller = new AbortController();
+    
+    const performFetch = async () => {
+      try {
+        setLoading(true);
+        setReportData(null);
+        setServicesAnalytics(null);
+        
+        // Prepare parameters for comprehensive reports
+        const comprehensiveParams = new URLSearchParams();
+        if (selectedDate) comprehensiveParams.append('date', selectedDate);
+        if (selectedAgency) comprehensiveParams.append('agency_id', selectedAgency);
+        if (serviceFilter) comprehensiveParams.append('service_filter', serviceFilter);
+
+        // Prepare parameters for services analytics
+        const analyticsParams = new URLSearchParams();
+        if (selectedDate) {
+          const endDate = new Date(selectedDate);
+          const startDate = new Date(endDate);
+          startDate.setDate(startDate.getDate() - 30);
+          analyticsParams.append('start_date', startDate.toISOString().split('T')[0]);
+          analyticsParams.append('end_date', selectedDate);
+        }
+        if (selectedAgency) analyticsParams.append('agency_id', selectedAgency);
+
+        // Execute both API calls simultaneously but handle them properly
+        const [comprehensiveResponse, analyticsResponse] = await Promise.allSettled([
+          axios.get(`${API}/reports/comprehensive-daily-financial?${comprehensiveParams.toString()}`, {
+            signal: controller.signal
+          }),
+          axios.get(`${API}/reports/services-analytics?${analyticsParams.toString()}`, {
+            signal: controller.signal
+          })
+        ]);
+
+        if (isCleanedUp) return;
+
+        // Handle comprehensive reports response
+        if (comprehensiveResponse.status === 'fulfilled') {
+          setReportData(comprehensiveResponse.value.data);
+        } else {
+          console.error('Error fetching comprehensive reports:', comprehensiveResponse.reason);
+          if (!controller.signal.aborted) {
+            alert('خطأ في تحميل التقارير الشاملة: ' + (comprehensiveResponse.reason?.response?.data?.detail || comprehensiveResponse.reason?.message));
+          }
+        }
+
+        // Handle services analytics response
+        if (analyticsResponse.status === 'fulfilled') {
+          setServicesAnalytics(analyticsResponse.value.data);
+        } else {
+          console.error('Error fetching services analytics:', analyticsResponse.reason);
+          // Don't show alert for analytics as it's not critical
+        }
+
+      } catch (error) {
+        if (!controller.signal.aborted && !isCleanedUp) {
+          console.error('Error in fetchAllReports:', error);
+          alert('خطأ في تحميل البيانات: ' + (error.response?.data?.detail || error.message));
+        }
+      } finally {
+        if (!controller.signal.aborted && !isCleanedUp) {
+          setLoading(false);
+        }
+      }
+    };
+
+    performFetch();
+
+    return () => {
+      isCleanedUp = true;
+      controller.abort();
+    };
+  }, [selectedDate, selectedAgency, serviceFilter]);
+
+  // Separate refresh handler
+  const handleRefresh = useCallback(async () => {
     const controller = new AbortController();
     
     try {
@@ -9932,7 +10009,7 @@ const DailyOperationsReports = memo(() => {
 
     } catch (error) {
       if (!controller.signal.aborted) {
-        console.error('Error in fetchAllReports:', error);
+        console.error('Error in handleRefresh:', error);
         alert('خطأ في تحميل البيانات: ' + (error.response?.data?.detail || error.message));
       }
     } finally {
@@ -9940,14 +10017,7 @@ const DailyOperationsReports = memo(() => {
         setLoading(false);
       }
     }
-
-    return () => controller.abort();
   }, [selectedDate, selectedAgency, serviceFilter]);
-
-  useEffect(() => {
-    const cleanup = fetchAllReports();
-    return cleanup;
-  }, [fetchAllReports]);
 
   const formatCurrency = (amount) => {
     return `${(amount || 0).toLocaleString()} دج`;
