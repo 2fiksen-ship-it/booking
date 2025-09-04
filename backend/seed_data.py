@@ -205,9 +205,9 @@ async def create_seed_data():
         
         for i in range(15):  # 15 invoices per agency
             client = agency_clients[i % len(agency_clients)]
-            amount_ht = round(3000 + (i * 200), 2)
-            tva_rate = 20.0
-            amount_ttc = round(amount_ht * (1 + tva_rate / 100), 2)
+            amount_ht = round(300000 + (i * 20000), 2)  # مبلغ بالدينار الجزائري بدون ضريبة
+            tva_rate = 19.0  # ضريبة القيمة المضافة في الجزائر 19%
+            amount_ttc = round(amount_ht * (1 + tva_rate / 100), 2)  # المبلغ شامل الضريبة
             
             status = 'paid' if i % 3 == 0 else ('overdue' if i % 5 == 0 else 'pending')
             due_date = datetime.now(timezone.utc) + timedelta(days=30 - i*2)
