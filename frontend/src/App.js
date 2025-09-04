@@ -1396,8 +1396,8 @@ const Dashboard = ({ setActiveTab }) => {
 
       {/* Main Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {mainStatCards.map((stat, index) => (
-          <Card key={index} className="overflow-hidden hover:shadow-lg transition-shadow">
+        {mainStatCards.map((stat) => (
+          <Card key={`stat-${stat.title.replace(/\s+/g, '-')}`} className="overflow-hidden hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-full bg-gradient-to-r ${stat.color}`}>
