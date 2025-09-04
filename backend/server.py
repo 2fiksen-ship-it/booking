@@ -6519,7 +6519,7 @@ async def generate_agency_balance_pdf(
 # NEW: Bulk Services Management Endpoints
 @api_router.delete("/services/bulk-delete")
 async def bulk_delete_services(
-    service_ids: List[str],
+    request: dict,  # {"service_ids": ["id1", "id2"]}
     current_user: User = Depends(get_current_user)
 ):
     """Delete multiple services at once"""
@@ -6528,10 +6528,15 @@ async def bulk_delete_services(
         raise HTTPException(status_code=403, detail="Access denied - insufficient permissions")
     
     try:
+        service_ids = request.get("service_ids", [])
+        if not service_ids:
+            raise HTTPException(status_code=400, detail="No service IDs provided")
+        
         # Check if services exist and can be deleted
         existing_services = await db.services.find({"id": {"$in": service_ids}}).to_list(None)
         if len(existing_services) != len(service_ids):
-            raise HTTPException(status_code=404, detail="Some services not found")
+            missing_ids = set(service_ids) - set(s["id"] for s in existing_services)
+            raise HTTPException(status_code=404, detail=f"Services not found: {', '.join(missing_ids)}")
         
         # Check if any service is being used in daily operations
         operations_using_services = await db.daily_operations.find({
