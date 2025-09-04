@@ -10562,21 +10562,31 @@ const DailyOperationsReports = memo(() => {
                 تحليل الخدمات PDF
               </Button>
               <Button 
-                onClick={() => {
-                  const params = new URLSearchParams();
-                  if (selectedDate) params.append('date', selectedDate);
-                  if (selectedAgency) params.append('agency_id', selectedAgency);
-                  if (serviceFilter) params.append('service_filter', serviceFilter);
-                  
-                  const link = document.createElement('a');
-                  link.href = `${import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL}/reports/comprehensive-daily-financial-pdf?${params.toString()}`;
-                  link.download = `financial_report_${selectedDate || new Date().toISOString().split('T')[0]}.pdf`;
-                  link.click();
-                }}
+                onClick={handleRefresh}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                تحديث البيانات
+              </Button>
+              <Button 
+                onClick={() => downloadPDF('reports/comprehensive-daily-financial-pdf')}
+                variant="outline"
                 className="bg-red-600 hover:bg-red-700 text-white border-red-600"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 تحميل PDF
+              </Button>
+              <Button 
+                onClick={() => {
+                  const printContent = document.getElementById('report-content');
+                  if (printContent) {
+                    window.print();
+                  }
+                }}
+                variant="outline"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                طباعة التقرير
               </Button>
             </div>
           </div>
