@@ -10520,7 +10520,17 @@ const DailyOperationsReports = memo(() => {
                 تحديث البيانات
               </Button>
               <Button 
-                onClick={downloadComprehensivePDF}
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (selectedDate) params.append('date', selectedDate);
+                  if (selectedAgency) params.append('agency_id', selectedAgency);
+                  if (serviceFilter) params.append('service_filter', serviceFilter);
+                  
+                  const link = document.createElement('a');
+                  link.href = `${API}/reports/comprehensive-daily-financial-pdf?${params.toString()}`;
+                  link.download = `financial_report_${selectedDate || new Date().toISOString().split('T')[0]}.pdf`;
+                  link.click();
+                }}
                 variant="outline"
                 className="bg-red-600 hover:bg-red-700 text-white border-red-600"
                 disabled={loading}
