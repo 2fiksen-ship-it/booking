@@ -1360,7 +1360,7 @@ async def check_notifications(current_user: User = Depends(get_current_user)):
     cashboxes = await db.cashboxes.find({"agency_id": current_user.agency_id}).to_list(None)
     
     for cashbox in cashboxes:
-        if cashbox["balance"] < 10000:  # أقل من 10,000 دج
+        if cashbox["balance"] < 1000000:  # أقل من 1,000,000 دج (مليون دينار)
             # تحقق من عدم وجود إشعار مسبق
             existing_notification = await db.notifications.find_one({
                 "type": NotificationType.LOW_CASHBOX,
