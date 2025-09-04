@@ -3822,8 +3822,8 @@ const ReportsManagement = () => {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {agency.invoices.map((invoice, index) => (
-                                <TableRow key={index} className="hover:bg-gray-50">
+                              {agency.invoices.map((invoice) => (
+                                <TableRow key={`invoice-${invoice.invoice || invoice.client}-${Math.random()}`} className="hover:bg-gray-50">
                                   <TableCell className="font-medium text-right">{invoice.client}</TableCell>
                                   <TableCell className="text-right">{invoice.invoice}</TableCell>
                                   <TableCell className="text-right text-red-600 font-semibold">
