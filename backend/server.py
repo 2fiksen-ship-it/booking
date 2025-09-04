@@ -5610,54 +5610,56 @@ async def get_agency_expenses(agency_id: str, current_user: User = Depends(get_c
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching expenses: {str(e)}")
 
+# Daily Financial Reports endpoint
 @api_router.get("/reports/daily-financial/{agency_id}")
 async def get_daily_financial_report(
-    agency_id: str, 
-    date: str = None,  # YYYY-MM-DD format
+    agency_id: str,
+    date: str = None,  # Format: YYYY-MM-DD
     current_user: User = Depends(get_current_user)
 ):
-    """Get detailed daily financial report for agency"""
-    # Check permissions
+    """Get daily financial report for specific agency"""
+    # Permission check
     if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
         if current_user.agency_id != agency_id:
-            raise HTTPException(status_code=403, detail="Not authorized to view this report")
+            raise HTTPException(status_code=403, detail="Access denied to this agency's data")
     
     try:
-        # Use today if no date specified
-        target_date = date or datetime.now().strftime('%Y-%m-%d')
-        start_date = datetime.strptime(target_date, '%Y-%m-%d')
+        # Parse date
+        if date:
+            report_date = datetime.fromisoformat(date)
+        else:
+            report_date = datetime.now()
+            
+        start_date = report_date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_date = start_date + timedelta(days=1)
         
-        # Get daily operations
+        # Get daily operations for the date
         operations = await db.daily_operations.find({
             "agency_id": agency_id,
-            "date": {"$gte": start_date, "$lt": end_date}
+            "date": {
+                "$gte": start_date,
+                "$lt": end_date
+            },
+            "status": "approved"
         }).to_list(None)
         
-        # Get daily cash transfers
+        # Get transfers for the date
         transfers = await db.cash_transfers.find({
             "agency_id": agency_id,
-            "transfer_date": {"$gte": start_date, "$lt": end_date}
+            "transfer_date": {
+                "$gte": start_date,
+                "$lt": end_date
+            }
         }).to_list(None)
         
-        # Get daily expenses
+        # Get expenses for the date
         expenses = await db.agency_expenses.find({
             "agency_id": agency_id,
-            "expense_date": {"$gte": start_date, "$lt": end_date}
+            "expense_date": {
+                "$gte": start_date,
+                "$lt": end_date
+            }
         }).to_list(None)
-        
-        # Convert ObjectIds to strings for JSON serialization
-        for op in operations:
-            if "_id" in op:
-                op["_id"] = str(op["_id"])
-        
-        for transfer in transfers:
-            if "_id" in transfer:
-                transfer["_id"] = str(transfer["_id"])
-        
-        for expense in expenses:
-            if "_id" in expense:
-                expense["_id"] = str(expense["_id"])
         
         # Calculate totals
         daily_revenue = sum(op.get('final_price', 0) for op in operations)
@@ -5666,10 +5668,11 @@ async def get_daily_financial_report(
         
         # Get current balance
         balance_response = await get_agency_balance(agency_id, current_user)
+        current_balance = balance_response.get('current_balance', 0)
         
         report = {
-            "date": target_date,
             "agency_id": agency_id,
+            "date": date or datetime.now().strftime('%Y-%m-%d'),
             "operations": operations,
             "transfers": transfers,
             "expenses": expenses,
@@ -5677,15 +5680,314 @@ async def get_daily_financial_report(
                 "daily_revenue": daily_revenue,
                 "daily_transfers": daily_transfers,
                 "daily_expenses": daily_expenses,
-                "net_daily_change": daily_revenue - daily_transfers - daily_expenses,
-                "current_balance": balance_response.current_balance
+                "net_balance": daily_revenue - daily_transfers - daily_expenses,
+                "current_balance": current_balance
             }
         }
         
         return report
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating financial report: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating daily financial report: {str(e)}")
+
+# NEW: Comprehensive Multi-Agency Daily Financial Reports
+@api_router.get("/reports/comprehensive-daily-financial")
+async def get_comprehensive_daily_financial_reports(
+    date: str = None,  # Format: YYYY-MM-DD
+    service_filter: str = None,  # Filter by service type
+    agency_id: str = None,  # Filter by specific agency
+    current_user: User = Depends(get_current_user)
+):
+    """Get comprehensive daily financial reports for all agencies with filters"""
+    # Permission check - only Super Admin and General Accountant can see all agencies
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        # Agency staff can only see their own agency
+        agency_id = current_user.agency_id
+    
+    try:
+        # Parse date
+        if date:
+            report_date = datetime.fromisoformat(date)
+        else:
+            report_date = datetime.now()
+            
+        start_date = report_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_date = start_date + timedelta(days=1)
+        
+        # Build query filters
+        query_filter = {
+            "date": {
+                "$gte": start_date,
+                "$lt": end_date
+            },
+            "status": "approved"
+        }
+        
+        # Add agency filter if specified
+        if agency_id:
+            query_filter["agency_id"] = agency_id
+        
+        # Add service filter if specified
+        if service_filter:
+            query_filter["service_name"] = {"$regex": service_filter, "$options": "i"}
+        
+        # Get all agencies for the report
+        agencies_query = {}
+        if agency_id:
+            agencies_query["id"] = agency_id
+        agencies = await db.agencies.find(agencies_query).to_list(None)
+        
+        # Get all daily operations matching criteria
+        operations = await db.daily_operations.find(query_filter).to_list(None)
+        
+        # Group operations by service type for analytics
+        service_analytics = {}
+        
+        # Prepare comprehensive report data
+        agency_reports = []
+        total_revenue = 0
+        total_transfers = 0
+        total_expenses = 0
+        total_net_balance = 0
+        
+        for agency in agencies:
+            agency_id_current = agency["id"]
+            
+            # Filter operations for this agency
+            agency_operations = [op for op in operations if op.get("agency_id") == agency_id_current]
+            
+            # Get transfers for this agency and date
+            transfers = await db.cash_transfers.find({
+                "agency_id": agency_id_current,
+                "transfer_date": {
+                    "$gte": start_date,
+                    "$lt": end_date
+                }
+            }).to_list(None)
+            
+            # Get expenses for this agency and date
+            expenses = await db.agency_expenses.find({
+                "agency_id": agency_id_current,
+                "expense_date": {
+                    "$gte": start_date,
+                    "$lt": end_date
+                }
+            }).to_list(None)
+            
+            # Calculate agency totals
+            agency_daily_revenue = sum(op.get('final_price', 0) for op in agency_operations)
+            agency_daily_transfers = sum(t.get('amount', 0) for t in transfers if t.get('status') == 'confirmed')
+            agency_daily_expenses = sum(e.get('amount', 0) for e in expenses)
+            agency_net_balance = agency_daily_revenue - agency_daily_transfers - agency_daily_expenses
+            
+            # Get current balance
+            try:
+                balance_response = await get_agency_balance(agency_id_current, current_user)
+                current_balance = balance_response.get('current_balance', 0)
+            except:
+                current_balance = 0
+            
+            # Service breakdown for this agency
+            agency_services = {}
+            for op in agency_operations:
+                service_name = op.get('service_name', 'غير محدد')
+                if service_name not in agency_services:
+                    agency_services[service_name] = {
+                        'count': 0,
+                        'revenue': 0,
+                        'avg_price': 0
+                    }
+                agency_services[service_name]['count'] += 1
+                agency_services[service_name]['revenue'] += op.get('final_price', 0)
+                
+                # Update global service analytics
+                if service_name not in service_analytics:
+                    service_analytics[service_name] = {
+                        'total_count': 0,
+                        'total_revenue': 0,
+                        'agencies_count': 0
+                    }
+                service_analytics[service_name]['total_count'] += 1
+                service_analytics[service_name]['total_revenue'] += op.get('final_price', 0)
+            
+            # Calculate average prices
+            for service in agency_services:
+                if agency_services[service]['count'] > 0:
+                    agency_services[service]['avg_price'] = agency_services[service]['revenue'] / agency_services[service]['count']
+            
+            agency_report = {
+                "agency_id": agency_id_current,
+                "agency_name": agency["name"],
+                "city": agency["city"],
+                "daily_revenue": agency_daily_revenue,
+                "daily_transfers": agency_daily_transfers,
+                "daily_expenses": agency_daily_expenses,
+                "net_balance": agency_net_balance,
+                "current_balance": current_balance,
+                "operations_count": len(agency_operations),
+                "services_breakdown": agency_services,
+                "operations": agency_operations,
+                "transfers": transfers,
+                "expenses": expenses
+            }
+            
+            agency_reports.append(agency_report)
+            
+            # Update totals
+            total_revenue += agency_daily_revenue
+            total_transfers += agency_daily_transfers
+            total_expenses += agency_daily_expenses
+            total_net_balance += agency_net_balance
+        
+        # Calculate service analytics percentages
+        for service in service_analytics:
+            service_analytics[service]['revenue_percentage'] = (service_analytics[service]['total_revenue'] / total_revenue * 100) if total_revenue > 0 else 0
+        
+        # Sort services by revenue for better analytics
+        sorted_services = sorted(service_analytics.items(), key=lambda x: x[1]['total_revenue'], reverse=True)
+        
+        comprehensive_report = {
+            "report_date": date or datetime.now().strftime('%Y-%m-%d'),
+            "filters": {
+                "service_filter": service_filter,
+                "agency_filter": agency_id
+            },
+            "summary": {
+                "total_agencies": len(agency_reports),
+                "total_revenue": total_revenue,
+                "total_transfers": total_transfers,
+                "total_expenses": total_expenses,
+                "total_net_balance": total_net_balance,
+                "total_operations": sum(len(report["operations"]) for report in agency_reports)
+            },
+            "service_analytics": dict(sorted_services),
+            "agencies": agency_reports
+        }
+        
+        return comprehensive_report
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating comprehensive daily financial report: {str(e)}")
+
+# NEW: Services Performance Analytics
+@api_router.get("/reports/services-analytics")
+async def get_services_analytics(
+    start_date: str = None,
+    end_date: str = None,
+    agency_id: str = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get detailed services performance analytics with charts data"""
+    # Permission check
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        agency_id = current_user.agency_id
+    
+    try:
+        # Parse dates
+        if start_date:
+            start_dt = datetime.fromisoformat(start_date)
+        else:
+            start_dt = datetime.now() - timedelta(days=30)  # Last 30 days
+            
+        if end_date:
+            end_dt = datetime.fromisoformat(end_date)
+        else:
+            end_dt = datetime.now()
+        
+        # Build query
+        query_filter = {
+            "date": {
+                "$gte": start_dt,
+                "$lte": end_dt
+            },
+            "status": "approved"
+        }
+        
+        if agency_id:
+            query_filter["agency_id"] = agency_id
+        
+        # Get operations
+        operations = await db.daily_operations.find(query_filter).to_list(None)
+        
+        # Analyze services
+        services_data = {}
+        daily_trends = {}
+        
+        for op in operations:
+            service_name = op.get('service_name', 'غير محدد')
+            op_date = op.get('date', datetime.now()).strftime('%Y-%m-%d')
+            price = op.get('final_price', 0)
+            
+            # Service analytics
+            if service_name not in services_data:
+                services_data[service_name] = {
+                    'count': 0,
+                    'total_revenue': 0,
+                    'avg_price': 0,
+                    'min_price': float('inf'),
+                    'max_price': 0
+                }
+            
+            services_data[service_name]['count'] += 1
+            services_data[service_name]['total_revenue'] += price
+            services_data[service_name]['min_price'] = min(services_data[service_name]['min_price'], price)
+            services_data[service_name]['max_price'] = max(services_data[service_name]['max_price'], price)
+            
+            # Daily trends
+            if op_date not in daily_trends:
+                daily_trends[op_date] = {}
+            if service_name not in daily_trends[op_date]:
+                daily_trends[op_date][service_name] = {'count': 0, 'revenue': 0}
+            
+            daily_trends[op_date][service_name]['count'] += 1
+            daily_trends[op_date][service_name]['revenue'] += price
+        
+        # Calculate averages and percentages
+        total_revenue = sum(data['total_revenue'] for data in services_data.values())
+        total_operations = sum(data['count'] for data in services_data.values())
+        
+        for service in services_data:
+            data = services_data[service]
+            data['avg_price'] = data['total_revenue'] / data['count'] if data['count'] > 0 else 0
+            data['revenue_percentage'] = (data['total_revenue'] / total_revenue * 100) if total_revenue > 0 else 0
+            data['operations_percentage'] = (data['count'] / total_operations * 100) if total_operations > 0 else 0
+            
+            # Handle min_price infinity
+            if data['min_price'] == float('inf'):
+                data['min_price'] = 0
+        
+        # Prepare chart data
+        services_chart_data = {
+            'labels': list(services_data.keys()),
+            'revenue_data': [services_data[service]['total_revenue'] for service in services_data],
+            'count_data': [services_data[service]['count'] for service in services_data],
+            'percentage_data': [services_data[service]['revenue_percentage'] for service in services_data]
+        }
+        
+        # Sort by revenue
+        sorted_services = sorted(services_data.items(), key=lambda x: x[1]['total_revenue'], reverse=True)
+        
+        analytics_report = {
+            "period": {
+                "start_date": start_date or start_dt.strftime('%Y-%m-%d'),
+                "end_date": end_date or end_dt.strftime('%Y-%m-%d'),
+                "agency_filter": agency_id
+            },
+            "summary": {
+                "total_services": len(services_data),
+                "total_operations": total_operations,
+                "total_revenue": total_revenue,
+                "avg_revenue_per_service": total_revenue / len(services_data) if len(services_data) > 0 else 0
+            },
+            "services_performance": dict(sorted_services),
+            "chart_data": services_chart_data,
+            "daily_trends": daily_trends
+        }
+        
+        return analytics_report
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating services analytics: {str(e)}")
 
 # Include the router in the main app
 app.include_router(api_router)
