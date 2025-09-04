@@ -9876,78 +9876,7 @@ const DailyOperationsReports = memo(() => {
   const [servicesAnalytics, setServicesAnalytics] = useState(null);
   const [viewMode, setViewMode] = useState('summary'); // summary, detailed, charts
 
-  // PDF Download functions
-  const downloadComprehensivePDF = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (selectedDate) params.append('date', selectedDate);
-      if (selectedAgency) params.append('agency_id', selectedAgency);
-      if (serviceFilter) params.append('service_filter', serviceFilter);
 
-      const response = await axios.get(`${API}/reports/comprehensive-daily-financial-pdf?${params.toString()}`, {
-        responseType: 'blob'
-      });
-
-      // Create blob and download
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `comprehensive_financial_report_${selectedDate || new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      alert('✅ تم تحميل تقرير PDF بنجاح!');
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      alert('❌ خطأ في تحميل PDF: ' + (error.response?.data?.detail || error.message));
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedDate, selectedAgency, serviceFilter]);
-
-  const downloadServicesAnalyticsPDF = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (selectedDate) {
-        const endDate = new Date(selectedDate);
-        const startDate = new Date(endDate);
-        startDate.setDate(startDate.getDate() - 30);
-        params.append('start_date', startDate.toISOString().split('T')[0]);
-        params.append('end_date', selectedDate);
-      }
-      if (selectedAgency) params.append('agency_id', selectedAgency);
-
-      const response = await axios.get(`${API}/reports/services-analytics-pdf?${params.toString()}`, {
-        responseType: 'blob'
-      });
-
-      // Create blob and download
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const startDate = selectedDate ? new Date(new Date(selectedDate).getTime() - 30*24*60*60*1000).toISOString().split('T')[0] : new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
-      const endDate = selectedDate || new Date().toISOString().split('T')[0];
-      a.download = `services_analytics_report_${startDate}_to_${endDate}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      alert('✅ تم تحميل تقرير تحليل الخدمات PDF بنجاح!');
-    } catch (error) {
-      console.error('Error downloading services analytics PDF:', error);
-      alert('❌ خطأ في تحميل PDF: ' + (error.response?.data?.detail || error.message));
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedDate, selectedAgency]);
-    
     const performFetch = async () => {
       try {
         setLoading(true);
