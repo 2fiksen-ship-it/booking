@@ -1089,13 +1089,13 @@ class SanhajaAPITester:
             print(f"   ✅ Services analytics report accessible")
             
             # Check if our service appears in analytics
-            services_performance = analytics_response.get('services_performance', [])
+            services_performance = analytics_response.get('services_performance', {})
             service_found_in_analytics = False
             
-            for service_perf in services_performance:
-                if service_perf.get('service_name') == service.get('name'):
+            for service_name, service_perf in services_performance.items():
+                if service_name == service.get('name'):
                     service_found_in_analytics = True
-                    operations_count = service_perf.get('operations_count', 0)
+                    operations_count = service_perf.get('count', 0)
                     revenue = service_perf.get('total_revenue', 0)
                     
                     print(f"   ✅ Service '{service.get('name')}' found in analytics")
