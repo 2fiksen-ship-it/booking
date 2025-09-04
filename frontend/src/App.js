@@ -10608,15 +10608,20 @@ const DailyOperationsReports = memo(() => {
               </Button>
               <Button 
                 onClick={() => {
-                  const printContent = document.getElementById('report-content');
-                  if (printContent) {
-                    window.print();
-                  }
+                  const params = new URLSearchParams();
+                  if (selectedDate) params.append('date', selectedDate);
+                  if (selectedAgency) params.append('agency_id', selectedAgency);
+                  if (serviceFilter) params.append('service_filter', serviceFilter);
+                  
+                  const link = document.createElement('a');
+                  link.href = `${import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL}/reports/comprehensive-daily-financial-pdf?${params.toString()}`;
+                  link.download = `financial_report_${selectedDate || new Date().toISOString().split('T')[0]}.pdf`;
+                  link.click();
                 }}
-                variant="outline"
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600"
               >
-                <Printer className="h-4 w-4 mr-2" />
-                طباعة التقرير
+                <FileText className="h-4 w-4 mr-2" />
+                تحميل PDF
               </Button>
             </div>
           </div>
