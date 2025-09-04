@@ -5062,8 +5062,8 @@ const InstallmentsManagement = memo(() => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {statusReport.clients.map((client, index) => (
-                          <TableRow key={index}>
+                        {statusReport.clients.map((client) => (
+                          <TableRow key={`client-status-${client.client_name || client.id || Math.random()}`}>
                             <TableCell className="font-medium">{client.client_name}</TableCell>
                             <TableCell>{client.total_plans}</TableCell>
                             <TableCell>{client.total_due?.toLocaleString()} دج</TableCell>
