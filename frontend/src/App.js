@@ -10563,7 +10563,7 @@ const DailyOperationsReports = memo(() => {
             </div>
             <div className="flex space-x-2 rtl:space-x-reverse">
               <Button 
-                onClick={fetchAllReports}
+                onClick={handleRefresh}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
