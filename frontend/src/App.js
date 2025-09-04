@@ -6394,16 +6394,48 @@ const FinancialManagement = memo(() => {
                   <div key={transfer.id} className="p-3 border rounded-lg">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">{transfer.amount?.toLocaleString()} دج</span>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        transfer.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                        transfer.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {transfer.status === 'confirmed' ? '✅ مؤكد' :
-                         transfer.status === 'pending' ? '⏳ في الانتظار' : '❌ ملغي'}
-                      </span>
+                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          transfer.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                          transfer.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          transfer.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {transfer.status === 'confirmed' ? '✅ مؤكد' :
+                           transfer.status === 'pending' ? '⏳ في الانتظار' : 
+                           transfer.status === 'rejected' ? '❌ مرفوض' : '❌ ملغي'}
+                        </span>
+                        
+                        {/* Confirmation buttons for pending transfers (only for authorized users) */}
+                        {transfer.status === 'pending' && (user.role === 'general_accountant' || user.role === 'super_admin') && (
+                          <div className="flex space-x-1 rtl:space-x-reverse">
+                            <Button
+                              size="sm"
+                              onClick={() => confirmTransfer(transfer.id)}
+                              className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 text-xs"
+                            >
+                              ✅ تأكيد
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => rejectTransfer(transfer.id)}
+                              className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 px-2 py-1 text-xs"
+                            >
+                              ❌ رفض
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600">{formatDateWithEnglishNumerals(transfer.transfer_date)}</p>
+                    <div className="flex justify-between items-center text-sm text-gray-600">
+                      <span>{formatDateWithEnglishNumerals(transfer.transfer_date)}</span>
+                      {transfer.confirmation_by && (
+                        <span className="text-xs">
+                          {transfer.status === 'confirmed' ? 'أكد من قبل:' : 'رفض من قبل:'} {transfer.confirmation_by}
+                        </span>
+                      )}
+                    </div>
                     {transfer.notes && <p className="text-sm text-gray-500 mt-1">{transfer.notes}</p>}
                   </div>
                 ))}
