@@ -10231,6 +10231,43 @@ const DailyOperationsReports = memo(() => {
             </Card>
           )}
 
+          {/* Service Operations Count Chart */}
+          {servicesAnalytics && (
+            <Card>
+              <CardHeader>
+                <CardTitle>📈 عدد العمليات لكل خدمة</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {Object.entries(servicesAnalytics.services_performance || {})
+                    .sort(([,a], [,b]) => b.count - a.count)
+                    .slice(0, 6)
+                    .map(([service, data], index) => {
+                      const maxCount = Math.max(...Object.values(servicesAnalytics.services_performance).map(s => s.count));
+                      const percentage = maxCount > 0 ? (data.count / maxCount) * 100 : 0;
+                      
+                      return (
+                        <div key={service} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">{service}</span>
+                            <span className="text-sm text-gray-500">
+                              {data.count} عملية ({data.operations_percentage?.toFixed(1)}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div 
+                              className={`h-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500`}
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Agency Performance Chart */}
           {reportData && (
             <Card>
@@ -10265,7 +10302,42 @@ const DailyOperationsReports = memo(() => {
             </Card>
           )}
 
-          {/* Financial Summary Chart */}
+          {/* Services Pricing Analysis */}
+          {servicesAnalytics && (
+            <Card>
+              <CardHeader>
+                <CardTitle>💰 تحليل أسعار الخدمات</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {Object.entries(servicesAnalytics.services_performance || {}).slice(0, 5).map(([service, data], index) => (
+                    <div key={service} className="p-3 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-medium text-gray-800">{service}</span>
+                        <span className="text-sm text-blue-600">{data.count} عملية</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="text-center">
+                          <p className="text-gray-500">متوسط السعر</p>
+                          <p className="font-semibold text-green-600">{formatCurrency(data.avg_price)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-gray-500">أقل سعر</p>
+                          <p className="font-semibold text-blue-600">{formatCurrency(data.min_price)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-gray-500">أعلى سعر</p>
+                          <p className="font-semibold text-red-600">{formatCurrency(data.max_price)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Financial Summary Pie Chart */}
           {reportData && (
             <Card className="lg:col-span-2">
               <CardHeader>
@@ -10312,9 +10384,75 @@ const DailyOperationsReports = memo(() => {
                     </p>
                   </div>
                 </div>
+
+                {/* Services Performance Donut Chart */}
+                {servicesAnalytics && (
+                  <div className="mt-8">
+                    <h4 className="text-lg font-semibold text-center mb-4">🎯 نسب الخدمات المباعة</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {Object.entries(servicesAnalytics.services_performance || {})
+                        .sort(([,a], [,b]) => b.revenue_percentage - a.revenue_percentage)
+                        .slice(0, 8)
+                        .map(([service, data], index) => (
+                          <div key={service} className="text-center p-3 bg-white rounded-lg border">
+                            <div className={`w-16 h-16 mx-auto mb-2 rounded-full ${getServiceColor(index)} flex items-center justify-center`}>
+                              <span className="text-white font-bold text-lg">
+                                {data.revenue_percentage?.toFixed(0)}%
+                              </span>
+                            </div>
+                            <h5 className="font-medium text-gray-800 text-sm">{service}</h5>
+                            <p className="text-xs text-gray-500">{formatCurrency(data.total_revenue)}</p>
+                            <p className="text-xs text-blue-600">{data.count} عملية</p>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
+
+          {/* Advanced Analytics Cards */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>📈 إحصائيات متقدمة</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {servicesAnalytics && (
+                  <>
+                    <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600 mb-1">
+                        {Object.keys(servicesAnalytics.services_performance || {}).length}
+                      </div>
+                      <div className="text-sm text-blue-700">أنواع الخدمات</div>
+                    </div>
+                    
+                    <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600 mb-1">
+                        {servicesAnalytics.summary?.total_operations || 0}
+                      </div>
+                      <div className="text-sm text-green-700">إجمالي العمليات</div>
+                    </div>
+                    
+                    <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600 mb-1">
+                        {formatCurrency(servicesAnalytics.summary?.avg_revenue_per_service || 0)}
+                      </div>
+                      <div className="text-sm text-purple-700">متوسط ربح الخدمة</div>
+                    </div>
+                    
+                    <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-600 mb-1">
+                        {reportData?.summary?.total_agencies || 0}
+                      </div>
+                      <div className="text-sm text-orange-700">الوكالات النشطة</div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
