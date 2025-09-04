@@ -1,7 +1,7 @@
 import React, { useState, useEffect, createContext, useContext, memo, useMemo, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import ServicesManagement from './ServicesManagement';
+import BulkServicesManagement from './ServicesManagement';
 import './App.css';
 
 // Import UI components
