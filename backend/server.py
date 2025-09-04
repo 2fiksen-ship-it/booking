@@ -6516,6 +6516,161 @@ async def generate_agency_balance_pdf(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating agency balance PDF: {str(e)}")
 
+# NEW: Bulk Services Management Endpoints
+@api_router.delete("/services/bulk-delete")
+async def bulk_delete_services(
+    service_ids: List[str],
+    current_user: User = Depends(get_current_user)
+):
+    """Delete multiple services at once"""
+    # Permission check - only Super Admin and General Accountant can delete services
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        raise HTTPException(status_code=403, detail="Access denied - insufficient permissions")
+    
+    try:
+        # Check if services exist and can be deleted
+        existing_services = await db.services.find({"id": {"$in": service_ids}}).to_list(None)
+        if len(existing_services) != len(service_ids):
+            raise HTTPException(status_code=404, detail="Some services not found")
+        
+        # Check if any service is being used in daily operations
+        operations_using_services = await db.daily_operations.find({
+            "service_name": {"$in": [service["name"] for service in existing_services]}
+        }).to_list(None)
+        
+        if operations_using_services:
+            used_services = set(op["service_name"] for op in operations_using_services)
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot delete services as they are being used in operations: {', '.join(used_services)}"
+            )
+        
+        # Delete services
+        result = await db.services.delete_many({"id": {"$in": service_ids}})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="No services were deleted")
+        
+        return {
+            "message": f"Successfully deleted {result.deleted_count} services",
+            "deleted_count": result.deleted_count,
+            "requested_count": len(service_ids)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting services: {str(e)}")
+
+@api_router.patch("/services/bulk-update-status")
+async def bulk_update_services_status(
+    request: dict,  # {"service_ids": ["id1", "id2"], "is_active": true}
+    current_user: User = Depends(get_current_user)
+):
+    """Update status (active/inactive) for multiple services"""
+    # Permission check - only Super Admin and General Accountant can update services
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        raise HTTPException(status_code=403, detail="Access denied - insufficient permissions")
+    
+    try:
+        service_ids = request.get("service_ids", [])
+        is_active = request.get("is_active", True)
+        
+        if not service_ids:
+            raise HTTPException(status_code=400, detail="No service IDs provided")
+        
+        # Update services status
+        result = await db.services.update_many(
+            {"id": {"$in": service_ids}},
+            {"$set": {"is_active": is_active, "updated_at": datetime.now(timezone.utc)}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="No services found to update")
+        
+        status_text = "activated" if is_active else "deactivated"
+        return {
+            "message": f"Successfully {status_text} {result.modified_count} services",
+            "updated_count": result.modified_count,
+            "requested_count": len(service_ids),
+            "new_status": is_active
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating services status: {str(e)}")
+
+@api_router.get("/services/management")
+async def get_services_for_management(
+    include_inactive: bool = True,
+    agency_id: str = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all services for management interface with usage statistics"""
+    # Permission check
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.GENERAL_ACCOUNTANT]:
+        # Agency staff can only see their agency's services
+        agency_id = current_user.agency_id
+    
+    try:
+        # Build query
+        query = {}
+        if agency_id:
+            query["agency_id"] = agency_id
+        if not include_inactive:
+            query["is_active"] = True
+        
+        # Get services
+        services = await db.services.find(query).to_list(None)
+        
+        # Get usage statistics for each service
+        services_with_stats = []
+        for service in services:
+            # Count operations using this service
+            operations_count = await db.daily_operations.count_documents({
+                "service_name": service["name"]
+            })
+            
+            # Get total revenue from this service
+            operations = await db.daily_operations.find({
+                "service_name": service["name"],
+                "status": {"$in": ["approved", "pending_approval"]}
+            }).to_list(None)
+            
+            total_revenue = sum(op.get("final_price", 0) for op in operations)
+            
+            # Get last used date
+            last_operation = await db.daily_operations.find_one(
+                {"service_name": service["name"]},
+                sort=[("date", -1)]
+            )
+            last_used = last_operation.get("date") if last_operation else None
+            
+            service_with_stats = {
+                **service,
+                "usage_stats": {
+                    "operations_count": operations_count,
+                    "total_revenue": total_revenue,
+                    "last_used": last_used.isoformat() if last_used else None,
+                    "can_delete": operations_count == 0  # Can only delete if not used
+                }
+            }
+            services_with_stats.append(service_with_stats)
+        
+        # Sort by name
+        services_with_stats.sort(key=lambda x: x["name"])
+        
+        return {
+            "services": services_with_stats,
+            "total_count": len(services_with_stats),
+            "active_count": len([s for s in services_with_stats if s["is_active"]]),
+            "inactive_count": len([s for s in services_with_stats if not s["is_active"]])
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching services for management: {str(e)}")
+
 # Include the router in the main app
 app.include_router(api_router)
 
