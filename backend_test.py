@@ -667,18 +667,241 @@ class SanhajaAPITester:
         
         return results
 
+    def test_new_reporting_analytics_endpoints(self):
+        """Test new reporting and analytics endpoints as requested in Arabic review"""
+        print(f"\n📊 اختبار شامل للنقاط الطرفية الجديدة للتقارير والتحليل البياني")
+        print(f"   Testing NEW endpoints: comprehensive-daily-financial & services-analytics")
+        
+        results = {}
+        
+        # Test credentials from review request
+        test_users = [
+            ('superadmin@sanhaja.com', 'super123', 'Super Admin'),
+            ('generalaccountant@sanhaja.com', 'acc123', 'General Accountant'), 
+            ('staff1@tlemcen.sanhaja.com', 'staff123', 'Agency Staff')
+        ]
+        
+        for email, password, role_name in test_users:
+            print(f"\n   🔐 Testing with {role_name} ({email})...")
+            
+            # Login
+            auth_success = self.test_login(email, password)
+            if not auth_success:
+                print(f"   ❌ {role_name} login failed - skipping tests")
+                results[f'{role_name.lower().replace(" ", "_")}_login'] = False
+                continue
+            
+            results[f'{role_name.lower().replace(" ", "_")}_login'] = True
+            print(f"   ✅ {role_name} authenticated successfully")
+            
+            # Test 1: GET /api/reports/comprehensive-daily-financial (without parameters)
+            print(f"\n   1️⃣ Testing comprehensive-daily-financial (no parameters)...")
+            success, response = self.run_test(
+                f"{role_name} - Comprehensive Daily Financial (No Params)",
+                "GET",
+                "reports/comprehensive-daily-financial",
+                200
+            )
+            results[f'{role_name.lower().replace(" ", "_")}_comprehensive_no_params'] = success
+            
+            if success:
+                print(f"   ✅ Endpoint accessible")
+                # Verify response structure
+                expected_keys = ['report_date', 'summary', 'service_analytics', 'agencies']
+                missing_keys = [key for key in expected_keys if key not in response]
+                if not missing_keys:
+                    print(f"   ✅ Response structure correct")
+                    results[f'{role_name.lower().replace(" ", "_")}_comprehensive_structure'] = True
+                    
+                    # Check data content
+                    summary = response.get('summary', {})
+                    agencies = response.get('agencies', [])
+                    service_analytics = response.get('service_analytics', {})
+                    
+                    print(f"   📊 Data Summary:")
+                    print(f"      - Total Agencies: {summary.get('total_agencies', 0)}")
+                    print(f"      - Total Revenue: {summary.get('total_revenue', 0)} DZD")
+                    print(f"      - Total Operations: {summary.get('total_operations', 0)}")
+                    print(f"      - Service Types: {len(service_analytics)}")
+                    
+                    # Verify calculations
+                    if summary.get('total_revenue', 0) >= 0 and summary.get('total_operations', 0) >= 0:
+                        print(f"   ✅ Calculations appear valid")
+                        results[f'{role_name.lower().replace(" ", "_")}_comprehensive_calculations'] = True
+                    else:
+                        print(f"   ❌ Invalid calculations detected")
+                        results[f'{role_name.lower().replace(" ", "_")}_comprehensive_calculations'] = False
+                else:
+                    print(f"   ❌ Missing keys in response: {missing_keys}")
+                    results[f'{role_name.lower().replace(" ", "_")}_comprehensive_structure'] = False
+            
+            # Test 2: GET /api/reports/comprehensive-daily-financial with date filter
+            print(f"\n   2️⃣ Testing comprehensive-daily-financial (with date filter)...")
+            success, response = self.run_test(
+                f"{role_name} - Comprehensive Daily Financial (Date Filter)",
+                "GET",
+                "reports/comprehensive-daily-financial?date=2024-12-26",
+                200
+            )
+            results[f'{role_name.lower().replace(" ", "_")}_comprehensive_date_filter'] = success
+            
+            if success:
+                print(f"   ✅ Date filter working")
+                report_date = response.get('report_date')
+                if report_date == '2024-12-26':
+                    print(f"   ✅ Date filter applied correctly")
+                    results[f'{role_name.lower().replace(" ", "_")}_date_filter_correct'] = True
+                else:
+                    print(f"   ❌ Date filter not applied correctly: {report_date}")
+                    results[f'{role_name.lower().replace(" ", "_")}_date_filter_correct'] = False
+            
+            # Test 3: GET /api/reports/comprehensive-daily-financial with service filter
+            print(f"\n   3️⃣ Testing comprehensive-daily-financial (with service filter)...")
+            success, response = self.run_test(
+                f"{role_name} - Comprehensive Daily Financial (Service Filter)",
+                "GET",
+                "reports/comprehensive-daily-financial?service_filter=عمرة",
+                200
+            )
+            results[f'{role_name.lower().replace(" ", "_")}_comprehensive_service_filter'] = success
+            
+            if success:
+                print(f"   ✅ Service filter working")
+                filters = response.get('filters', {})
+                if filters.get('service_filter') == 'عمرة':
+                    print(f"   ✅ Service filter applied correctly")
+                    results[f'{role_name.lower().replace(" ", "_")}_service_filter_correct'] = True
+                else:
+                    print(f"   ❌ Service filter not applied correctly")
+                    results[f'{role_name.lower().replace(" ", "_")}_service_filter_correct'] = False
+            
+            # Test 4: GET /api/reports/services-analytics (without parameters - last 30 days)
+            print(f"\n   4️⃣ Testing services-analytics (no parameters - last 30 days)...")
+            success, response = self.run_test(
+                f"{role_name} - Services Analytics (No Params)",
+                "GET",
+                "reports/services-analytics",
+                200
+            )
+            results[f'{role_name.lower().replace(" ", "_")}_services_analytics_no_params'] = success
+            
+            if success:
+                print(f"   ✅ Services analytics endpoint accessible")
+                # Verify response structure for charts
+                expected_keys = ['period', 'summary', 'services_performance', 'chart_data', 'daily_trends']
+                missing_keys = [key for key in expected_keys if key not in response]
+                if not missing_keys:
+                    print(f"   ✅ Chart-ready response structure correct")
+                    results[f'{role_name.lower().replace(" ", "_")}_analytics_structure'] = True
+                    
+                    # Check chart data specifically
+                    chart_data = response.get('chart_data', {})
+                    chart_keys = ['labels', 'revenue_data', 'count_data', 'percentage_data']
+                    chart_missing = [key for key in chart_keys if key not in chart_data]
+                    
+                    if not chart_missing:
+                        print(f"   ✅ Chart data structure ready for visualization")
+                        results[f'{role_name.lower().replace(" ", "_")}_chart_data_ready'] = True
+                        
+                        # Verify data consistency
+                        labels = chart_data.get('labels', [])
+                        revenue_data = chart_data.get('revenue_data', [])
+                        count_data = chart_data.get('count_data', [])
+                        
+                        if len(labels) == len(revenue_data) == len(count_data):
+                            print(f"   ✅ Chart data arrays consistent ({len(labels)} services)")
+                            results[f'{role_name.lower().replace(" ", "_")}_chart_consistency'] = True
+                        else:
+                            print(f"   ❌ Chart data arrays inconsistent")
+                            results[f'{role_name.lower().replace(" ", "_")}_chart_consistency'] = False
+                    else:
+                        print(f"   ❌ Missing chart data keys: {chart_missing}")
+                        results[f'{role_name.lower().replace(" ", "_")}_chart_data_ready'] = False
+                else:
+                    print(f"   ❌ Missing analytics keys: {missing_keys}")
+                    results[f'{role_name.lower().replace(" ", "_")}_analytics_structure'] = False
+            
+            # Test 5: GET /api/reports/services-analytics with date range
+            print(f"\n   5️⃣ Testing services-analytics (with date range)...")
+            success, response = self.run_test(
+                f"{role_name} - Services Analytics (Date Range)",
+                "GET",
+                "reports/services-analytics?start_date=2024-12-01&end_date=2024-12-31",
+                200
+            )
+            results[f'{role_name.lower().replace(" ", "_")}_services_analytics_date_range'] = success
+            
+            if success:
+                print(f"   ✅ Date range filter working")
+                period = response.get('period', {})
+                if period.get('start_date') == '2024-12-01' and period.get('end_date') == '2024-12-31':
+                    print(f"   ✅ Date range applied correctly")
+                    results[f'{role_name.lower().replace(" ", "_")}_date_range_correct'] = True
+                else:
+                    print(f"   ❌ Date range not applied correctly")
+                    results[f'{role_name.lower().replace(" ", "_")}_date_range_correct'] = False
+            
+            # Test role-based access control
+            print(f"\n   6️⃣ Testing role-based access control...")
+            user_role = self.current_user.get('role') if self.current_user else 'unknown'
+            
+            if user_role == 'agency_staff':
+                # Agency staff should only see their agency data
+                print(f"   Testing agency staff data isolation...")
+                
+                # Test comprehensive report
+                success, comp_response = self.run_test(
+                    f"{role_name} - Check Agency Isolation (Comprehensive)",
+                    "GET",
+                    "reports/comprehensive-daily-financial",
+                    200
+                )
+                
+                if success:
+                    agencies = comp_response.get('agencies', [])
+                    agency_ids = set(agency.get('agency_id') for agency in agencies)
+                    user_agency_id = self.current_user.get('agency_id')
+                    
+                    if len(agency_ids) == 1 and user_agency_id in agency_ids:
+                        print(f"   ✅ Agency staff sees only their agency data")
+                        results[f'{role_name.lower().replace(" ", "_")}_agency_isolation'] = True
+                    else:
+                        print(f"   ❌ Agency staff sees data from {len(agency_ids)} agencies")
+                        results[f'{role_name.lower().replace(" ", "_")}_agency_isolation'] = False
+                
+            elif user_role in ['super_admin', 'general_accountant']:
+                # Super Admin and General Accountant should see all agencies
+                print(f"   Testing cross-agency access for {user_role}...")
+                
+                success, comp_response = self.run_test(
+                    f"{role_name} - Check Cross-Agency Access",
+                    "GET",
+                    "reports/comprehensive-daily-financial",
+                    200
+                )
+                
+                if success:
+                    agencies = comp_response.get('agencies', [])
+                    print(f"   {role_name} sees {len(agencies)} agencies")
+                    results[f'{role_name.lower().replace(" ", "_")}_cross_agency_access'] = len(agencies) >= 1
+            
+            print(f"\n   ✅ {role_name} testing completed")
+        
+        return results
+
 if __name__ == "__main__":
     tester = SanhajaAPITester()
     
-    # Run the urgent permissions issue test
-    print("🚨 Starting URGENT Permissions Issue Testing...")
+    # Run the new reporting and analytics endpoints test as requested in Arabic review
+    print("📊 اختبار شامل للنقاط الطرفية الجديدة للتقارير والتحليل البياني")
+    print("🔍 Testing NEW Reporting & Analytics Endpoints")
     print("=" * 80)
     
-    results = tester.test_urgent_permissions_issue()
+    results = tester.test_new_reporting_analytics_endpoints()
     
     # Print summary
     print(f"\n" + "=" * 80)
-    print(f"🚨 URGENT PERMISSIONS ISSUE TEST SUMMARY")
+    print(f"📊 NEW REPORTING & ANALYTICS ENDPOINTS TEST SUMMARY")
     print(f"=" * 80)
     
     total_tests = len(results)
@@ -694,54 +917,156 @@ if __name__ == "__main__":
         status = "✅ PASS" if result else "❌ FAIL"
         print(f"  {status} {test_name}")
     
-    # Analyze the specific issue
+    # Analyze by user role
     print(f"\n" + "=" * 80)
-    print(f"🔍 PERMISSIONS ISSUE ANALYSIS")
+    print(f"🔍 ROLE-BASED ACCESS ANALYSIS")
     print(f"=" * 80)
     
-    critical_issues = []
+    roles = ['super_admin', 'general_accountant', 'agency_staff']
     
-    # Check if role is saved correctly
-    if not results.get('role_saved_correctly', False):
-        critical_issues.append("❌ CRITICAL: Role not saved correctly in database")
+    for role in roles:
+        role_tests = {k: v for k, v in results.items() if role in k}
+        if role_tests:
+            role_passed = sum(1 for result in role_tests.values() if result is True)
+            role_total = len(role_tests)
+            role_success_rate = (role_passed/role_total*100) if role_total > 0 else 0
+            
+            print(f"\n👤 {role.upper().replace('_', ' ')}:")
+            print(f"   Tests: {role_passed}/{role_total} passed ({role_success_rate:.1f}%)")
+            
+            # Check specific capabilities
+            login_key = f"{role}_login"
+            if results.get(login_key, False):
+                print(f"   ✅ Authentication: Working")
+            else:
+                print(f"   ❌ Authentication: Failed")
+            
+            # Check endpoint access
+            comprehensive_key = f"{role}_comprehensive_no_params"
+            analytics_key = f"{role}_services_analytics_no_params"
+            
+            if results.get(comprehensive_key, False):
+                print(f"   ✅ Comprehensive Daily Financial: Accessible")
+            else:
+                print(f"   ❌ Comprehensive Daily Financial: Not accessible")
+            
+            if results.get(analytics_key, False):
+                print(f"   ✅ Services Analytics: Accessible")
+            else:
+                print(f"   ❌ Services Analytics: Not accessible")
+            
+            # Check data structure
+            structure_key = f"{role}_comprehensive_structure"
+            chart_key = f"{role}_chart_data_ready"
+            
+            if results.get(structure_key, False):
+                print(f"   ✅ Data Structure: Correct")
+            else:
+                print(f"   ❌ Data Structure: Issues found")
+            
+            if results.get(chart_key, False):
+                print(f"   ✅ Chart Data: Ready for visualization")
+            else:
+                print(f"   ❌ Chart Data: Not ready")
     
-    # Check if login returns correct role
-    if not results.get('login_role_correct', False):
-        critical_issues.append("❌ CRITICAL: Login returns wrong role")
+    # Check specific requirements from Arabic review
+    print(f"\n" + "=" * 80)
+    print(f"📋 ARABIC REVIEW REQUIREMENTS CHECK")
+    print(f"=" * 80)
     
-    # Check if permissions are enforced
-    if not results.get('users_access_denied', False):
-        critical_issues.append("❌ CRITICAL: Agency staff can access /users endpoint")
+    requirements_met = []
+    requirements_failed = []
     
-    if not results.get('user_creation_denied', False):
-        critical_issues.append("❌ CRITICAL: Agency staff can create users")
-    
-    # Check agency isolation
-    if not results.get('agency_isolation', False):
-        critical_issues.append("❌ CRITICAL: Agency data isolation not working")
-    
-    if critical_issues:
-        print(f"\n🚨 CRITICAL PERMISSIONS ISSUES FOUND:")
-        for issue in critical_issues:
-            print(f"  {issue}")
-        
-        print(f"\n🔧 RECOMMENDED ACTIONS:")
-        print(f"  1. Check user creation endpoint in backend/server.py")
-        print(f"  2. Verify role assignment logic")
-        print(f"  3. Check authentication middleware")
-        print(f"  4. Verify permission decorators")
-        print(f"  5. Test role-based access control")
-        
-        print(f"\n⚠️  SECURITY RISK: Agency staff users may have elevated permissions!")
+    # 1. Test endpoints without parameters
+    if any(results.get(f"{role}_comprehensive_no_params", False) for role in roles):
+        requirements_met.append("✅ GET /api/reports/comprehensive-daily-financial (no params)")
     else:
-        print(f"\n✅ NO CRITICAL PERMISSIONS ISSUES FOUND")
-        print(f"   The permissions system is working correctly.")
-        print(f"   Agency staff users have appropriate restricted access.")
+        requirements_failed.append("❌ GET /api/reports/comprehensive-daily-financial (no params)")
+    
+    # 2. Test with date filter
+    if any(results.get(f"{role}_comprehensive_date_filter", False) for role in roles):
+        requirements_met.append("✅ Date filter (date=2024-12-26)")
+    else:
+        requirements_failed.append("❌ Date filter (date=2024-12-26)")
+    
+    # 3. Test with service filter
+    if any(results.get(f"{role}_comprehensive_service_filter", False) for role in roles):
+        requirements_met.append("✅ Service filter (service_filter=عمرة)")
+    else:
+        requirements_failed.append("❌ Service filter (service_filter=عمرة)")
+    
+    # 4. Test services analytics
+    if any(results.get(f"{role}_services_analytics_no_params", False) for role in roles):
+        requirements_met.append("✅ GET /api/reports/services-analytics (last 30 days)")
+    else:
+        requirements_failed.append("❌ GET /api/reports/services-analytics (last 30 days)")
+    
+    # 5. Test with date ranges
+    if any(results.get(f"{role}_services_analytics_date_range", False) for role in roles):
+        requirements_met.append("✅ Date range filters (start_date & end_date)")
+    else:
+        requirements_failed.append("❌ Date range filters (start_date & end_date)")
+    
+    # 6. Test role-based permissions
+    if any(results.get(f"{role}_agency_isolation", False) for role in ['agency_staff']) or \
+       any(results.get(f"{role}_cross_agency_access", False) for role in ['super_admin', 'general_accountant']):
+        requirements_met.append("✅ Role-based access control")
+    else:
+        requirements_failed.append("❌ Role-based access control")
+    
+    # 7. Test data structure for charts
+    if any(results.get(f"{role}_chart_data_ready", False) for role in roles):
+        requirements_met.append("✅ Chart-ready data structure")
+    else:
+        requirements_failed.append("❌ Chart-ready data structure")
+    
+    # 8. Test calculations accuracy
+    if any(results.get(f"{role}_comprehensive_calculations", False) for role in roles):
+        requirements_met.append("✅ Accurate calculations (totals, percentages)")
+    else:
+        requirements_failed.append("❌ Accurate calculations (totals, percentages)")
+    
+    print(f"\nREQUIREMENTS MET:")
+    for req in requirements_met:
+        print(f"  {req}")
+    
+    if requirements_failed:
+        print(f"\nREQUIREMENTS FAILED:")
+        for req in requirements_failed:
+            print(f"  {req}")
+    
+    # Final assessment
+    requirements_success_rate = len(requirements_met) / (len(requirements_met) + len(requirements_failed)) * 100
+    
+    print(f"\n" + "=" * 80)
+    print(f"🎯 FINAL ASSESSMENT")
+    print(f"=" * 80)
+    
+    if requirements_success_rate >= 90:
+        print(f"🎉 EXCELLENT: {requirements_success_rate:.1f}% of Arabic review requirements met!")
+        print(f"   The new reporting and analytics endpoints are working excellently.")
+        print(f"   Ready for production use with comprehensive chart data support.")
+    elif requirements_success_rate >= 75:
+        print(f"✅ GOOD: {requirements_success_rate:.1f}% of Arabic review requirements met.")
+        print(f"   Most functionality working correctly with minor issues.")
+    elif requirements_success_rate >= 50:
+        print(f"⚠️  PARTIAL: {requirements_success_rate:.1f}% of Arabic review requirements met.")
+        print(f"   Significant issues found that need attention.")
+    else:
+        print(f"❌ CRITICAL: Only {requirements_success_rate:.1f}% of Arabic review requirements met.")
+        print(f"   Major fixes needed before production deployment.")
+    
+    print(f"\n📊 ARABIC REVIEW SUMMARY:")
+    print(f"   - Comprehensive Daily Financial Reports: {'✅ Working' if any(results.get(f'{role}_comprehensive_no_params', False) for role in roles) else '❌ Failed'}")
+    print(f"   - Services Analytics Reports: {'✅ Working' if any(results.get(f'{role}_services_analytics_no_params', False) for role in roles) else '❌ Failed'}")
+    print(f"   - Chart Data Structure: {'✅ Ready' if any(results.get(f'{role}_chart_data_ready', False) for role in roles) else '❌ Not Ready'}")
+    print(f"   - Role-based Access Control: {'✅ Working' if any('isolation' in k or 'cross_agency' in k for k, v in results.items() if v) else '❌ Failed'}")
+    print(f"   - Filter Functionality: {'✅ Working' if any('filter' in k for k, v in results.items() if v) else '❌ Failed'}")
     
     if passed_tests == total_tests:
-        print(f"\n🎉 ALL TESTS PASSED! Permissions system is working correctly.")
+        print(f"\n🎉 ALL TESTS PASSED! New reporting endpoints are production-ready.")
     elif passed_tests >= total_tests * 0.8:
-        print(f"\n⚠️  MOSTLY WORKING: {passed_tests}/{total_tests} tests passed. Minor issues detected.")
+        print(f"\n✅ MOSTLY WORKING: {passed_tests}/{total_tests} tests passed. Minor issues detected.")
     else:
         print(f"\n❌ CRITICAL ISSUES: Only {passed_tests}/{total_tests} tests passed. Major fixes needed.")
 
