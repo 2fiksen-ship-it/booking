@@ -10991,7 +10991,7 @@ const MainApp = ({ activeTab, setActiveTab }) => {
     userManagement: UserManagement,
     agencyManagement: AgencyManagement,
     dailyReports: DailyReportsManagement,
-    servicesManagement: ServicesManagement,
+    servicesManagement: EnhancedServicesManagement,
     agencySettings: AgencySettingsManagement,
     dailyOperations: DailyOperationsManagement,
     dailyOperationsReports: DailyOperationsReports
