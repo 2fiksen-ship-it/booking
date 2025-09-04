@@ -1198,6 +1198,113 @@ if __name__ == "__main__":
     
     # Print summary
     print(f"\n" + "=" * 80)
+    print(f"📊 DAILY OPERATIONS & REPORTS INTEGRATION TEST SUMMARY")
+    print(f"=" * 80)
+    
+    total_tests = len(results)
+    passed_tests = sum(1 for result in results.values() if result is True)
+    
+    print(f"Total Tests: {total_tests}")
+    print(f"Passed: {passed_tests}")
+    print(f"Failed: {total_tests - passed_tests}")
+    print(f"Success Rate: {(passed_tests/total_tests*100):.1f}%" if total_tests > 0 else "No tests run")
+    
+    print(f"\nDetailed Results:")
+    for test_name, result in results.items():
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"  {status} {test_name}")
+    
+    # Check specific requirements from Arabic review
+    print(f"\n" + "=" * 80)
+    print(f"📋 ARABIC REVIEW REQUIREMENTS CHECK")
+    print(f"=" * 80)
+    
+    requirements_met = []
+    requirements_failed = []
+    
+    # 1. Agency Staff Login
+    if results.get('agency_staff_login', False):
+        requirements_met.append("✅ تسجيل دخول كـ Agency Staff")
+    else:
+        requirements_failed.append("❌ تسجيل دخول كـ Agency Staff")
+    
+    # 2. Operation Creation with pending_approval status
+    if results.get('create_operation', False) and results.get('correct_status', False):
+        requirements_met.append("✅ إنشاء عملية يومية بحالة 'pending_approval'")
+    else:
+        requirements_failed.append("❌ إنشاء عملية يومية بحالة 'pending_approval'")
+    
+    # 3. Operation appears in GET /api/daily-operations
+    if results.get('operation_in_list', False):
+        requirements_met.append("✅ ظهور العملية في GET /api/daily-operations")
+    else:
+        requirements_failed.append("❌ ظهور العملية في GET /api/daily-operations")
+    
+    # 4. Operation appears in comprehensive daily financial report
+    if results.get('operation_in_comprehensive_report', False):
+        requirements_met.append("✅ ظهور العملية في تقرير comprehensive-daily-financial")
+    else:
+        requirements_failed.append("❌ ظهور العملية في تقرير comprehensive-daily-financial")
+    
+    # 5. Operation appears in services analytics
+    if results.get('service_in_analytics', False):
+        requirements_met.append("✅ ظهور العملية في تحليل services-analytics")
+    else:
+        requirements_failed.append("❌ ظهور العملية في تحليل services-analytics")
+    
+    # 6. Reports include both pending and approved operations
+    if results.get('includes_both_statuses', False):
+        requirements_met.append("✅ التقارير تشمل العمليات المعلقة والمعتمدة")
+    else:
+        requirements_failed.append("❌ التقارير تشمل العمليات المعلقة والمعتمدة")
+    
+    print(f"\nREQUIREMENTS MET:")
+    for req in requirements_met:
+        print(f"  {req}")
+    
+    if requirements_failed:
+        print(f"\nREQUIREMENTS FAILED:")
+        for req in requirements_failed:
+            print(f"  {req}")
+    
+    # Final assessment
+    requirements_success_rate = len(requirements_met) / (len(requirements_met) + len(requirements_failed)) * 100
+    
+    print(f"\n" + "=" * 80)
+    print(f"🎯 FINAL ASSESSMENT")
+    print(f"=" * 80)
+    
+    if requirements_success_rate >= 90:
+        print(f"🎉 EXCELLENT: {requirements_success_rate:.1f}% of Arabic review requirements met!")
+        print(f"   The daily operations and reports integration fix is working excellently.")
+        print(f"   New operations immediately appear in all reports and statistics.")
+    elif requirements_success_rate >= 75:
+        print(f"✅ GOOD: {requirements_success_rate:.1f}% of Arabic review requirements met.")
+        print(f"   Most functionality working correctly with minor issues.")
+    elif requirements_success_rate >= 50:
+        print(f"⚠️  PARTIAL: {requirements_success_rate:.1f}% of Arabic review requirements met.")
+        print(f"   Significant issues found that need attention.")
+    else:
+        print(f"❌ CRITICAL: Only {requirements_success_rate:.1f}% of Arabic review requirements met.")
+        print(f"   Major fixes needed - operations not appearing in reports.")
+    
+    print(f"\n📊 INTEGRATION FIX SUMMARY:")
+    print(f"   - Operation Creation: {'✅ Working' if results.get('create_operation', False) else '❌ Failed'}")
+    print(f"   - Correct Status (pending_approval): {'✅ Working' if results.get('correct_status', False) else '❌ Failed'}")
+    print(f"   - Appears in Operations List: {'✅ Working' if results.get('operation_in_list', False) else '❌ Failed'}")
+    print(f"   - Appears in Comprehensive Report: {'✅ Working' if results.get('operation_in_comprehensive_report', False) else '❌ Failed'}")
+    print(f"   - Appears in Services Analytics: {'✅ Working' if results.get('service_in_analytics', False) else '❌ Failed'}")
+    print(f"   - Both Statuses Included: {'✅ Working' if results.get('includes_both_statuses', False) else '❌ Failed'}")
+    
+    if passed_tests == total_tests:
+        print(f"\n🎉 ALL TESTS PASSED! Daily operations and reports integration fix is working perfectly.")
+    elif passed_tests >= total_tests * 0.8:
+        print(f"\n✅ MOSTLY WORKING: {passed_tests}/{total_tests} tests passed. Minor issues detected.")
+    else:
+        print(f"\n❌ CRITICAL ISSUES: Only {passed_tests}/{total_tests} tests passed. Integration fix needs attention.")
+    
+    # Print summary
+    print(f"\n" + "=" * 80)
     print(f"📊 NEW REPORTING & ANALYTICS ENDPOINTS TEST SUMMARY")
     print(f"=" * 80)
     
