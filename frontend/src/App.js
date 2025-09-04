@@ -3851,8 +3851,8 @@ const ReportsManagement = () => {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {(agency.periods || []).map((period, index) => (
-                                <TableRow key={index} className="hover:bg-gray-50">
+                              {(agency.periods || []).map((period) => (
+                                <TableRow key={`period-${period.month || period.date || period.period}-${Math.random()}`} className="hover:bg-gray-50">
                                   <TableCell className="font-medium text-right">
                                     {period.month || period.date || period.period}
                                   </TableCell>
