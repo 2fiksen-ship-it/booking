@@ -10408,10 +10408,10 @@ const DailyOperationsReports = memo(() => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {Object.entries(servicesAnalytics.services_performance || {}).slice(0, 5).map(([service, data], index) => (
-                    <div key={service} className="p-3 bg-gray-50 rounded-lg">
+                  {Object.entries(servicesAnalytics.services_performance || {}).slice(0, 5).map(([serviceName, data]) => (
+                    <div key={`service-pricing-${serviceName}`} className="p-3 bg-gray-50 rounded-lg">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-gray-800">{service}</span>
+                        <span className="font-medium text-gray-800">{serviceName}</span>
                         <span className="text-sm text-blue-600">{data.count} عملية</span>
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-xs">
