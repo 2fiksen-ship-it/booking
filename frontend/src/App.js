@@ -9876,8 +9876,8 @@ const DailyOperationsReports = memo(() => {
   const [servicesAnalytics, setServicesAnalytics] = useState(null);
   const [viewMode, setViewMode] = useState('summary'); // summary, detailed, charts
 
-
-    const performFetch = async () => {
+  // Fetch comprehensive daily reports
+  const fetchAllReports = useCallback(async () => {
       try {
         setLoading(true);
         setReportData(null);
