@@ -3788,8 +3788,8 @@ const ReportsManagement = () => {
 
                 {/* Individual Agency Reports */}
                 <div className="space-y-6">
-                  {reportData.agencies_data.map((agency, agencyIndex) => (
-                    <div key={agencyIndex} className="border rounded-lg overflow-hidden">
+                  {reportData.agencies_data.map((agency) => (
+                    <div key={`agency-report-${agency.agency_name || agency.agency_id || Math.random()}`} className="border rounded-lg overflow-hidden">
                       {/* Agency Header */}
                       <div className="bg-gray-50 px-6 py-4 border-b">
                         <div className="flex justify-between items-center">
