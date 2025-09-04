@@ -10,7 +10,7 @@ import sys
 
 class BulkServicesTest:
     def __init__(self):
-        self.base_url = "https://travel-agency-app.preview.emergentagent.com"
+        self.base_url = "https://travel-ops-manager.preview.emergentagent.com"
         self.api_url = f"{self.base_url}/api"
         self.token = None
         self.current_user = None
