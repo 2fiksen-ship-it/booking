@@ -10238,17 +10238,17 @@ const DailyOperationsReports = memo(() => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {Object.entries(servicesAnalytics.services_performance || {}).slice(0, 6).map(([service, data], index) => (
-                    <div key={service} className="space-y-2">
+                  {Object.entries(servicesAnalytics.services_performance || {}).slice(0, 6).map(([serviceName, data]) => (
+                    <div key={`service-revenue-${serviceName}`} className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">{service}</span>
+                        <span className="text-sm font-medium">{serviceName}</span>
                         <span className="text-sm text-gray-500">
                           {data.revenue_percentage?.toFixed(1)}% ({formatCurrency(data.total_revenue)})
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3">
                         <div 
-                          className={`h-3 rounded-full ${getServiceColor(index)}`}
+                          className={`h-3 rounded-full ${getServiceColor(Object.keys(servicesAnalytics.services_performance).indexOf(serviceName))}`}
                           style={{ width: `${Math.min(data.revenue_percentage || 0, 100)}%` }}
                         ></div>
                       </div>
