@@ -9981,30 +9981,6 @@ const DailyOperationsReports = memo(() => {
     return colors[index % colors.length];
   };
 
-  // Simple PDF download function
-  const downloadPDF = async (endpoint, filename) => {
-    try {
-      const params = new URLSearchParams();
-      if (selectedDate) params.append('date', selectedDate);
-      if (selectedAgency) params.append('agency_id', selectedAgency);
-      if (serviceFilter) params.append('service_filter', serviceFilter);
-
-      const response = await axios.get(`${API}/${endpoint}?${params.toString()}`, { responseType: 'blob' });
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      alert('✅ تم تحميل PDF بنجاح!');
-    } catch (error) {
-      alert('❌ خطأ في تحميل PDF: ' + (error.response?.data?.detail || error.message));
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center py-8">
