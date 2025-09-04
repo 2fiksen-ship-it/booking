@@ -10304,12 +10304,12 @@ const DailyOperationsReports = memo(() => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {reportData.agencies?.sort((a, b) => b.daily_revenue - a.daily_revenue).slice(0, 6).map((agency, index) => {
+                  {reportData.agencies?.sort((a, b) => b.daily_revenue - a.daily_revenue).slice(0, 6).map((agency) => {
                     const maxRevenue = Math.max(...reportData.agencies.map(a => a.daily_revenue));
                     const percentage = maxRevenue > 0 ? (agency.daily_revenue / maxRevenue) * 100 : 0;
                     
                     return (
-                      <div key={agency.agency_id} className="space-y-2">
+                      <div key={`agency-performance-${agency.agency_id}`} className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium">{agency.agency_name}</span>
                           <span className="text-sm text-gray-500">
