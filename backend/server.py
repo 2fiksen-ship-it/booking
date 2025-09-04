@@ -5934,7 +5934,7 @@ async def get_services_analytics(
                 "$gte": start_dt,
                 "$lte": end_dt
             },
-            "status": "approved"
+            "status": {"$in": ["approved", "pending_approval"]}  # Include both approved and pending operations
         }
         
         if agency_id:
