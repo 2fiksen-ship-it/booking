@@ -900,8 +900,8 @@ const Layout = ({ children }) => {
 
         {/* Navigation Menu */}
         <nav className="flex-1 py-4">
-          {navItems.map((item, index) => (
-            <div key={index}>
+          {navItems.map((item) => (
+            <div key={`nav-${item.title}-${item.category}`}>
               {item.category === 'main' ? (
                 // Main dashboard item
                 <button
