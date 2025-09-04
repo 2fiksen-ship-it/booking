@@ -10539,7 +10539,22 @@ const DailyOperationsReports = memo(() => {
                 {loading ? 'جاري التحميل...' : 'تحميل PDF'}
               </Button>
               <Button 
-                onClick={downloadServicesAnalyticsPDF}
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (selectedDate) {
+                    const endDate = new Date(selectedDate);
+                    const startDate = new Date(endDate);
+                    startDate.setDate(startDate.getDate() - 30);
+                    params.append('start_date', startDate.toISOString().split('T')[0]);
+                    params.append('end_date', selectedDate);
+                  }
+                  if (selectedAgency) params.append('agency_id', selectedAgency);
+                  
+                  const link = document.createElement('a');
+                  link.href = `${API}/reports/services-analytics-pdf?${params.toString()}`;
+                  link.download = `services_analytics_${selectedDate || new Date().toISOString().split('T')[0]}.pdf`;
+                  link.click();
+                }}
                 variant="outline"
                 className="bg-green-600 hover:bg-green-700 text-white border-green-600"
                 disabled={loading}
