@@ -6845,8 +6845,8 @@ const AgencyManagement = () => {
 
             <div>
               <Label>أرقام الهاتف</Label>
-              {formData.phone_numbers.map((phone, index) => (
-                <div key={index} className="flex items-center space-x-2 mt-2">
+              {formData.phone_numbers.map((phone, phoneIndex) => (
+                <div key={`phone-${phoneIndex}-${phone || 'empty'}`} className="flex items-center space-x-2 mt-2">
                   <Input
                     value={phone}
                     onChange={(e) => updatePhoneNumber(index, e.target.value)}
