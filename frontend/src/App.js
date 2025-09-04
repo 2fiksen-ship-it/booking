@@ -7922,7 +7922,7 @@ const ServicesManagement = memo(() => {
       </Dialog>
     </div>
   );
-};
+});
 
 // Agency Settings Management Component
 const AgencySettingsManagement = () => {
