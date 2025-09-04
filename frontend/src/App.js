@@ -10270,14 +10270,14 @@ const DailyOperationsReports = memo(() => {
                   {Object.entries(servicesAnalytics.services_performance || {})
                     .sort(([,a], [,b]) => b.count - a.count)
                     .slice(0, 6)
-                    .map(([service, data], index) => {
+                    .map(([serviceName, data]) => {
                       const maxCount = Math.max(...Object.values(servicesAnalytics.services_performance).map(s => s.count));
                       const percentage = maxCount > 0 ? (data.count / maxCount) * 100 : 0;
                       
                       return (
-                        <div key={service} className="space-y-2">
+                        <div key={`service-count-${serviceName}`} className="space-y-2">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">{service}</span>
+                            <span className="text-sm font-medium">{serviceName}</span>
                             <span className="text-sm text-gray-500">
                               {data.count} عملية ({data.operations_percentage?.toFixed(1)}%)
                             </span>
