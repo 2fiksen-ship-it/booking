@@ -9876,50 +9876,78 @@ const DailyOperationsReports = memo(() => {
   const [servicesAnalytics, setServicesAnalytics] = useState(null);
   const [viewMode, setViewMode] = useState('summary'); // summary, detailed, charts
 
-  // Fetch comprehensive daily reports
-  const fetchComprehensiveReports = async () => {
+  // Combined fetch function to prevent race conditions
+  const fetchAllReports = useCallback(async () => {
+    const controller = new AbortController();
+    
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (selectedDate) params.append('date', selectedDate);
-      if (selectedAgency) params.append('agency_id', selectedAgency);
-      if (serviceFilter) params.append('service_filter', serviceFilter);
+      setReportData(null);
+      setServicesAnalytics(null);
+      
+      // Prepare parameters for comprehensive reports
+      const comprehensiveParams = new URLSearchParams();
+      if (selectedDate) comprehensiveParams.append('date', selectedDate);
+      if (selectedAgency) comprehensiveParams.append('agency_id', selectedAgency);
+      if (serviceFilter) comprehensiveParams.append('service_filter', serviceFilter);
 
-      const response = await axios.get(`${API}/reports/comprehensive-daily-financial?${params.toString()}`);
-      setReportData(response.data);
-    } catch (error) {
-      console.error('Error fetching comprehensive reports:', error);
-      alert('خطأ في تحميل التقارير: ' + (error.response?.data?.detail || error.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch services analytics
-  const fetchServicesAnalytics = async () => {
-    try {
-      const params = new URLSearchParams();
+      // Prepare parameters for services analytics
+      const analyticsParams = new URLSearchParams();
       if (selectedDate) {
-        // Get analytics for the past 30 days from selected date
         const endDate = new Date(selectedDate);
         const startDate = new Date(endDate);
         startDate.setDate(startDate.getDate() - 30);
-        params.append('start_date', startDate.toISOString().split('T')[0]);
-        params.append('end_date', selectedDate);
+        analyticsParams.append('start_date', startDate.toISOString().split('T')[0]);
+        analyticsParams.append('end_date', selectedDate);
       }
-      if (selectedAgency) params.append('agency_id', selectedAgency);
+      if (selectedAgency) analyticsParams.append('agency_id', selectedAgency);
 
-      const response = await axios.get(`${API}/reports/services-analytics?${params.toString()}`);
-      setServicesAnalytics(response.data);
+      // Execute both API calls simultaneously but handle them properly
+      const [comprehensiveResponse, analyticsResponse] = await Promise.allSettled([
+        axios.get(`${API}/reports/comprehensive-daily-financial?${comprehensiveParams.toString()}`, {
+          signal: controller.signal
+        }),
+        axios.get(`${API}/reports/services-analytics?${analyticsParams.toString()}`, {
+          signal: controller.signal
+        })
+      ]);
+
+      // Handle comprehensive reports response
+      if (comprehensiveResponse.status === 'fulfilled') {
+        setReportData(comprehensiveResponse.value.data);
+      } else {
+        console.error('Error fetching comprehensive reports:', comprehensiveResponse.reason);
+        if (!controller.signal.aborted) {
+          alert('خطأ في تحميل التقارير الشاملة: ' + (comprehensiveResponse.reason?.response?.data?.detail || comprehensiveResponse.reason?.message));
+        }
+      }
+
+      // Handle services analytics response
+      if (analyticsResponse.status === 'fulfilled') {
+        setServicesAnalytics(analyticsResponse.value.data);
+      } else {
+        console.error('Error fetching services analytics:', analyticsResponse.reason);
+        // Don't show alert for analytics as it's not critical
+      }
+
     } catch (error) {
-      console.error('Error fetching services analytics:', error);
+      if (!controller.signal.aborted) {
+        console.error('Error in fetchAllReports:', error);
+        alert('خطأ في تحميل البيانات: ' + (error.response?.data?.detail || error.message));
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
-  };
+
+    return () => controller.abort();
+  }, [selectedDate, selectedAgency, serviceFilter]);
 
   useEffect(() => {
-    fetchComprehensiveReports();
-    fetchServicesAnalytics();
-  }, [selectedDate, selectedAgency, serviceFilter]);
+    const cleanup = fetchAllReports();
+    return cleanup;
+  }, [fetchAllReports]);
 
   const formatCurrency = (amount) => {
     return `${(amount || 0).toLocaleString()} دج`;
