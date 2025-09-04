@@ -10491,14 +10491,14 @@ const DailyOperationsReports = memo(() => {
                       {Object.entries(servicesAnalytics.services_performance || {})
                         .sort(([,a], [,b]) => b.revenue_percentage - a.revenue_percentage)
                         .slice(0, 8)
-                        .map(([service, data], index) => (
-                          <div key={service} className="text-center p-3 bg-white rounded-lg border">
-                            <div className={`w-16 h-16 mx-auto mb-2 rounded-full ${getServiceColor(index)} flex items-center justify-center`}>
+                        .map(([serviceName, data]) => (
+                          <div key={`service-donut-${serviceName}`} className="text-center p-3 bg-white rounded-lg border">
+                            <div className={`w-16 h-16 mx-auto mb-2 rounded-full ${getServiceColor(Object.keys(servicesAnalytics.services_performance).indexOf(serviceName))} flex items-center justify-center`}>
                               <span className="text-white font-bold text-lg">
                                 {data.revenue_percentage?.toFixed(0)}%
                               </span>
                             </div>
-                            <h5 className="font-medium text-gray-800 text-sm">{service}</h5>
+                            <h5 className="font-medium text-gray-800 text-sm">{serviceName}</h5>
                             <p className="text-xs text-gray-500">{formatCurrency(data.total_revenue)}</p>
                             <p className="text-xs text-blue-600">{data.count} عملية</p>
                           </div>
