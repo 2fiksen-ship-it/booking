@@ -588,7 +588,7 @@ class BookingUpdate(BaseModel):
 class InvoiceCreate(BaseModel):
     client_id: str
     amount_ht: float
-    tva_rate: float = 20.0
+    tva_rate: float = 19.0  # ضريبة القيمة المضافة في الجزائر
     due_date: datetime
 
 class PaymentCreate(BaseModel):
