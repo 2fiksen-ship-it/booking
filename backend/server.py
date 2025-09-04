@@ -5535,6 +5535,30 @@ async def confirm_cash_transfer(transfer_id: str, current_user: User = Depends(g
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error confirming transfer: {str(e)}")
 
+@api_router.put("/cash-transfers/{transfer_id}/reject")
+async def reject_cash_transfer(transfer_id: str, current_user: User = Depends(get_current_user)):
+    """Reject cash transfer (General Accountant/Super Admin only)"""
+    if current_user.role not in [UserRole.GENERAL_ACCOUNTANT, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Not authorized to reject transfers")
+    
+    try:
+        result = await db.cash_transfers.update_one(
+            {"id": transfer_id},
+            {"$set": {
+                "status": "rejected",
+                "confirmation_by": current_user.id,
+                "confirmation_date": datetime.now()
+            }}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Transfer not found")
+        
+        return {"message": "Cash transfer rejected successfully"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error rejecting transfer: {str(e)}")
+
 @api_router.post("/agencies/{agency_id}/expenses")
 async def create_agency_expense(
     agency_id: str, 
