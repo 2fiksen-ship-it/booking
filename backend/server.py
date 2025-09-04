@@ -413,7 +413,7 @@ class Invoice(BaseModel):
     client_id: str
     agency_id: str
     amount_ht: float
-    tva_rate: float = 20.0
+    tva_rate: float = 19.0  # ضريبة القيمة المضافة في الجزائر
     amount_ttc: float
     invoice_status: InvoiceStatus = InvoiceStatus.PENDING
     due_date: datetime
