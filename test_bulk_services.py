@@ -121,9 +121,10 @@ class BulkServicesTest:
         print(f"\n🗑️  Testing bulk delete services...")
         
         headers = {'Authorization': f'Bearer {self.token}', 'Content-Type': 'application/json'}
+        data = {"service_ids": service_ids}
         
         response = requests.delete(f"{self.api_url}/services/bulk-delete", 
-                                 json=service_ids, headers=headers)
+                                 json=data, headers=headers)
         
         if response.status_code == 200:
             result = response.json()
